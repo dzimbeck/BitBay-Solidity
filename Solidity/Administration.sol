@@ -18,14 +18,14 @@ contract Administration is IAdministration {
 
     uint public totalvotes;
     uint public voteperc;
-    uint[13] public votetimelimit;
+    uint[14] public votetimelimit;
     uint public maxweight;
 
     mapping (address => bool) public isCurator;
     mapping (bytes32 => uint[2]) public MerkleRoot;
     mapping (bytes32 => bool) public spent;
     mapping (bytes32 => uint[2]) public proposals; //Hash of proposal
-    mapping (address => uint[13]) public myvotetimes; //Time limits to vote on specific things
+    mapping (address => uint[14]) public myvotetimes; //Time limits to vote on specific things
     mapping (address => uint) public myweight;
     address[] public curators;
 
@@ -45,7 +45,8 @@ contract Administration is IAdministration {
     uint startingTime;
     uint nonce;
     uint intervaltime = 43200; //12 hour batches of transactions. And stakers can wait a few hours to finalize data.
-
+    
+    uint public isActive = 1; //Initially proxies may be immediately changed
     uint public proxylock;
 
     event emitProposal(address from, uint myprop, bytes packed);
@@ -141,7 +142,7 @@ contract Administration is IAdministration {
 
     //This will specify the BitBay contract
     function setProxy(address myproxy) public returns (bool){
-        require(proxylock < block.timestamp);
+        checkProxyLock();
         bytes32 proposal = keccak256(abi.encodePacked("setProxy",myproxy));
         bool res = checkProposal(proposal, 0);
         if (res) {            
@@ -152,17 +153,17 @@ contract Administration is IAdministration {
     }
 
     //This will change the admin contract so proceed with caution
-    function changeBAYMinter(address newminter) public returns (bool){
-        require(proxylock < block.timestamp);
-        bytes32 proposal = keccak256(abi.encodePacked("changeBAYMinter",newminter));
+    function changeAdminMinter(address targetproxy, address newminter) public returns (bool){
+        checkProxyLock();
+        bytes32 proposal = keccak256(abi.encodePacked("changeAdminMinter",targetproxy,newminter));
         bool res = checkProposal(proposal, 1);
         if (res) {
             bool success;
             bytes memory result;
-            (success, result) = proxy.call(abi.encodeWithSignature("changeMinter(address)",newminter));
+            (success, result) = targetproxy.call(abi.encodeWithSignature("changeMinter(address)",newminter));
             require(success);
         }
-        emit emitProposal(msg.sender, 1, abi.encodePacked("changeBAYMinter",newminter));
+        emit emitProposal(msg.sender, 1, abi.encodePacked("changeAdminMinter",targetproxy,newminter));
         return res;
     }
 
@@ -187,7 +188,7 @@ contract Administration is IAdministration {
     }
     
     function changeBAYProxy(address newproxy, bool status) public returns (bool){
-        require(proxylock < block.timestamp);
+        checkProxyLock();
         bytes32 proposal = keccak256(abi.encodePacked("changeProxy",newproxy,status));
         bool res = checkProposal(proposal, 3);
         if (res) {
@@ -207,6 +208,12 @@ contract Administration is IAdministration {
             bool success;
             bytes memory result;
             (success, result) = proxy.call(abi.encodeWithSignature("setActive(bool)",status));
+            if(status == true) {
+                isActive = 0; //This makes it so to change proxies all contracts must be locked for some time
+            }
+            if(status == false) {
+                isActive = block.timestamp + 1814400 //Everything must be paused for 3 weeks to update the contract
+            }
             require(success);
         }
         emit emitProposal(msg.sender, 4, abi.encodePacked("setActive",status));
@@ -296,7 +303,7 @@ contract Administration is IAdministration {
     }
 
     function setLiquidityPool(address LP) public returns (bool){
-        require(proxylock < block.timestamp);
+        checkProxyLock();
         bytes32 proposal = keccak256(abi.encodePacked("setLiquidityPool",LP));
         bool res = checkProposal(proposal, 11);
         if (res) {
@@ -317,6 +324,27 @@ contract Administration is IAdministration {
         }
         emit emitProposal(msg.sender, 12, abi.encodePacked("setTimeLimit",pos,mytime));
         return res;
+    }
+
+    //This will change the admin contract so proceed with caution
+    function changeTargetProxy(address targetproxy, address newminter) public returns (bool){
+        checkProxyLock();
+        bytes32 proposal = keccak256(abi.encodePacked("changeTargetProxy",targetproxy,newminter));
+        bool res = checkProposal(proposal, 13);
+        if (res) {
+            bool success;
+            bytes memory result;
+            (success, result) = targetproxy.call(abi.encodeWithSignature("setProxy(address)",newminter));
+            require(success);
+        }
+        emit emitProposal(msg.sender, 13, abi.encodePacked("changeTargetProxy",targetproxy,newminter));
+        return res;
+    }
+
+    function checkProxyLock() private {
+        require(proxylock < block.timestamp);
+        require(isActive != 0);
+        require(isActive < block.timestamp);
     }
 
     function verify(bytes32 root, bytes32 leaf, bytes32[] memory proof) public pure returns (bool){
@@ -340,13 +368,13 @@ contract Administration is IAdministration {
     function redeemTX(bytes32 root, bytes32[] memory proof, uint[38] memory reserve, string memory txid) public returns (bytes32){
         bytes32 leaf = keccak256(abi.encode(msg.sender,reserve,txid));
         require(verify(root, leaf, proof), "Merkle proof was not valid");
-        require(MerkleRoot[root][0] == 1, "Merkle root not found");        
+        require(MerkleRoot[root][0] == 1, "Merkle root not found");
         require(spent[leaf] == false, "Transaction already spent");
         require(reserve[MerkleRoot[root][1]] == 0, "Microshard section not set properly");
         spent[leaf] = true;
         bool success;
         bytes memory result;
-        (success, result) = proxy.staticcall(abi.encodeWithSignature("getState()"));        
+        (success, result) = proxy.staticcall(abi.encodeWithSignature("getState()"));
         calcLocals memory a;
         uint deflationrate;
         (a.supply,a.pegsteps,a.mk,a.pegrate,deflationrate) = abi.decode(result, (uint,uint,uint,uint,uint));
@@ -369,7 +397,7 @@ contract Administration is IAdministration {
                 //It's okay to divide microshards evenly because liquid/reserve ratios don't precisely convert between networks on the bridge either way
                 //This is because BAY network has many more shards and the microshards system is done to save in storage costs
                 a.liquid = a.newtot / a.mk;
-                while (a.i < a.mk - 1) {                    
+                while (a.i < a.mk - 1) {
                     a.newtot -= a.liquid;
                     reserve[a.pegsteps + a.i] += a.liquid;
                     a.i += 1;
@@ -385,7 +413,7 @@ contract Administration is IAdministration {
 
     function mintNew(address receiver, uint amount) public returns (uint[38] memory){
         require(mintmode == 1);
-        require(msg.sender == minter);        
+        require(msg.sender == minter);
         require(add(totalMinted, amount) <= totalSupply);
         totalMinted = add(totalMinted, amount);
         bool success;

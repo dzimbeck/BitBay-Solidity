@@ -37,6 +37,11 @@ contract BAYR is IHALO {
         minter = msg.sender;
     }
     
+    function changeMinter(address newminter) public {
+        require(msg.sender == minter);
+        minter = newminter;
+    }
+
     function setProxy(address prox) public {
         require(block.timestamp > proxylock);
         require(msg.sender == minter);
