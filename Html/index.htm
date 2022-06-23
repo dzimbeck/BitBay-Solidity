@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+<body>
+<div id="Loaded"></div>
+<p id="text1"></p>
+<input type="button" value="Login" onclick="login()">
+<br><br>
+<input type="button" value="Frozen Coins Details" onclick="showFrozen()">
+<p id="frozentext"></p>
+<br><br>
+<input type="button" value="Release Frozen Funds" onclick="sendFrozen()">
+<br><br>
+<input type="button" value="Show liquid/reserve chart" onclick="showPegChart()">
+<div id="chartContainer" style="height: 150px; width: 50%; border: 5px solid #d9dbda"></div>
+<script src="web3.min.js"></script>
+<script src="merkletree.js"></script>
+<script type="text/javascript" src="./BAYL.js"></script>
+<script type="text/javascript" src="./BAYR.js"></script>
+<script type="text/javascript" src="./BAYF.js"></script>
+<script type="text/javascript" src="./BAYData.js"></script>
+<link rel="stylesheet" type="text/css" href="./chartist.min.css">
+<script type="text/javascript" src="./chartist.js"></script>
+<script src="chartist-plugin-tooltip.js"></script>
+<script type="text/javascript">
+var web3 = [];
+var contractInst = [];
+//web3[0] = new Web3("https://cloudflare-eth.com");
+//web3[1] = new Web3("https://bsc-dataseed.binance.org");
+var isConnected = false;
+async function login() {
+    if (window.ethereum) {    
+        console.log("connecting");
+        web3 = new Web3(window.ethereum);
+        console.log("success");
+        document.getElementById("Loaded").innerHTML = "Welcome to the BitBay bridge";
+        isConnected = true;
+        checkbalances();
+    } else {
+        isConnected = false;
+        document.getElementById("Loaded").innerHTML = "Please log in with Metamask. If you don't have the extension you can download it for your browser from the official source."
+    }
+}
+
+myaccounts = [];
+baydatacontract = '';
+baylcontract = '';
+bayrcontract = '';
+bayfcontract = '';
+
+async function checkbalances() {
+    if (!isConnected) {
+        return;
+    }
+    document.getElementById("text1").innerHTML = "checking balance..."    
+    myaccounts = await web3.eth.getAccounts();
+    if (myaccounts.length == 0) {
+        document.getElementById("text1").innerHTML = "Please unlock Metamask so it can connect.";
+        return;
+    }
+    currentChainId = await web3.eth.net.getId();
+    netname = "unknown";
+    if (currentChainId == 5) {
+        netname = "Goerli Testnet";
+        BAYLaddy = "0xD7567f0841Aae04833C8c004e8685cBF9F1a6b11";
+        BAYRaddy = "0xe491CC5b00e24fE53cCA89adaC79f5D7FdA80a82";
+        BAYFaddy = "0x3c4Fa78cA311FF83A5EdF60140B0b45e8c39eBf9";
+        BAYDataAddy = "0x7Be96cCeeB7D6488d1656DD43631a61e553a43E7";
+    }
+    if (netname == "unknown") {
+        document.getElementById("text1").innerHTML = "Unsupported network";
+    }
+    myaccounts = myaccounts[0];
+    baydatacontract = new web3.eth.Contract(BAYDataAbi, BAYDataAddy)
+    baylcontract = new web3.eth.Contract(BAYLabi, BAYLaddy);
+    bayrcontract = new web3.eth.Contract(BAYRabi, BAYRaddy);
+    bayfcontract = new web3.eth.Contract(BAYFabi, BAYFaddy);    
+    await baylcontract.methods.balanceOf(myaccounts).call().then(function (liquid) {
+        BAYLBal = web3.utils.fromWei(liquid, 'gwei')*10;         
+    })
+    await bayrcontract.methods.balanceOf(myaccounts).call().then(function (rval) {
+        BAYRBal = web3.utils.fromWei(rval, 'gwei')*10;  
+    })
+    await bayfcontract.methods.balanceOf(myaccounts).call().then(function (val) {
+        BAYFBal = web3.utils.fromWei(val, 'gwei')*10;  
+    })
+    await window.web3.eth.getBalance(myaccounts, function(err, result) {
+        if (err) {
+            ETHBalance = err;
+        } else {
+            ETHBalance = window.web3.utils.fromWei(result, "ether");
+        document.getElementById("text1").innerHTML = "Current Network: "+ netname + "<br>" + myaccounts + "<br>ETH balance:" + ETHBalance + "<br>BAY Liquid:" + BAYLBal + "<br>BAY Reserve:" + BAYRBal + "<br>BAY Frozen:" + BAYFBal;
+        }
+    })
+}
+
+async function showFrozen() {
+    result = [];
+    result2 = [];
+    await baydatacontract.methods.getFrozen(myaccounts).call().then(function (myresult) {
+        result = myresult;
+    })
+    await baydatacontract.methods.getState().call().then(function (myresult2) {
+        result2 = myresult2;
+    })
+    timestamps = [];
+    amounts = [];
+    x = 0;
+    text = "";
+    while(x < 4) {
+        val2 = 0;
+        await baydatacontract.methods.FrozenTXDBTimeSpent(myaccounts,x,0).call().then(function (val) {
+            val2 = val;
+        });
+        if(val2 == 1) {
+            await baydatacontract.methods.FrozenTXDBTimeSpent(myaccounts,x,1).call().then(function (val) {
+                y = 0;
+                amt = 0;
+                //If you want you can calculate both liquid and reserve for each payment if you follow the release frozen calculation protocol
+                while(y < result2[0]) {
+                    amt += parseInt(result[x][y]);
+                    y += 1;
+                }
+                text += "Amount: " + amt + "<br>" + "Timestamp to release funds: " + val + "<br>";
+            });
+        }
+        x += 1;
+    }
+    if(text == "") {
+        text = "You currently have no frozen coins."
+    }
+    document.getElementById("frozentext").innerHTML = text;
+}
+
+function sendFrozen() {
+    baydatacontract.methods.ReleaseFrozenFunds(myaccounts).send({"from":myaccounts,"gasLimit": 2500000});
+}
+
+async function showPegChart() {
+    result = [];
+    result2 = [];
+    await baydatacontract.methods.calculateBalance(myaccounts,0).call().then(function (myresult) {
+        result = myresult;
+    })
+    await baydatacontract.methods.getState().call().then(function (myresult2) {
+        result2 = myresult2;
+    })
+    x = 0;
+    data = [];
+    section = Math.floor(result2[0] / result2[2]);
+    ak = Math.floor(result2[0] % result2[2]);
+    highkey = 0;
+    labels = [];
+    while(x < result2[1]) {        
+        y = 0;
+        while(y < result2[2]) {
+            if(x == section) {
+                if(y == ak) {
+                    highkey = data.length;
+                }
+                data.push(parseInt(result[2][parseInt(result2[1])+y]));
+            } else {
+                data.push(parseInt(result[2][x]));
+            }
+            y += 1;
+        }
+        labels.push(x);
+        x += 1;
+    }
+    paintchart(labels,data,highkey);
+}
+
+function paintchart(mylabels, mydata, highkey) {
+    highkey = 7;
+    chart = new Chartist.Bar('#chartContainer', {
+      labels: mylabels,
+      series: [
+        mydata
+      ]
+    }, {
+      low: 0,
+      showArea: true,
+      axisX: {
+        labelInterpolationFnc: function(value, index) {
+          return index % 0 === 0 ? value : null;
+        }
+      },
+      axisY: {
+        labelInterpolationFnc: function(value, index) {
+          return index % 0 === 0 ? value : null;
+        }
+      },
+      plugins: [
+        Chartist.plugins.tooltip()
+      ]
+    });
+
+    chart.on('draw', function(context) {
+        if(context.type === 'bar' && context.index >= highkey) {
+            context.element.attr({
+              style: 'stroke: hsla(200, 100%, 50%, 0.5);'
+            });
+
+        }
+        if(context.type === 'bar' && context.index < highkey) {
+            context.element.attr({
+              style: 'stroke: hsla(255, 100%, 50%, 0.5);'
+            });
+
+        }
+    });
+}
+
+setInterval(checkbalances, 30000);
+</script>
+</body>
