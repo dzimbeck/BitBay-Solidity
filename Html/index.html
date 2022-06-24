@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<head></head>
 <body>
 <div id="Loaded"></div>
 <p id="text1"></p>
@@ -11,7 +12,11 @@
 <input type="button" value="Release Frozen Funds" onclick="sendFrozen()">
 <br><br>
 <input type="button" value="Show liquid/reserve chart" onclick="showPegChart()">
+<input class="textBox" id="range1" type="text" maxlength="30"    required/>
+<input class="textBox" id="range2" type="text" maxlength="30"    required/>
 <div id="chartContainer" style="height: 150px; width: 50%; border: 5px solid #d9dbda"></div>
+<br><br>
+<p id="networkinfo"></p>
 <script src="web3.min.js"></script>
 <script src="merkletree.js"></script>
 <script type="text/javascript" src="./BAYL.js"></script>
@@ -27,9 +32,13 @@ var contractInst = [];
 //web3[0] = new Web3("https://cloudflare-eth.com");
 //web3[1] = new Web3("https://bsc-dataseed.binance.org");
 var isConnected = false;
+window.addEventListener('ethereum#initialized', login, {
+    once: true,
+});
 async function login() {
-    if (window.ethereum) {    
+    if (window.ethereum) { //Note: for mobile this only works if the webpage has <head> tag
         console.log("connecting");
+        await window.ethereum.request({method: 'eth_requestAccounts'});
         web3 = new Web3(window.ethereum);
         console.log("success");
         document.getElementById("Loaded").innerHTML = "Welcome to the BitBay bridge";
@@ -46,12 +55,14 @@ baydatacontract = '';
 baylcontract = '';
 bayrcontract = '';
 bayfcontract = '';
+networkvars = [];
+reservetimelock = 2629800;
+
 
 async function checkbalances() {
     if (!isConnected) {
         return;
     }
-    document.getElementById("text1").innerHTML = "checking balance..."    
     myaccounts = await web3.eth.getAccounts();
     if (myaccounts.length == 0) {
         document.getElementById("text1").innerHTML = "Please unlock Metamask so it can connect.";
@@ -65,6 +76,12 @@ async function checkbalances() {
         BAYRaddy = "0xe491CC5b00e24fE53cCA89adaC79f5D7FdA80a82";
         BAYFaddy = "0x3c4Fa78cA311FF83A5EdF60140B0b45e8c39eBf9";
         BAYDataAddy = "0x7Be96cCeeB7D6488d1656DD43631a61e553a43E7";
+        BAYAdmin = "0xC2aDC15DAbb9D395700da75eA2CD7f7b912B8C35";
+        pegsteps = 30;
+        microsteps = 8;
+        deflationrate = 99;
+        compoundrate = 5;
+        reservetimelock = 120; //Testnet is actually 120 seconds but github reads 10 minutes
     }
     if (netname == "unknown") {
         document.getElementById("text1").innerHTML = "Unsupported network";
@@ -73,7 +90,10 @@ async function checkbalances() {
     baydatacontract = new web3.eth.Contract(BAYDataAbi, BAYDataAddy)
     baylcontract = new web3.eth.Contract(BAYLabi, BAYLaddy);
     bayrcontract = new web3.eth.Contract(BAYRabi, BAYRaddy);
-    bayfcontract = new web3.eth.Contract(BAYFabi, BAYFaddy);    
+    bayfcontract = new web3.eth.Contract(BAYFabi, BAYFaddy);
+    await baydatacontract.methods.getState().call().then(function (netvars) {
+        networkvars = netvars;
+    })
     await baylcontract.methods.balanceOf(myaccounts).call().then(function (liquid) {
         BAYLBal = web3.utils.fromWei(liquid, 'gwei')*10;         
     })
@@ -91,6 +111,17 @@ async function checkbalances() {
         document.getElementById("text1").innerHTML = "Current Network: "+ netname + "<br>" + myaccounts + "<br>ETH balance:" + ETHBalance + "<br>BAY Liquid:" + BAYLBal + "<br>BAY Reserve:" + BAYRBal + "<br>BAY Frozen:" + BAYFBal;
         }
     })
+    document.getElementById("networkinfo").innerHTML = "Current Total Network Supply: " + calculateSupply(networkvars[0],networkvars[4],networkvars[3]) + "% (" + networkvars[0] + " / " + (networkvars[1] * networkvars[2]) + ")<br>Peg compression(steps, microsteps): " + networkvars[1] + ", "+ networkvars[2] + "<br>Deflation rate and compound rate: (" + networkvars[4] + "% ^ " + (100 - networkvars[3]) + ")<br>Three way factor to BitBay's 1200 possible supplies: (" + networkvars[1] + " * " + networkvars[2] + " * " + (100 - networkvars[3]) + ")<br>Time delay for reserve payments(in seconds): " + reservetimelock;
+}
+
+function calculateSupply(supply, defrate, pegrate) {
+    perc = 100;
+    x = 0;
+    while(x < supply) {
+        perc = perc * ((deflationrate ** (100 - pegrate)) / (100 **  (100 - pegrate)));
+        x += 1;
+    }
+    return parseFloat(perc).toFixed(8);
 }
 
 async function showFrozen() {
@@ -99,9 +130,7 @@ async function showFrozen() {
     await baydatacontract.methods.getFrozen(myaccounts).call().then(function (myresult) {
         result = myresult;
     })
-    await baydatacontract.methods.getState().call().then(function (myresult2) {
-        result2 = myresult2;
-    })
+    result2 = networkvars;
     timestamps = [];
     amounts = [];
     x = 0;
@@ -141,36 +170,80 @@ async function showPegChart() {
     await baydatacontract.methods.calculateBalance(myaccounts,0).call().then(function (myresult) {
         result = myresult;
     })
-    await baydatacontract.methods.getState().call().then(function (myresult2) {
-        result2 = myresult2;
-    })
+    result2 = networkvars;
     x = 0;
     data = [];
     section = Math.floor(result2[0] / result2[2]);
     ak = Math.floor(result2[0] % result2[2]);
     highkey = 0;
     labels = [];
+    iters = 0;
+    iters2 = 0;
+    min = 0;
+    max = parseInt(result2[1] * result2[2]);
+    if(document.getElementById("range1").value == "") {
+        document.getElementById("range1").value = min;
+    } else {
+        if(parseInt(document.getElementById("range1").value) > 0) {
+            min = parseInt(document.getElementById("range1").value);
+        }
+    }
+    if(document.getElementById("range2").value == "") {
+        document.getElementById("range2").value = max;
+
+    } else {
+        if(parseInt(document.getElementById("range2").value) < max) {
+            max = parseInt(document.getElementById("range2").value);
+        }
+    }
+    if (min >= max) {
+        return;
+    }
     while(x < result2[1]) {        
         y = 0;
+        tot=Math.floor(parseInt(result[2][x])/result2[2]);
+        tot2=result[2][x];
         while(y < result2[2]) {
             if(x == section) {
                 if(y == ak) {
-                    highkey = data.length;
+                    highkey = iters2;
                 }
-                data.push(parseInt(result[2][parseInt(result2[1])+y]));
+                if(iters >= min && iters <= max) {
+                    data.push(parseInt(result[2][parseInt(result2[1])+y]));
+                    iters2 += 1;
+                }
             } else {
-                data.push(parseInt(result[2][x]));
+                if(y==result2[2]-1) {
+                    if(tot2 < 0) {
+                        tot2 = 0;                        
+                    }
+                    if(iters >= min && iters <= max) {
+                        data.push(tot2);
+                        iters2 += 1;
+                    }
+                } else {
+                    tot2-=tot;
+                    if(tot < 0) {
+                        tot = 0;                        
+                    }
+                    if(iters >= min && iters <= max) {
+                        data.push(tot);
+                        iters2 += 1;
+                    }
+                }
             }
+            iters += 1;
             y += 1;
         }
-        labels.push(x);
+        if(iters >= min && iters <= max) {
+            labels.push(x);
+        }
         x += 1;
     }
     paintchart(labels,data,highkey);
 }
 
 function paintchart(mylabels, mydata, highkey) {
-    highkey = 7;
     chart = new Chartist.Bar('#chartContainer', {
       labels: mylabels,
       series: [
@@ -179,11 +252,9 @@ function paintchart(mylabels, mydata, highkey) {
     }, {
       low: 0,
       showArea: true,
+      seriesBarDistance: 50,
       axisX: {
-        labelInterpolationFnc: function(value, index) {
-          return index % 0 === 0 ? value : null;
-        }
-      },
+        showLabel: false },
       axisY: {
         labelInterpolationFnc: function(value, index) {
           return index % 0 === 0 ? value : null;
@@ -199,6 +270,7 @@ function paintchart(mylabels, mydata, highkey) {
             context.element.attr({
               style: 'stroke: hsla(200, 100%, 50%, 0.5);'
             });
+            return;
 
         }
         if(context.type === 'bar' && context.index < highkey) {

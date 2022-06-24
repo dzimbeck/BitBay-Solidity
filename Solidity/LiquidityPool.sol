@@ -22,8 +22,8 @@ contract Pool is ILiquidityPool {
     mapping (address => uint[38]) public poolbalance;
     mapping (address => uint) public override poolhighkey;
     mapping (address => uint) public prevLPBalance;
-    bool checkBalance = false; //Check for advantageous withdraws(useful during times of high BAYL distribution)
-    uint matchprecision;
+    bool public checkBalance = false; //Check for advantageous withdraws(useful during times of high BAYL distribution)
+    uint public matchprecision;
 
     constructor() {
         minter = msg.sender;

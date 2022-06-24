@@ -773,14 +773,8 @@ BAYDataAbi = [
 		"type": "function"
 	},
 	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"name": "mintTo",
+		"inputs": [],
+		"name": "minter",
 		"outputs": [
 			{
 				"internalType": "address",
@@ -870,30 +864,6 @@ BAYDataAbi = [
 			}
 		],
 		"name": "reserveBalanceOf",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			},
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"name": "routerVars",
 		"outputs": [
 			{
 				"internalType": "uint256",
@@ -1187,25 +1157,6 @@ BAYDataAbi = [
 				"internalType": "string",
 				"name": "",
 				"type": "string"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"name": "withdrawAddy",
-		"outputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
 			}
 		],
 		"stateMutability": "view",

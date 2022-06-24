@@ -11,8 +11,8 @@ contract Administration is IAdministration {
     string public version  = "1";
        
     address public minter;
-    uint mintmode; //0 is bridge mode and 1 is testing mode
-    uint totalMinted;
+    uint public mintmode; //0 is bridge mode and 1 is testing mode
+    uint public totalMinted;
     uint totalSupply;
     address public proxy; //Where all the peg functions and storage are
 
@@ -47,6 +47,8 @@ contract Administration is IAdministration {
     uint intervaltime = 43200; //12 hour batches of transactions. And stakers can wait a few hours to finalize data.
     
     uint public isActive = 1; //Initially proxies may be immediately changed
+    bool public enableSpecialTX = false;
+    bool public automaticUnfreeze = true;
     uint public proxylock;
 
     event emitProposal(address from, uint myprop, bytes packed);
@@ -212,7 +214,7 @@ contract Administration is IAdministration {
                 isActive = 0; //This makes it so to change proxies all contracts must be locked for some time
             }
             if(status == false) {
-                isActive = block.timestamp + 1814400 //Everything must be paused for 3 weeks to update the contract
+                isActive = block.timestamp + 1814400; //Everything must be paused for 3 weeks to update the contract
             }
             require(success);
         }
@@ -228,6 +230,7 @@ contract Administration is IAdministration {
             bytes memory result;     
             (success, result) = proxy.call(abi.encodeWithSignature("enableSpecial(bool)",status));
             require(success);
+            enableSpecialTX = status;
         }
         emit emitProposal(msg.sender, 5, abi.encodePacked("enableSpecial",status));
         return res;
@@ -241,6 +244,7 @@ contract Administration is IAdministration {
             bytes memory result;
             (success, result) = proxy.call(abi.encodeWithSignature("setAutomaticUnfreeze(bool)",status));
             require(success);
+            automaticUnfreeze = status;
         }
         emit emitProposal(msg.sender, 6, abi.encodePacked("setAutomaticUnfreeze",status));
         return res;
@@ -341,7 +345,7 @@ contract Administration is IAdministration {
         return res;
     }
 
-    function checkProxyLock() private {
+    function checkProxyLock() private view {
         require(proxylock < block.timestamp);
         require(isActive != 0);
         require(isActive < block.timestamp);

@@ -23,7 +23,7 @@ contract BITBAY {
     
     // The keyword "public" makes variables
     // accessible from other contracts
-    address minter;
+    address public minter;
     uint pegrate;
     uint deflationrate;
     uint pegsteps;
@@ -55,9 +55,9 @@ contract BITBAY {
     address[] public myRouters;
     mapping (address => uint) public isAMM;
     mapping (address => bool) public isRouter;
-    mapping (address => uint[2]) public routerVars;
-    mapping (address => address) public mintTo;
-    mapping (address => address) public withdrawAddy;
+    mapping (address => uint[2]) routerVars;
+    mapping (address => address) mintTo;
+    mapping (address => address) withdrawAddy;
 
     // Events allow clients to react to specific
     // contract changes you declare
