@@ -13,7 +13,7 @@ contract Administration is IAdministration {
     address public minter;
     uint public mintmode; //0 is bridge mode and 1 is testing mode
     uint public totalMinted;
-    uint totalSupply;
+    uint public totalSupply;
     address public proxy; //Where all the peg functions and storage are
 
     uint public totalvotes;
@@ -42,7 +42,6 @@ contract Administration is IAdministration {
     mapping (uint => bytes32[]) public hashes;
     mapping (uint => address[]) public addresses; //Useful cross reference
     mapping (uint => uint) public processingTime;
-    uint public startingTime;
     uint public nonce;
     uint public intervaltime = 43200; //12 hour batches of transactions. And stakers can wait a few hours to finalize data.
     
@@ -491,13 +490,12 @@ contract Administration is IAdministration {
         require(msg.sender == proxy || msg.sender == address(this));
         require(bytes(BAYaddress[sender]).length != 0, "Please register your burn address.");
         calcLocals memory a;
-        if(startingTime == 0) {
-            startingTime = block.timestamp;
-        }
-        if(startingTime + intervaltime < block.timestamp) {
+        if(nonce == 0 && processingTime[nonce] == 0) {
             processingTime[nonce] = block.timestamp;
-            startingTime = block.timestamp;
+        }
+        if(processingTime[nonce] + intervaltime < block.timestamp) {
             nonce += 1; //Start making a new tree
+            processingTime[nonce] = block.timestamp;
         }
         if(filled[nonce][sender] == false) {            
             BAYdata[nonce][sender] = reserve;
@@ -554,5 +552,17 @@ contract Administration is IAdministration {
         require(regNonce[msg.sender] != nonce || bytes(BAYaddress[msg.sender]).length == 0, "Please wait until the next merkle to change address.");
         regNonce[msg.sender] = nonce;
         BAYaddress[msg.sender] = addy;
+    }
+
+    function listNonces(address user) public view returns(uint[] memory) {        
+        return mynonces[user];
+    }
+
+    function showReserve(address user, uint mynonce) public view returns(uint[38] memory) {        
+        return BAYdata[mynonce][user];
+    }
+
+    function listHashes(uint mynonce) public view returns(bytes32[] memory) {        
+        return hashes[mynonce];
     }
 }
