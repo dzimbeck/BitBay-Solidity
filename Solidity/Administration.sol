@@ -381,7 +381,7 @@ contract Administration is IAdministration {
         calcLocals memory a;
         uint deflationrate;
         (a.supply,a.pegsteps,a.mk,a.pegrate,deflationrate) = abi.decode(result, (uint,uint,uint,uint,uint));
-        a.section == a.supply / a.mk;
+        a.section = a.supply / a.mk;
         a.newtot = 0;
         a.i = 0;
         a.liquid = 0;
@@ -508,7 +508,7 @@ contract Administration is IAdministration {
             addresses[nonce].push(sender);
         } else {
             bytes memory result;
-            a.section == highkey[nonce][sender];
+            a.section = highkey[nonce][sender];
             a.reserve = BAYdata[nonce][sender];
             (, result) = proxy.staticcall(abi.encodeWithSignature("getState()"));
             (a.supply,a.pegsteps,a.mk,a.pegrate,) = abi.decode(result, (uint,uint,uint,uint,uint));
