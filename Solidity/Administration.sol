@@ -49,6 +49,7 @@ contract Administration is IAdministration {
     bool public enableSpecialTX = false;
     bool public automaticUnfreeze = true;
     uint public proxylock;
+    uint unlock = 0;
 
     event emitProposal(address from, uint myprop, bytes packed);
 
@@ -483,11 +484,13 @@ contract Administration is IAdministration {
             reserve2[x] = reserve[x];
             x += 1;
         }
-        burn(sender, reserve2, section);
+        unlock = 1;
+        burn(sender, reserve2, section);        
     }
 
     function burn(address sender, uint256[38] memory reserve, uint section) public virtual override {
-        require(msg.sender == proxy || msg.sender == address(this));
+        require(msg.sender == proxy || unlock == 1);
+        unlock = 0;
         require(bytes(BAYaddress[sender]).length != 0, "Please register your burn address.");
         calcLocals memory a;
         if(nonce == 0 && processingTime[nonce] == 0) {
