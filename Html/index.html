@@ -1,6 +1,11 @@
 <!DOCTYPE html>
+<html>
 <meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
-<head></head>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/x-icon" href="./favicon.ico">
+    <title>BitBay Solidity</title>
+</head>
 <body>
 <div id="Loaded"></div>
 <p id="text1"></p>
@@ -17,15 +22,33 @@
 <div id="chartContainer" style="height: 150px; width: 50%; border: 5px solid #d9dbda"></div>
 <br><br>
 <p id="networkinfo"></p>
+<br><br>
+<p id="BridgeInfo">Bridge Tools:</p><br>
+<input type="button" value="Mint/Redeem coins from BitBay" onclick="mintFromBitBay(document.getElementById('jsonproof').value)">
+<input class="textBox" id="jsonproof" type="text" width="70"    required/>
+<br><br>
+<input type="button" value="Register BitBay Address for bridge(burn): " onclick="registerBitBay(document.getElementById('myBAYaddy').value)">
+<input class="textBox" id="myBAYaddy" type="text" width="70"    required/>
+<br><br>
+<input type="button" value="Burn coins back to BitBay: " onclick="burnToBitBay(document.getElementById('myBAYamount').value)">
+<input class="textBox" id="myBAYamount" type="text" width="70"    required/>
+<select id="amountToBurn">
+<option>Reserve Coins</option>
+<option>Liquid Coins</option>
+</select>
 <script src="web3.min.js"></script>
 <script src="merkletree.js"></script>
 <script type="text/javascript" src="./BAYL.js"></script>
 <script type="text/javascript" src="./BAYR.js"></script>
 <script type="text/javascript" src="./BAYF.js"></script>
 <script type="text/javascript" src="./BAYData.js"></script>
+<script type="text/javascript" src="./BAYAdmin.js"></script>
 <link rel="stylesheet" type="text/css" href="./chartist.min.css">
+<script type="text/javascript" src="./coin.js"></script>
+<script type="text/javascript" src="./crypto-sha256.js"></script>
+<script type="text/javascript" src="./jsbn.js"></script>
 <script type="text/javascript" src="./chartist.js"></script>
-<script src="chartist-plugin-tooltip.js"></script>
+<script type="text/javascript" src="chartist-plugin-tooltip.js"></script>
 <script type="text/javascript">
 var web3 = [];
 var contractInst = [];
@@ -43,7 +66,8 @@ async function login() {
         console.log("success");
         document.getElementById("Loaded").innerHTML = "Welcome to the BitBay bridge";
         isConnected = true;
-        checkbalances();
+        await checkbalances();
+        getNetworkInfo();
     } else {
         isConnected = false;
         document.getElementById("Loaded").innerHTML = "Please log in with Metamask. If you don't have the extension you can download it for your browser from the official source."
@@ -55,9 +79,11 @@ baydatacontract = '';
 baylcontract = '';
 bayrcontract = '';
 bayfcontract = '';
+bayadmincontract = '';
 networkvars = [];
 reservetimelock = 2629800;
-
+BAYAdmin = '';
+currentChainId = '';
 
 async function checkbalances() {
     if (!isConnected) {
@@ -91,9 +117,7 @@ async function checkbalances() {
     baylcontract = new web3.eth.Contract(BAYLabi, BAYLaddy);
     bayrcontract = new web3.eth.Contract(BAYRabi, BAYRaddy);
     bayfcontract = new web3.eth.Contract(BAYFabi, BAYFaddy);
-    await baydatacontract.methods.getState().call().then(function (netvars) {
-        networkvars = netvars;
-    })
+    bayadmincontract = new web3.eth.Contract(BAYAdminAbi, BAYAdmin);
     await baylcontract.methods.balanceOf(myaccounts).call().then(function (liquid) {
         BAYLBal = web3.utils.fromWei(liquid, 'gwei')*10;         
     })
@@ -111,6 +135,17 @@ async function checkbalances() {
         document.getElementById("text1").innerHTML = "Current Network: "+ netname + "<br>" + myaccounts + "<br>ETH balance:" + ETHBalance + "<br>BAY Liquid:" + BAYLBal + "<br>BAY Reserve:" + BAYRBal + "<br>BAY Frozen:" + BAYFBal;
         }
     })
+    //await bayadmincontract.methods.isActive().call().then(function (isActive) { //May also check if automatic unfreeze and special transactions are enabled
+    //    if(isActive > 1) {
+    //        document.getElementById("text1").innerHTML += "<br>NOTICE: Spending is currently disabled as this contract may be under maintenance."
+    //    }
+    //})
+}
+
+async function getNetworkInfo() {
+    await baydatacontract.methods.getState().call().then(function (netvars) {
+        networkvars = netvars;
+    })
     document.getElementById("networkinfo").innerHTML = "Current Total Network Supply: " + calculateSupply(networkvars[0],networkvars[4],networkvars[3]) + "% (" + networkvars[0] + " / " + (networkvars[1] * networkvars[2]) + ")<br>Peg compression(steps, microsteps): " + networkvars[1] + ", "+ networkvars[2] + "<br>Deflation rate and compound rate: (" + networkvars[4] + "% ^ " + (100 - networkvars[3]) + ")<br>Three way factor to BitBay's 1200 possible supplies: (" + networkvars[1] + " * " + networkvars[2] + " * " + (100 - networkvars[3]) + ")<br>Time delay for reserve payments(in seconds): " + reservetimelock;
 }
 
@@ -125,6 +160,7 @@ function calculateSupply(supply, defrate, pegrate) {
 }
 
 async function showFrozen() {
+    getNetworkInfo();
     result = [];
     result2 = [];
     await baydatacontract.methods.getFrozen(myaccounts).call().then(function (myresult) {
@@ -165,6 +201,7 @@ function sendFrozen() {
 }
 
 async function showPegChart() {
+    getNetworkInfo();
     result = [];
     result2 = [];
     await baydatacontract.methods.calculateBalance(myaccounts,0).call().then(function (myresult) {
@@ -281,7 +318,70 @@ function paintchart(mylabels, mydata, highkey) {
         }
     });
 }
+jsondata={}
+async function mintFromBitBay(jsondata) {
+    jsondata = JSON.parse(jsondata.toString().replace(/'/g,'"').replace(/\n/g,'').replace(/\r/g,'').trim());
+    bayadmincontract.methods.redeemTX(jsondata['root'],jsondata['proof'],jsondata['reserve'],jsondata['txid']).send({"from":myaccounts,"gasLimit": 2500000});
+}
 
-setInterval(checkbalances, 30000);
+async function registerBitBay(addy) {
+    if(addy[0] != 'b' && addy[0] != "B") {
+        document.getElementById("text1").innerHTML += "<br><br>Invalid BitBay address.";
+        return;
+    }
+    if(coinjs.addressDecode(addy) == false) {
+        document.getElementById("text1").innerHTML += "<br><br>Invalid BitBay address.";
+        return;
+    }
+    found = 1;
+    await bayadmincontract.methods.BAYaddress(myaccounts).call().then(function (myresult) {
+        if(myresult == addy){
+            found = 0;
+            document.getElementById("text1").innerHTML += "<br><br>A BitBay address is already registered to your address.";
+            return;
+        }    
+    });
+    if(found == 0) {
+        return;
+    }
+    bayadmincontract.methods.register(addy).send({"from":myaccounts,"gasLimit": 500000});
+}
+
+async function burnToBitBay(amount) {
+    if(await web3.eth.net.getId() != currentChainId) {
+        document.getElementById("text1").innerHTML += "<br><br>The selected chain was recently changed or you are not logged in, please log in again.";
+        return;
+    }
+    found = 1;
+    await bayadmincontract.methods.BAYaddress(myaccounts).call().then(function (myresult) {
+        if(!myresult && myresult.length == 0){
+            document.getElementById("text1").innerHTML += "<br><br>You need to register your BitBay address before burning.";
+            found = 0;
+        }
+    });
+    if(found == 0) {
+        return;
+    }
+    console.log("FIRST")
+    myadmin = "0xC2aDC15DAbb9D395700da75eA2CD7f7b912B8C35";
+    //await baydatacontract.methods.minter().call().then(function (admin) {
+    //    myadmin = admin;
+    //})
+    var myvar = document.getElementById("amountToBurn").value;
+    amount = web3.utils.toWei(document.getElementById("myBAYamount").value,'gwei')/10;
+    if(BAYAdmin != myadmin) {
+        document.getElementById("text1").innerHTML += "<br><br>Burn address does not match known admin contract.";
+        return;
+    }
+    if(myvar == "Reserve Coins") {
+        bayrcontract.methods.transfer(BAYAdmin, amount).send({"from":myaccounts,"gasLimit": 2500000});
+    }
+    if(myvar == "Liquid Coins") {
+        baylcontract.methods.transfer(BAYAdmin, amount).send({"from":myaccounts,"gasLimit": 2500000});
+    }
+}
+
+setInterval(checkbalances, 90000);
 </script>
 </body>
+</html>

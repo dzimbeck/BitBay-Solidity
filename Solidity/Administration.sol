@@ -42,9 +42,9 @@ contract Administration is IAdministration {
     mapping (uint => bytes32[]) public hashes;
     mapping (uint => address[]) public addresses; //Useful cross reference
     mapping (uint => uint) public processingTime;
-    uint startingTime;
-    uint nonce;
-    uint intervaltime = 43200; //12 hour batches of transactions. And stakers can wait a few hours to finalize data.
+    uint public startingTime;
+    uint public nonce;
+    uint public intervaltime = 43200; //12 hour batches of transactions. And stakers can wait a few hours to finalize data.
     
     uint public isActive = 1; //Initially proxies may be immediately changed
     bool public enableSpecialTX = false;
@@ -488,7 +488,7 @@ contract Administration is IAdministration {
     }
 
     function burn(address sender, uint256[38] memory reserve, uint section) public virtual override {
-        require(msg.sender == proxy);
+        require(msg.sender == proxy || msg.sender == address(this));
         require(bytes(BAYaddress[sender]).length != 0, "Please register your burn address.");
         calcLocals memory a;
         if(startingTime == 0) {
