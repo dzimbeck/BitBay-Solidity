@@ -698,6 +698,9 @@ contract BITBAY {
         if (isRouter[receiver] && b.AMMstatus == 0) {
             b.mysize += a.mk;
         }
+        if (receiver == minter && b.mysize == a.pegsteps) {
+            b.mysize += a.mk;
+        }
         a.i = 0;
         uint[38] memory reserve;
         if (b.AMMstatus == 1) { //We have detected the user might be withdrawing from an AMM
@@ -851,7 +854,6 @@ contract BITBAY {
         if (receiver == minter) {
             require(b.AMMstatus == 0 && !isRouter[receiver]);
             IMinter(minter).burn2(sender,reserve2,a.section);
-            b.mysize += a.mk;
         }
         if (b.AMMstatus == 1) {
             ILiquidityPool(LiquidityPool).withdrawBuy(sender,reserve,a.section);
