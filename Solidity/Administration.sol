@@ -15,6 +15,7 @@ contract Administration is IAdministration {
     uint public totalMinted;
     uint public totalSupply;
     address public proxy; //Where all the peg functions and storage are
+    address public poolProxy;
 
     uint public totalvotes;
     uint public voteperc;
@@ -117,6 +118,12 @@ contract Administration is IAdministration {
     function disableMinting() public returns (bool){
         require(msg.sender == minter);
         mintmode = 0;
+        return true;
+    }
+
+    function changePoolProxy(address newpool) public returns (bool){
+        require(msg.sender == minter);
+        poolProxy = newpool;
         return true;
     }
 
@@ -261,7 +268,7 @@ contract Administration is IAdministration {
             uint len = sync.length;
             uint x = 0;
             while(x < len) {
-                (success, result) = proxy.call(abi.encodeWithSignature("syncAMM(address)",sync[x]));
+                (success, result) = poolProxy.call(abi.encodeWithSignature("syncAMM(address)",sync[x]));
                 require(success);
                 x += 1;
             }
@@ -299,7 +306,7 @@ contract Administration is IAdministration {
         if (res) {
             bool success;
             bytes memory result;
-            (success, result) = proxy.call(abi.encodeWithSignature("changeRouteraddress,bool)",myAMM,status));
+            (success, result) = proxy.call(abi.encodeWithSignature("changeRouter(address,bool)",myAMM,status));
             require(success);
         }
         emit emitProposal(msg.sender, 10, abi.encodePacked("changeRouter",myAMM,status));
@@ -315,6 +322,7 @@ contract Administration is IAdministration {
             bytes memory result;
             (success, result) = proxy.call(abi.encodeWithSignature("changeLiquidityPool(address)",LP));
             require(success);
+            poolProxy = LP;
         }
         emit emitProposal(msg.sender, 11, abi.encodePacked("setLiquidityPool",LP));
         return res;
