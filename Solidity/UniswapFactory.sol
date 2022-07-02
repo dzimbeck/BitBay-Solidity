@@ -396,6 +396,7 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
 }
 
 contract UniswapV2Factory is IUniswapV2Factory {
+    bytes32 public constant INIT_CODE_PAIR_HASH = keccak256(abi.encodePacked(type(UniswapV2Pair).creationCode));
     address public feeTo;
     address public feeToSetter;
 
