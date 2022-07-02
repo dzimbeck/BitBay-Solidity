@@ -36,6 +36,41 @@
 <option>Reserve Coins</option>
 <option>Liquid Coins</option>
 </select>
+<br>
+<p id="merkleintro">Show my receipts/proofs for redeeming on BitBay</p>
+<input type="button" value="Show next receipt" onclick="showNonces()">
+<input type="button" value="Copy to clipboard" onclick="copyNonce()">
+<p id="merkletext"></p>
+<br><br>
+<img src="./walrus.png" style="height: 75px; width: 75px;"/>
+<p id="swapintro">Decentralized exchange through Uniswap, Pancakeswap and more</p>
+<br>
+<select id="exchangeSelect">
+<option>WalrusSwap</option>
+</select>
+<br>
+<input type="button" value="Add Liquidity" onclick="addLiquidity()">
+
+<br>
+<select id="Coin1" style="width:150px">
+<option>HappyWalrusCoin</option>
+<option>Wrapped ETH</option>
+</select>
+Amount to add: 
+<input class="textBox" id="Coin1amount" type="text" width="70"    required/>
+Min/Max price fluctuation:
+<input class="textBox" id="CoinPercent" type="text" width="70"    required/>%
+<br>
+<select id="Coin2" style="width:150px">
+<option>BitBay Liquid</option>
+<option>BitBay Reserve</option>
+</select>
+Amount to add: 
+<input class="textBox" id="Coin2amount" type="text" width="70"    required/>
+<p id="additionalCoins">Reserve required for deposit(in addition to liquid coins): </p>
+<br>
+<p id="addliquidtext"></p>
+
 <script src="web3.min.js"></script>
 <script src="merkletree.js"></script>
 <script type="text/javascript" src="./BAYL.js"></script>
@@ -66,8 +101,11 @@ async function login() {
         console.log("success");
         document.getElementById("Loaded").innerHTML = "Welcome to the BitBay bridge";
         isConnected = true;
+        document.getElementById("frozentext").innerHTML = '';
+        document.getElementById("merkletext").innerHTML = '';
+        lastitem = 10000000;
         await checkbalances();
-        getNetworkInfo();
+        getNetworkInfo();        
     } else {
         isConnected = false;
         document.getElementById("Loaded").innerHTML = "Please log in with Metamask. If you don't have the extension you can download it for your browser from the official source."
@@ -84,6 +122,7 @@ networkvars = [];
 reservetimelock = 2629800;
 BAYAdmin = '';
 currentChainId = '';
+lastitem = 10000000;
 
 async function checkbalances() {
     if (!isConnected) {
@@ -102,7 +141,7 @@ async function checkbalances() {
         BAYRaddy = "0xe491CC5b00e24fE53cCA89adaC79f5D7FdA80a82";
         BAYFaddy = "0x3c4Fa78cA311FF83A5EdF60140B0b45e8c39eBf9";
         BAYDataAddy = "0x7Be96cCeeB7D6488d1656DD43631a61e553a43E7";
-        BAYAdmin = "0xC2aDC15DAbb9D395700da75eA2CD7f7b912B8C35";
+        BAYAdmin = "0x79448c4fbdb606DbDFEAC4f2804cDcA1c00FC272";
         pegsteps = 30;
         microsteps = 8;
         deflationrate = 99;
@@ -135,11 +174,11 @@ async function checkbalances() {
         document.getElementById("text1").innerHTML = "Current Network: "+ netname + "<br>" + myaccounts + "<br>ETH balance:" + ETHBalance + "<br>BAY Liquid:" + BAYLBal + "<br>BAY Reserve:" + BAYRBal + "<br>BAY Frozen:" + BAYFBal;
         }
     })
-    //await bayadmincontract.methods.isActive().call().then(function (isActive) { //May also check if automatic unfreeze and special transactions are enabled
-    //    if(isActive > 1) {
-    //        document.getElementById("text1").innerHTML += "<br>NOTICE: Spending is currently disabled as this contract may be under maintenance."
-    //    }
-    //})
+    await bayadmincontract.methods.isActive().call().then(function (isActive) { //May also check if automatic unfreeze and special transactions are enabled
+        if(isActive > 1) {
+            document.getElementById("text1").innerHTML += "<br>NOTICE: Spending is currently disabled as this contract may be under maintenance."
+        }
+    })
 }
 
 async function getNetworkInfo() {
@@ -362,8 +401,7 @@ async function burnToBitBay(amount) {
     if(found == 0) {
         return;
     }
-    console.log("FIRST")
-    myadmin = "0xC2aDC15DAbb9D395700da75eA2CD7f7b912B8C35";
+    myadmin = "0x79448c4fbdb606DbDFEAC4f2804cDcA1c00FC272";
     //await baydatacontract.methods.minter().call().then(function (admin) {
     //    myadmin = admin;
     //})
@@ -378,6 +416,93 @@ async function burnToBitBay(amount) {
     }
     if(myvar == "Liquid Coins") {
         baylcontract.methods.transfer(BAYAdmin, amount).send({"from":myaccounts,"gasLimit": 2500000});
+    }
+}
+
+jsonreceipt = {};
+async function showNonces() {
+    document.getElementById("merkletext").innerHTML = "Loading...";
+    getNetworkInfo();
+    item = '';
+    returnthis = 0;
+    await bayadmincontract.methods.listNonces(myaccounts).call().then(function (myresult) {
+        if(myresult.length == 0) {
+            document.getElementById("merkletext").innerHTML = 'No history of burned funds to BitBay network from this account.';
+            returnthis = 1;
+            return;
+        }
+        if(lastitem == 10000000) {
+            lastitem = myresult.length - 1;
+        } else {
+            if(lastitem != 0) {
+                lastitem -= 1;
+            } else {
+                lastitem = myresult.length - 1;
+            }
+        }
+        item = myresult[lastitem];
+    });
+    if (returnthis == 1) {
+        return;
+    }
+    intervaltime = 0;
+    processingTime = 0;
+
+    jsonreceipt = {'nonce':item};
+    await bayadmincontract.methods.BAYaddress(myaccounts).call().then(function (myresult) {
+        jsonreceipt['address'] = myresult;
+    });
+    await bayadmincontract.methods.showReserve(myaccounts, item).call().then(function (myresult) {
+        jsonreceipt['reserve'] = myresult;
+    });
+    await bayadmincontract.methods.highkey(item, myaccounts).call().then(function (myresult) {
+        jsonreceipt['section'] = myresult;
+    });
+    await bayadmincontract.methods.intervaltime().call().then(function (myresult) {
+        intervaltime = myresult;
+    });
+    await bayadmincontract.methods.processingTime(item).call().then(function (myresult) {
+        processingTime = myresult;
+    });
+    steps = parseInt(networkvars[1]) + parseInt(networkvars[2]);
+    myhash = web3.utils.keccak256(web3.eth.abi.encodeParameters(['string','uint256[' + steps.toString() + ']','uint','uint'],[jsonreceipt['address'],jsonreceipt['reserve'],jsonreceipt['section'],jsonreceipt['nonce']]));
+    x = 0;
+    amt = 0;
+    while(x < steps) {
+        amt += parseInt(jsonreceipt['reserve'][x]);
+        x += 1;
+    }
+    amt = web3.utils.fromWei(amt.toString(), 'gwei')*10;
+    document.getElementById("merkletext").innerHTML = "Nonce: " + item + "<br>Hash: " + myhash + "<br>Total coins: " + amt; 
+    block = await web3.eth.getBlock(await web3.eth.getBlockNumber());
+    if ((parseInt(processingTime) + parseInt(intervaltime) + parseInt(intervaltime)) < parseInt(block.timestamp)) {
+        document.getElementById("merkletext").innerHTML += "<br>Merkle Proof: Merkle tree ready, you may copy the receipt to the clipboard.";
+        leaves = [];
+        await bayadmincontract.methods.listHashes(item).call().then(function (myresult) {
+            leaves = myresult;
+        });
+        tree = new MerkleTree(leaves, web3.utils.keccak256, { sort: true });
+        root = tree.getRoot().toString('hex');
+        leaf = myhash;
+        //proof = tree.getProof(leaf);
+        //console.log(tree.verify(proof, leaf, root)) // true
+        //console.log(tree)
+        //console.log(leaves)
+        //console.log(tree.toString())
+        jsonreceipt['proof'] = tree.getHexProof(leaf);
+        jsonreceipt['root'] = tree.getHexRoot();
+    } else {
+        document.getElementById("merkletext").innerHTML += "<br>Merkle Proof: This tree is not processed yet. Please check again later.";
+        jsonreceipt = {}
+    }
+}
+
+async function copyNonce() {
+    if(JSON.stringify(jsonreceipt) == "{}") {
+        document.getElementById("merkletext").innerHTML = "Current receipt is empty or not processed yet.";
+        return
+    } else {
+        navigator.clipboard.writeText(JSON.stringify(jsonreceipt));
     }
 }
 
