@@ -67,7 +67,7 @@ contract BAYL is IHALO {
     function allowance(address owner, address spender) public virtual override view returns (uint) {
         bool success;
         bytes memory result;
-        (success, result) = proxy.staticcall(abi.encodeWithSignature("allowed(address,address)",owner,spender));
+        (success, result) = proxy.staticcall(abi.encodeWithSignature("allowance(address,address)",owner,spender));
         return abi.decode(result, (uint));
     }
     
