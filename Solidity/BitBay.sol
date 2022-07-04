@@ -57,7 +57,7 @@ contract BITBAY {
     mapping (address => bool) public isRouter;
     mapping (address => uint[2]) routerVars;
     mapping (address => address) mintTo;
-    mapping (address => address) withdrawAddy;
+    mapping (address => address) public withdrawAddy;
 
     // Events allow clients to react to specific
     // contract changes you declare
@@ -466,6 +466,9 @@ contract BITBAY {
     function isAMMExchange(address AMM) private returns (bool) {
         bool success;
         bytes memory result;
+        if (AMM.code.length == 0) {
+            return false;
+        }
         if (isAMM[AMM] > 0) {
             if (isAMM[AMM] == 1) {
                 ILiquidityPool(LiquidityPool).LPbalance(AMM);

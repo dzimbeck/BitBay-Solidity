@@ -94,13 +94,19 @@ contract Pool is ILiquidityPool {
 
     //A person who wants to code a contract that is compatible with BAY can simply add these 4 functions.
     //These are functions typical to any AMM contract. Sync is required to keep balances up to date.
-    function checkAMM(address AMM) external view returns (address, address, address) {
+    //Users should be careful to set a gas limit when using regular BitBay payments to new addresses.
+    function checkAMM(address AMM) external returns (address, address, address) {
         //Static call avoids re-entrancy and these functions test for a "possible" AMM
         //However users should proceed with caution and audit any AMM they wish to list on
         //This is because it's unclear if the functions operate like a standard AMM
         address[3] memory myaddy;
-        (bool success, bytes memory result) = AMM.staticcall(abi.encodeWithSignature("sync()"));
+        (bool success, bytes memory result) = AMM.call(abi.encodeWithSignature("sync()"));
         //(bool success, bytes memory result) = AMM.staticcall(abi.encodeWithSignature("balanceOf(address),AMM"));
+        if(msg.sender == proxy) {
+            (success, result) = proxy.staticcall(abi.encodeWithSignature("getState()"));
+            (uint supply,,uint mk,,) = abi.decode(result, (uint,uint,uint,uint,uint));
+            poolhighkey[AMM] = (supply / mk); //It can start in sync because checkAMM is called only on first LP deposit
+        }
         (success, result) = AMM.staticcall(abi.encodeWithSignature("token0()"));
         (myaddy[0]) = abi.decode(result, (address));
         (success, result) = AMM.staticcall(abi.encodeWithSignature("token1()"));
@@ -207,9 +213,9 @@ contract Pool is ILiquidityPool {
         bool success;
         bytes memory result;
         (success, result) = proxy.staticcall(abi.encodeWithSignature("isRouter(address)",msg.sender));
-        require(success);
+        require(success || msg.sender == proxy);
         success = abi.decode(result, (bool));
-        require(success);
+        require(success || msg.sender == proxy);
         (success, result) = pool.staticcall(abi.encodeWithSignature("balanceOf(address)",pool));
         require(success);
         prevLPBalance[pool] = abi.decode(result, (uint));

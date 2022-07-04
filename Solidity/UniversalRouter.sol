@@ -340,13 +340,13 @@ contract UniswapV2Router02 is IUniswapV2Router01 {
         require(Liquid >= 0);
         // create the pair if it doesn't exist yet
         address addy = IUniswapV2Factory(factory).getPair(tokenA, tokenB);
-        regBalance(addy);
         myLocals memory a;
         if (addy == address(0)) {
             addy = IUniswapV2Factory(factory).createPair(tokenA, tokenB);
         }
+        regBalance(addy);
         (uint reserveA, uint reserveB) = UniswapV2Library.getReserves(factory, tokenA, tokenB, INIT_CODE[factory]);        
-        (a.success, a.result) = LiquidityPool.staticcall(abi.encodeWithSignature("calculateBalance(address)",addy));
+        (a.success, a.result) = LiquidityPool.staticcall(abi.encodeWithSignature("calculateBalance(address,address,bool,uint256)",addy,addy,true,0));
         (a.liquid, a.rval, a.reserve) = abi.decode(a.result, (uint,uint,uint[38]));
         (a.success, a.result) = proxyBAY.staticcall(abi.encodeWithSignature("getState()"));
         (a.supply,a.pegsteps,a.mk,a.pegrate,a.deflationrate) = abi.decode(a.result, (uint,uint,uint,uint,uint));
@@ -653,7 +653,7 @@ contract UniswapV2Router02 is IUniswapV2Router01 {
     function regBalance(address pair) private {
         bool success;
         bytes memory result;        
-        (success, result) = proxyBAY.call(abi.encodeWithSignature("LPbalance(address)",pair));
+        (success, result) = LiquidityPool.call(abi.encodeWithSignature("LPbalance(address)",pair));
         require(success);       
     }
     // **** SWAP ****
