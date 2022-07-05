@@ -3,8 +3,8 @@ pragma solidity = 0.8.4; //Required to hand memory safe decoding of arrays
 
 interface ILiquidityPool {
     function deposit(address,address,uint256[38] memory,uint256) external;
-    function calculateBalance(address, address, bool, uint256)  external returns (uint256, uint256, uint256[38] memory);
-    function poolhighkey(address) external returns (uint256);
+    function calculateBalance(address, address, bool, uint256)  external view returns (uint256, uint256, uint256[38] memory);
+    function poolhighkey(address) external view returns (uint256);
 }
 
 contract Pool is ILiquidityPool {
@@ -158,11 +158,13 @@ contract Pool is ILiquidityPool {
         a.i = 0;
         while(a.i < a.pegsteps + a.mk) {
             a.reserve[a.i] += reserve[a.i];
+            a.i += 1;
         }
         if(trade == 0) {
             a.i = 0;
             while(a.i < a.pegsteps + a.mk) {
                 reserve2[a.i] += reserve[a.i];
+                a.i += 1;
             }
             reserveatpool[user][pool] = reserve2;
             highkeyatpool[user][pool] = (a.supply / a.mk);
