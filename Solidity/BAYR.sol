@@ -60,6 +60,7 @@ contract BAYR is IHALO {
         bool success;
         bytes memory result;
         (success, result) = proxy.staticcall(abi.encodeWithSignature("reserveBalanceOf(address)",user));
+        require(success);
         uint rval = abi.decode(result, (uint));
         return rval;
     }
@@ -68,6 +69,7 @@ contract BAYR is IHALO {
         bool success;
         bytes memory result;
         (success, result) = proxy.staticcall(abi.encodeWithSignature("allowanceReserve(address,address)",owner,spender));
+        require(success);
         return abi.decode(result, (uint));
     }
     
@@ -76,6 +78,7 @@ contract BAYR is IHALO {
         bool success;
         bytes memory result;        
         (success, result) = proxy.call(abi.encodeWithSignature("approveReserve(address,uint256,address)",spender,value,msg.sender));
+        require(success);
         emit Approval(msg.sender, spender, value);
         return true;
     }

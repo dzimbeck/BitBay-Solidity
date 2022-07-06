@@ -60,6 +60,7 @@ contract BAYL is IHALO {
         bool success;
         bytes memory result;
         (success, result) = proxy.staticcall(abi.encodeWithSignature("balanceOf(address)",user));
+        require(success);
         uint liquid = abi.decode(result, (uint));
         return liquid;
     }
@@ -68,6 +69,7 @@ contract BAYL is IHALO {
         bool success;
         bytes memory result;
         (success, result) = proxy.staticcall(abi.encodeWithSignature("allowance(address,address)",owner,spender));
+        require(success);
         return abi.decode(result, (uint));
     }
     
