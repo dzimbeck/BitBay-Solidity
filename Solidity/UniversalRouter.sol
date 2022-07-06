@@ -288,13 +288,15 @@ contract UniswapV2Router02 is IUniswapV2Router01 {
         proxyBAY = _proxyBAY;
     }
 
-    function changeFactory(address myfactory, address myWETH, bytes memory init, uint mynumerator) public {        
+    function changeFactory(address myfactory, address myWETH, bytes memory init, uint mynumerator, uint fnum, uint fden) public {        
         require(msg.sender == minter);
         if(!INIT_FILLED[myfactory]) {
             WETH[myfactory] = myWETH;
             INIT_CODE[myfactory] = init;
             INIT_FILLED[myfactory] = true;
             numerators[myfactory] = mynumerator;
+            feenum[myfactory] = fnum;
+            feeden[myfactory] = fden;
         }
     }
 
