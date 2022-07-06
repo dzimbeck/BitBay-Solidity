@@ -124,9 +124,6 @@ contract Pool is ILiquidityPool {
         (a.supply,a.pegsteps,a.mk,a.pegrate,a.i) = abi.decode(result, (uint,uint,uint,uint,uint));
         poolbalance[AMM] = a.reserve;
         poolhighkey[AMM] = (a.supply / a.mk);
-        (success, result) = AMM.staticcall(abi.encodeWithSignature("balanceOf(address)",AMM));
-        require(success);
-        prevLPBalance[AMM] = abi.decode(result, (uint));
         (success, result) = AMM.call(abi.encodeWithSignature("sync()"));
         require(success);
     }
