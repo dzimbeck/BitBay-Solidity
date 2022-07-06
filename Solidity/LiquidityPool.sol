@@ -230,9 +230,9 @@ contract Pool is ILiquidityPool {
         //This is so users can still buy from AMM sites directly. If there is a change in LP token balance it can be
         //suspected as a withdraw. In some situations a buy can be declined if LP balance changes if someone sacrifices tokens.
         //So it's still recommended to trade from the official BitBay router.
-        if(buffer == 9999 && checkBalance) { //Check for potential withdraw
+        if(buffer == 9999) { //Check for potential withdraw
             buffer = 0;
-            if(isPool) {
+            if(isPool && checkBalance) {
                 (success, result) = pool.staticcall(abi.encodeWithSignature("balanceOf(address)",pool));
                 require(success);
                 if(prevLPBalance[pool] != abi.decode(result, (uint))) {
