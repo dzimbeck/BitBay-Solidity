@@ -604,9 +604,9 @@ contract BITBAY {
             if (reserve[a.pegsteps + a.k + a.i] > 0) {
                 reserve[a.pegsteps + a.k + a.i] -= 1;
                 reserve2[a.pegsteps + a.k + a.i] += 1;
+                remainder -= 1;
+                a.newtot += 1;
             }
-            remainder -= 1;
-            a.newtot += 1;
             a.i += 1;
         }
         a.i = a.section + 1;
@@ -617,9 +617,9 @@ contract BITBAY {
             if (reserve[a.i] > 0) {
                 reserve[a.i] -= 1;
                 reserve2[a.i] += 1;
+                remainder -= 1;
+                a.newtot += 1;
             }
-            remainder -= 1;
-            a.newtot += 1;
             a.i += 1;
         }
         require(remainder == 0); //"Calculation error"

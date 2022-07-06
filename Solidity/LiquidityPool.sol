@@ -332,7 +332,7 @@ contract Pool is ILiquidityPool {
         (a.liquid, a.rval, a.reserve) = calculateBalance(user,pool,false,buffer);
         (b.poolliquid, b.poolrval, b.poolreserve) = calculateBalance(pool,pool,true,buffer);
         a.section = (a.supply / a.mk);
-        a.k = a.supply % a.mk;        
+        a.k = a.supply % a.mk;
         uint val;
         uint[38] memory newreserve;
         //First we find out how much the user antipates taking from the pool and get the chart for that.
@@ -380,6 +380,7 @@ contract Pool is ILiquidityPool {
         //The quality of the liquidity chart given may entitle them to higher quality liquidity when there are profits.
         a.i = 0;
         a.j = 0;
+        val = 0;
         uint[3] memory inx;
         if(skip == 0) {
             while (a.i < (a.pegsteps + a.mk) - 1) {
@@ -397,7 +398,6 @@ contract Pool is ILiquidityPool {
                     continue;
                 }
                 a.j = 0;
-                val = 0;
                 while (a.j < precision) { //Here we check for the nearest neighbor that can match our reserve/liquid chart                
                     if (inx[1] >= a.pegsteps) { //This element is within the current section
                         a.k = inx[1] - a.pegsteps;
@@ -523,8 +523,8 @@ contract Pool is ILiquidityPool {
                 if (b.poolreserve[a.pegsteps + a.i] > 0) {
                     b.poolreserve[a.pegsteps + a.i] -= 1;
                     newreserve[a.pegsteps + a.i] += 1;
-                }
-                a.highkey -= 1;
+                    a.highkey -= 1;
+                }                
                 a.i += 1;
             }
             a.i = 0;
@@ -535,8 +535,8 @@ contract Pool is ILiquidityPool {
                 if (b.poolreserve[a.i] > 0) {
                     b.poolreserve[a.i] -= 1;
                     newreserve[a.i] += 1;
-                }
-                a.highkey -= 1;
+                    a.highkey -= 1;
+                }                
                 a.i += 1;
             }
             require(a.highkey == 0, "Calculation error");
@@ -638,9 +638,9 @@ contract Pool is ILiquidityPool {
                 if (poolreserve[a.pegsteps + a.k + a.i] > 0) {
                     poolreserve[a.pegsteps + a.k + a.i] -= 1;
                     newreserve[a.pegsteps + a.k + a.i] += 1;
+                    remainder -= 1;
+                    a.newtot += 1;
                 }
-                remainder -= 1;
-                a.newtot += 1;
                 a.i += 1;
             }
             a.i = a.section + 1;
@@ -651,9 +651,9 @@ contract Pool is ILiquidityPool {
                 if (poolreserve[a.i] > 0) {
                     poolreserve[a.i] -= 1;
                     newreserve[a.i] += 1;
+                    remainder -= 1;
+                    a.newtot += 1;
                 }
-                remainder -= 1;
-                a.newtot += 1;
                 a.i += 1;
             }
             require(remainder == 0, "Calculation error");
@@ -808,7 +808,7 @@ contract Pool is ILiquidityPool {
             }
             a.i += 1;
         }
-        //Calculate balance of new pool        
+        //Calculate balance of new pool
         a.i = 0;
         a.liquid = 0;
         a.rval = 0;
