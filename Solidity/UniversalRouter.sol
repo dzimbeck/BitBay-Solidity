@@ -349,6 +349,7 @@ contract UniswapV2Router02 is IUniswapV2Router01 {
         regBalance(addy);
         (uint reserveA, uint reserveB) = UniswapV2Library.getReserves(factory, tokenA, tokenB, INIT_CODE[factory]);        
         (a.success, a.result) = LiquidityPool.staticcall(abi.encodeWithSignature("calculateBalance(address,address,bool,uint256)",addy,addy,true,0));
+        require(a.success);
         (a.liquid, a.rval, a.reserve) = abi.decode(a.result, (uint,uint,uint[38]));
         (a.success, a.result) = proxyBAY.staticcall(abi.encodeWithSignature("getState()"));
         (a.supply,a.pegsteps,a.mk,a.pegrate,a.deflationrate) = abi.decode(a.result, (uint,uint,uint,uint,uint));

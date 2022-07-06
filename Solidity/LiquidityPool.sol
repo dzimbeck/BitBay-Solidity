@@ -322,6 +322,7 @@ contract Pool is ILiquidityPool {
         (b.success, b.result) = proxy.staticcall(abi.encodeWithSignature("getState()"));
         (a.supply,a.pegsteps,a.mk,a.pegrate,b.deflationrate) = abi.decode(b.result, (uint,uint,uint,uint,uint));        
         (b.success, b.result) = pool.staticcall(abi.encodeWithSignature("totalSupply()"));
+        require(b.success);
         //Many AMMs burn coins before requesting a withdraw. So we can start with the supply higher initially
         LPsupply += abi.decode(b.result, (uint)); //(LP burned + remaining supply)
         require(LP <= LPsupply);
