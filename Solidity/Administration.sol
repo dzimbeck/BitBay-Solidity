@@ -50,6 +50,7 @@ contract Administration is IAdministration {
     bool public enableSpecialTX = false;
     bool public automaticUnfreeze = true;
     uint public proxylock;
+    bytes32[] Merkles;
     uint unlock = 0;
 
     event emitProposal(address from, uint myprop, bytes packed);
@@ -293,6 +294,7 @@ contract Administration is IAdministration {
         if (res) {
             MerkleRoot[mysha][0] = 1;
             MerkleRoot[mysha][1] = section;
+            Merkles.push(mysha);
         }
         emit emitProposal(msg.sender, 9, abi.encodePacked("addMerkle",mysha,section));
         return res;
@@ -493,7 +495,7 @@ contract Administration is IAdministration {
             x += 1;
         }
         unlock = 1;
-        burn(sender, reserve2, section);        
+        burn(sender, reserve2, section);
     }
 
     function burn(address sender, uint256[38] memory reserve, uint section) public virtual override {
