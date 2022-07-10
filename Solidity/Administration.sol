@@ -50,7 +50,7 @@ contract Administration is IAdministration {
     bool public enableSpecialTX = false;
     bool public automaticUnfreeze = true;
     uint public proxylock;
-    bytes32[] Merkles;
+    bytes32[] public Merkles; //This can be validated by looking at the BitBay network.
     uint unlock = 0;
 
     event emitProposal(address from, uint myprop, bytes packed);
