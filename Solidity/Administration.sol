@@ -51,6 +51,7 @@ contract Administration is IAdministration {
     bool public automaticUnfreeze = true;
     uint public proxylock;
     bytes32[] public Merkles; //This can be validated by looking at the BitBay network.
+    mapping (bytes32 => uint) public MerkleConfirm; //Gives time for users to react to a bad Merkle
     uint unlock = 0;
 
     event emitProposal(address from, uint myprop, bytes packed);
@@ -296,6 +297,7 @@ contract Administration is IAdministration {
             MerkleRoot[mysha][0] = 1;
             MerkleRoot[mysha][1] = section;
             Merkles.push(mysha);
+            MerkleConfirm[mysha] = block.timestamp + (intervaltime * 2);
         }
         emit emitProposal(msg.sender, 9, abi.encodePacked("addMerkle",mysha,section));
         return res;
@@ -388,6 +390,7 @@ contract Administration is IAdministration {
         require(MerkleRoot[root][0] == 1, "Merkle root not found");
         require(spent[leaf] == false, "Transaction already spent");
         require(reserve[MerkleRoot[root][1]] == 0, "Microshard section not set properly");
+        require(MerkleConfirm[root] < block.timestamp, "Please wait for merkle to confirm");
         spent[leaf] = true;
         bool success;
         bytes memory result;
