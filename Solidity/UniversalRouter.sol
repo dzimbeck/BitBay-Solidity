@@ -198,12 +198,12 @@ contract UniswapV2Router02 is IUniswapV2Router01 {
     using SafeMath for uint;
 
     address public factory;
-    mapping (address => bytes) public INIT_CODE;
-    mapping (address => bool) public INIT_FILLED;
-    mapping (address => address) public WETH;
-    mapping (address => uint) public numerators;
-    mapping (address => uint) public feenum;
-    mapping (address => uint) public feeden;
+    mapping (address => bytes) INIT_CODE;
+    mapping (address => bool) INIT_FILLED;
+    mapping (address => address) WETH;
+    mapping (address => uint) numerators;
+    mapping (address => uint) feenum;
+    mapping (address => uint) feeden;
 
     //bytes public constant INIT_CODE = hex'e1f8c2f058bd6b94d979958a2ee8fbf8d7f33d32b7e27e3d93fc7c89f833b576';
 
@@ -213,11 +213,12 @@ contract UniswapV2Router02 is IUniswapV2Router01 {
     }
 
     address public minter;
-    address public BAY;
-    address public BAYR;
-    address public LiquidityPool;
-    address public proxyBAY;
-    mapping (address => bool) public isProxy;
+    //To save on contract size, can get the variables from showProxies
+    address BAY;
+    address BAYR;
+    address LiquidityPool;
+    address proxyBAY;
+    mapping (address => bool) isProxy;
     bool locked;
 
     uint[30] fairRatio;
@@ -228,7 +229,8 @@ contract UniswapV2Router02 is IUniswapV2Router01 {
     uint totalSupply = 1e17;
     
     bool public enforcePoolRatio = true;
-    uint public ratioTolerance = 110; //Recommended 10% fault tolerance
+    uint public resTolerance = 125;
+    uint public liqTolerance = 125; //Recommended 25% fault tolerance
 
     struct myLocals {
         uint[38] reserve;
@@ -288,6 +290,14 @@ contract UniswapV2Router02 is IUniswapV2Router01 {
         proxyBAY = _proxyBAY;
     }
 
+    function showProxies() public view returns(address, address, address, address) {
+        return (BAY, BAYR, LiquidityPool, proxyBAY);
+    }
+
+    function showfactory(address fact) public view returns(bytes memory, bool, address, uint, uint, uint) {
+        return (INIT_CODE[fact], INIT_FILLED[fact], WETH[fact], numerators[fact], feenum[fact], feeden[fact]);
+    }
+
     function changeFactory(address myfactory, address myWETH, bytes memory init, uint mynumerator, uint fnum, uint fden) public {        
         require(msg.sender == minter);
         if(!INIT_FILLED[myfactory]) {
@@ -300,10 +310,11 @@ contract UniswapV2Router02 is IUniswapV2Router01 {
         }
     }
 
-    function enforceRatio(bool status, uint tolerance) public {
+    function enforceRatio(bool status, uint toleranceL, uint toleranceR) public {
         require(msg.sender == minter);
         enforcePoolRatio = status;
-        ratioTolerance = tolerance;
+        resTolerance = toleranceR;
+        liqTolerance = toleranceL;
     }
 
     function setRatio() private {
@@ -329,6 +340,70 @@ contract UniswapV2Router02 is IUniswapV2Router01 {
         }
     }
 
+    function donateLiquidity(address pair, uint amount, uint BAY_BAYR) public {
+        require(!locked);
+        locked = true;
+        address path = address(0);
+        if(BAY_BAYR == 0) {
+            path = BAY;
+        }
+        if(BAY_BAYR == 1) {
+            path = BAYR;
+        }
+        unlockBAYvars(path);
+        TransferHelper.safeTransferFrom(path, msg.sender, pair, amount);
+        locked = false;
+    }
+
+    //One additional way to compare liquidity is by comparing/rating charts. To do so, you can multiply each shard by
+    //a fraction of the shard on the opposite side of the chart of what is given during newly minted coins. That essentially
+    //corrects the deflation and gives highly deflated coins a corrected value representing their strength.
+    function checkLiquidity(address proxytoken, uint liquidDesired, uint amountDesired, uint amount, uint[38] memory poolreserve, uint section) public view returns(bool) {
+        if(amount != amountDesired) {
+            liquidDesired = (liquidDesired.mul(amount)) / amountDesired;
+        }
+        require(liquidDesired <= amount);
+        uint x = 0;
+        uint[4] memory tot;
+        while(x < 8) {
+            tot[0] += poolreserve[30 + x];
+            poolreserve[30 + x] = 0;
+            x += 1;
+        }
+        poolreserve[section] = tot[0];
+        tot[0] = 0;
+        x = 0;
+        while(x < 30) {
+            if(x < section) {
+                tot[1] += fairRatio[x];
+                tot[3] += poolreserve[x];
+            } else {
+                tot[0] += fairRatio[x];
+                tot[2] += poolreserve[x];
+            }
+            x += 1;
+        }        
+        if(proxytoken == BAYR) {
+            if(section == 29) {
+                return true;
+            }
+            Math.compareFractions((liquidDesired * liqTolerance) / 100, amount, tot[0], tot[0]+tot[1]);
+            if (enforcePoolRatio) {
+                Math.compareFractions((liquidDesired * liqTolerance) / 100, amount, tot[2], tot[2]+tot[3]);
+            }
+        } else {
+            if(section == 0) {
+                return true;
+            }
+            Math.compareFractions(((amount - liquidDesired) * resTolerance) / 100, amount, tot[1], tot[0]+tot[1]);
+            if (enforcePoolRatio) {
+                Math.compareFractions(((amount - liquidDesired) * resTolerance) / 100, amount, tot[3], tot[2]+tot[3]);
+            }
+        }
+        return true;
+    }
+
+
     // **** ADD LIQUIDITY ****
     function _addLiquidity(
         address tokenA,
@@ -347,6 +422,7 @@ contract UniswapV2Router02 is IUniswapV2Router01 {
             addy = IUniswapV2Factory(factory).createPair(tokenA, tokenB);
         }
         regBalance(addy);
+        
         (uint reserveA, uint reserveB) = UniswapV2Library.getReserves(factory, tokenA, tokenB, INIT_CODE[factory]);        
         (a.success, a.result) = LiquidityPool.staticcall(abi.encodeWithSignature("calculateBalance(address,address,bool,uint256)",addy,addy,true,0));
         require(a.success);
@@ -354,33 +430,12 @@ contract UniswapV2Router02 is IUniswapV2Router01 {
         (a.success, a.result) = proxyBAY.staticcall(abi.encodeWithSignature("getState()"));
         (a.supply,a.pegsteps,a.mk,a.pegrate,a.deflationrate) = abi.decode(a.result, (uint,uint,uint,uint,uint));
         if(isProxy[tokenA]) {
-            if(tokenA == BAY) {
-                require(Liquid <= amountADesired);
-                require((Liquid.mul(totalSupply)) / amountADesired >= fairRatio[a.supply / a.mk]);
-                if (enforcePoolRatio && (a.liquid + a.rval != 0)) {
-                    if (amountADesired <= (a.liquid + a.rval)) {
-                        require((((Liquid.mul(ratioTolerance)) / 100) * (a.liquid + a.rval)) / amountADesired >= a.liquid);
-                    } else {
-                        require((a.liquid.mul(amountADesired)) / (a.liquid + a.rval) <= (Liquid.mul(ratioTolerance)) / 100);
-                    }
-                }
-            }
             reserveA = a.liquid + a.rval;
         }
         if(isProxy[tokenB]) {
-            if(tokenB == BAY) {
-                require(Liquid <= amountBDesired);
-                require((Liquid.mul(totalSupply)) / amountBDesired >= fairRatio[a.supply / a.mk]);
-                if (enforcePoolRatio && (a.liquid + a.rval != 0)) {
-                    if (amountBDesired <= (a.liquid + a.rval)) {
-                        require((((Liquid.mul(ratioTolerance)) / 100) * (a.liquid + a.rval)) / amountBDesired >= a.liquid);
-                    } else {
-                        require((a.liquid.mul(amountBDesired)) / (a.liquid + a.rval) <= (Liquid.mul(ratioTolerance)) / 100);
-                    }
-                }
-            }
             reserveB = a.liquid + a.rval;
         }
+
         if (reserveA == 0 && reserveB == 0) {
             (amountA, amountB) = (amountADesired, amountBDesired);
         } else {
@@ -394,6 +449,11 @@ contract UniswapV2Router02 is IUniswapV2Router01 {
                 require(amountAOptimal >= amountAMin, 'INSUFFICIENT_A');
                 (amountA, amountB) = (amountAOptimal, amountBDesired);
             }
+        }
+        if(isProxy[tokenA]) {
+            require(checkLiquidity(tokenA, Liquid, amountADesired, amountA, a.reserve, (a.supply / a.mk)));
+        } else {
+            require(checkLiquidity(tokenB, Liquid, amountBDesired, amountB, a.reserve, (a.supply / a.mk)));
         }
     }
 
@@ -890,6 +950,9 @@ library Math {
         } else if (y != 0) {
             z = 1;
         }
+    }    
+    function compareFractions(uint num1, uint den1, uint num2, uint den2) internal pure {
+        require(num1 * den2 >= num2 * den1);
     }
 }
 
