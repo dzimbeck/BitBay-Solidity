@@ -212,6 +212,7 @@ contract Administration is IAdministration {
     }
     
     function setActive(bool status) public returns (bool){
+        require(isActive + 1814400 < block.timestamp); //Everything must be paused for 3 weeks to update the contract
         bytes32 proposal = keccak256(abi.encodePacked("setActive",status));
         bool res = checkProposal(proposal, 4);
         if (res) {
@@ -222,7 +223,7 @@ contract Administration is IAdministration {
                 isActive = 0; //This makes it so to change proxies all contracts must be locked for some time
             }
             if(status == false) {
-                isActive = block.timestamp + 1814400; //Everything must be paused for 3 weeks to update the contract
+                isActive = block.timestamp;
             }
             require(success);
         }
@@ -358,7 +359,9 @@ contract Administration is IAdministration {
     function checkProxyLock() private view {
         require(proxylock < block.timestamp);
         require(isActive != 0);
-        require(isActive < block.timestamp);
+        if(isActive > 1) {
+            require(isActive + 907200 > block.timestamp); //Proxies must be changed within 2 weeks to give users 2 weeks to review
+        }
     }
 
     function verify(bytes32 root, bytes32 leaf, bytes32[] memory proof) public pure returns (bool){
