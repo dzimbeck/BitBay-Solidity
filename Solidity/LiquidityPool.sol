@@ -128,6 +128,7 @@ contract Pool is ILiquidityPool {
         require(success);
     }
     function deposit2(address user, address pool, uint[] memory reserve, uint trade) external {
+        require(msg.sender == proxy);
         uint x = 0;
         uint[38] memory reserve2;
         while(x < 38) {
