@@ -58,6 +58,8 @@ contract BITBAY {
     mapping (address => uint[2]) routerVars;
     mapping (address => address) mintTo;
     mapping (address => address) public withdrawAddy;
+    address[] public registry; //Useful for upgrading liquidity or BitBay data contracts
+    mapping (address => bool) public isRegistered;
 
     // Events allow clients to react to specific
     // contract changes you declare
@@ -162,7 +164,7 @@ contract BITBAY {
     }
 
     // Sends an amount of newly created coins to an address, used for the BAY bridge
-    // Can only be called by the contract creator
+    // Can only be called by the contract creator or routers
     function mint(address receiver, uint[38] memory reserve) public returns (bool){
         require(active);
         require(msg.sender == minter || isRouter[msg.sender]);
@@ -211,8 +213,18 @@ contract BITBAY {
         Rbalances[receiver] =  a.reserve;
         //highkey tells us the microshard section we are currently in
         highkey[receiver] = a.section;
+        register(receiver);
         emit Transfer(minter, receiver, amount);
         return true;
+    }
+
+    function register(address user) public {
+        if(isRegistered[user]) {
+            return;
+        } else {
+            isRegistered[user] = true;
+            registry.push(user);
+        }
     }
 
     //Increase or decrease the total system supply changing each users ratio of liquid and reserve coins based on their arrays
@@ -294,7 +306,7 @@ contract BITBAY {
     }
     
     //Allowances should be reset to zero before changing them. Otherwise you can use increase or decrease functions.
-    function approve(address spender, uint value, address proxyaddy) public returns (bool) {
+    function approve(address spender, uint value, address proxyaddy, uint BAY_BAYR) public returns (bool) {
         require(active);
         require(spender != address(0));
         address sender;
@@ -302,25 +314,17 @@ contract BITBAY {
         if (isProxy[msg.sender]) {
             sender = proxyaddy;
         }
-        allowed[sender][spender] = value;
-        emit Approval(sender, spender, value);
-        return true;
-    }
-    
-    function approveReserve(address spender, uint value, address proxyaddy) public returns (bool) {
-        require(active);
-        require(spender != address(0));
-        address sender;
-        sender = msg.sender;
-        if (isProxy[msg.sender]) {
-            sender = proxyaddy;
+        if(BAY_BAYR == 0) {
+            allowed[sender][spender] = value;
+            emit Approval(sender, spender, value);
+        } else {
+            allowedReserve[sender][spender] = value;
+            emit ApprovalReserve(sender, spender, value);
         }
-        allowedReserve[sender][spender] = value;
-        emit ApprovalReserve(sender, spender, value);
         return true;
     }
 
-    function increaseAllowance(address spender, uint value, address proxyaddy) public returns (bool) {
+    function increaseAllowance(address spender, uint value, address proxyaddy, uint BAY_BAYR) public returns (bool) {
         require(active);
         require(spender != address(0));
         address sender;
@@ -328,12 +332,17 @@ contract BITBAY {
         if (isProxy[msg.sender]) {
             sender = proxyaddy;
         }
-        allowed[sender][spender] = add(allowed[sender][spender], value);
-        emit Approval(sender, spender, allowed[sender][spender]);
+        if(BAY_BAYR == 0) {
+            allowed[sender][spender] = add(allowed[sender][spender], value);
+            emit Approval(sender, spender, allowed[sender][spender]);
+        } else {
+            allowedReserve[sender][spender] = add(allowedReserve[sender][spender], value);
+            emit ApprovalReserve(sender, spender, allowedReserve[sender][spender]);
+        }
         return true;
     }
     
-    function decreaseAllowance(address spender, uint value, address proxyaddy) public returns (bool) {
+    function decreaseAllowance(address spender, uint value, address proxyaddy, uint BAY_BAYR) public returns (bool) {
         require(active);
         require(spender != address(0));
         address sender;
@@ -341,53 +350,14 @@ contract BITBAY {
         if (isProxy[msg.sender]) {
             sender = proxyaddy;
         }
-        allowed[sender][spender] = sub(allowed[sender][spender], value);
-        emit Approval(sender, spender, allowed[sender][spender]);
-        return true;
-    }
-    
-    function increaseAllowanceReserve(address spender, uint value, address proxyaddy) public returns (bool) {
-        require(active);
-        require(spender != address(0));
-        address sender;
-        sender = msg.sender;
-        if (isProxy[msg.sender]) {
-            sender = proxyaddy;
+        if(BAY_BAYR == 0) {
+            allowed[sender][spender] = sub(allowed[sender][spender], value);
+            emit Approval(sender, spender, allowed[sender][spender]);
+        } else {
+            allowedReserve[sender][spender] = sub(allowedReserve[sender][spender], value);
+            emit ApprovalReserve(sender, spender, allowedReserve[sender][spender]);
         }
-        allowedReserve[sender][spender] = add(allowedReserve[sender][spender], value);
-        emit ApprovalReserve(sender, spender, allowedReserve[sender][spender]);
         return true;
-    }
-    
-    function decreaseAllowanceReserve(address spender, uint value, address proxyaddy) public returns (bool) {
-        require(active);
-        require(spender != address(0));
-        address sender;
-        sender = msg.sender;
-        if (isProxy[msg.sender]) {
-            sender = proxyaddy;
-        }
-        allowedReserve[sender][spender] = sub(allowedReserve[sender][spender], value);
-        emit ApprovalReserve(sender, spender, allowedReserve[sender][spender]);
-        return true;
-    }
-    
-    function transfer(address to, uint value, address proxyaddy) public returns (bool) {
-        return sendLiquid(msg.sender, to, value, proxyaddy);
-    }
-    
-    function transferFrom(address from, address to, uint value, address proxyaddy) public returns (bool) {
-        return sendLiquid(from, to, value, proxyaddy);
-    }
-    
-    function transferReserve(address to, uint value, address proxyaddy) public returns (bool) {
-        uint[] memory a;
-        return sendReserve(msg.sender, to, value, a, 0, proxyaddy);
-    }
-    
-    function transferReserveFrom(address from, address to, uint value, address proxyaddy) public returns (bool) {
-        uint[] memory a;
-        return sendReserve(from, to, value, a, 0, proxyaddy);
     }
 
     function getFrozen(address user) public view returns (uint[30][4] memory) {
@@ -503,6 +473,7 @@ contract BITBAY {
         require(active);
         require(amount > 0); //"No funds sent."
         require(receiver != address(0));
+        register(receiver);
         calcLocals memory a;
         othervars memory b;
         b.sender2 = msg.sender;
@@ -547,6 +518,7 @@ contract BITBAY {
                     a.newtot += reserve[a.i];
                     a.i += 1;
                 }
+                register(mintTo[sender]);
                 Rbalances[mintTo[sender]] = reserve2;
                 highkey[mintTo[sender]] = a.section;
                 emit Transfer(sender, mintTo[sender], a.newtot);
@@ -658,6 +630,7 @@ contract BITBAY {
         lock = true;
         require(active);
         require(receiver != address(0));
+        register(receiver);
         calcLocals memory a;
         othervars memory b;
         b.sender2 = msg.sender;
@@ -721,6 +694,7 @@ contract BITBAY {
                     a.newtot += reserve[a.i];
                     a.i += 1;
                 }
+                register(mintTo[sender]);
                 Rbalances[mintTo[sender]] = a.reserve;
                 highkey[mintTo[sender]] = a.section;
                 emit TransferReserve(sender, mintTo[sender], a.newtot);

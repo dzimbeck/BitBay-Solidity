@@ -77,7 +77,7 @@ contract BAYL is IHALO {
         require(spender != address(0));
         bool success;
         bytes memory result;
-        (success, result) = proxy.call(abi.encodeWithSignature("approve(address,uint256,address)",spender,value,msg.sender));
+        (success, result) = proxy.call(abi.encodeWithSignature("approve(address,uint256,address,uint256)",spender,value,msg.sender,0));
         require(success);
         emit Approval(msg.sender, spender, value);
         return true;
@@ -87,7 +87,7 @@ contract BAYL is IHALO {
         require(spender != address(0));
         bool success;
         bytes memory result;
-        (success, result) = proxy.call(abi.encodeWithSignature("increaseAllowance(address,uint256,address)",spender,value,msg.sender));
+        (success, result) = proxy.call(abi.encodeWithSignature("increaseAllowance(address,uint256,address,uint256)",spender,value,msg.sender,0));
         require(success); 
         emit Approval(msg.sender, spender, allowance(msg.sender, spender));
         return true;
@@ -97,7 +97,7 @@ contract BAYL is IHALO {
         require(spender != address(0));
         bool success;
         bytes memory result;
-        (success, result) = proxy.call(abi.encodeWithSignature("decreaseAllowance(address,uint256,address)",spender,value,msg.sender));
+        (success, result) = proxy.call(abi.encodeWithSignature("decreaseAllowance(address,uint256,address,uint256)",spender,value,msg.sender,0));
         require(success); 
         emit Approval(msg.sender, spender, allowance(msg.sender, spender));
         return true;
@@ -106,8 +106,8 @@ contract BAYL is IHALO {
     function transfer(address to, uint value) public virtual override returns (bool) {
         bool success;
         bytes memory result;
-        (success, result) = proxy.call(abi.encodeWithSignature("transferFrom(address,address,uint256,address)",msg.sender,to,value,msg.sender));
-        require(success); 
+        (success, result) = proxy.call(abi.encodeWithSignature("sendLiquid(address,address,uint256,address)",msg.sender,to,value,msg.sender));
+        require(success);
         emit Transfer(msg.sender, to, value);
         return true;
     }
@@ -115,8 +115,8 @@ contract BAYL is IHALO {
     function transferFrom(address from, address to, uint value) public virtual override returns (bool) {
         bool success;
         bytes memory result;
-        (success, result) = proxy.call(abi.encodeWithSignature("transferFrom(address,address,uint256,address)",from,to,value,msg.sender));
-        require(success); 
+        (success, result) = proxy.call(abi.encodeWithSignature("sendLiquid(address,address,uint256,address)",from,to,value,msg.sender));
+        require(success);
         emit Transfer(from, to, value);
         return true;
     }
