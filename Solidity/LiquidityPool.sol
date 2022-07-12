@@ -212,9 +212,11 @@ contract Pool is ILiquidityPool {
     function LPbalance(address pool) external {
         bool success;
         bytes memory result;
-        (success, result) = proxy.staticcall(abi.encodeWithSignature("isRouter(address)",msg.sender));
-        require(success || msg.sender == proxy);
-        success = abi.decode(result, (bool));
+        if(msg.sender != proxy) {
+            (success, result) = proxy.staticcall(abi.encodeWithSignature("isRouter(address)",msg.sender));
+            require(success);
+            success = abi.decode(result, (bool));
+        }
         require(success || msg.sender == proxy);
         (success, result) = pool.staticcall(abi.encodeWithSignature("balanceOf(address)",pool));
         require(success);

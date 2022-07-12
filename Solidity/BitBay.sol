@@ -2,7 +2,7 @@
 pragma solidity = 0.8.4; //Required to hand memory safe decoding of arrays
 
 interface ILiquidityPool {
-    function LPbalance(address) external returns (address, address, address);
+    function LPbalance(address) external;
     function deposit(address,address,uint256[38] memory,uint256) external;
     function deposit2(address,address,uint256[] memory,uint256) external;
     function withdrawLP(address,address,uint256) external returns (uint256[38] memory);

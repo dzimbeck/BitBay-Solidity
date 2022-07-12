@@ -365,15 +365,15 @@ contract UniswapV2Router02 is IUniswapV2Router01 {
         require(liquidDesired <= amount);
         uint x = 0;
         uint[4] memory tot;
-        while(x < 8) {
-            tot[0] += poolreserve[30 + x];
-            poolreserve[30 + x] = 0;
+        while(x < microsteps) {
+            tot[0] += poolreserve[pegsteps + x];
+            poolreserve[pegsteps + x] = 0;
             x += 1;
         }
         poolreserve[section] = tot[0];
         tot[0] = 0;
         x = 0;
-        while(x < 30) {
+        while(x < pegsteps) {
             if(x < section) {
                 tot[1] += fairRatio[x];
                 tot[3] += poolreserve[x];
@@ -384,7 +384,7 @@ contract UniswapV2Router02 is IUniswapV2Router01 {
             x += 1;
         }        
         if(proxytoken == BAYR) {
-            if(section == 29) {
+            if(section == pegsteps - 1) {
                 return true;
             }
             Math.compareFractions((liquidDesired * liqTolerance) / 100, amount, tot[0], tot[0]+tot[1]);
