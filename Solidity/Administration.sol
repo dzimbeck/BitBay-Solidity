@@ -425,7 +425,6 @@ contract Administration is IAdministration {
                 reserve[a.pegsteps + a.i] += a.newtot; //Last section gets whatever is left over
             }
         }
-        
         (success, result) = proxy.call(abi.encodeWithSignature("mint(address,uint256[38])",msg.sender,reserve));
         require(success);
         return leaf;
