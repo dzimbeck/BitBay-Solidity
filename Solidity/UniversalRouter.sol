@@ -321,7 +321,6 @@ contract UniswapV2Router02 is IUniswapV2Router01 {
         uint i;
         uint j;
         uint newtot = totalSupply;
-        uint prevsupply = totalSupply;
         uint liquid;
         uint temp;
         uint mk = microsteps;
@@ -334,8 +333,7 @@ contract UniswapV2Router02 is IUniswapV2Router01 {
                 temp += liquid;
                 j += 1;
             }
-            prevsupply -= temp;
-            fairRatio[i] = prevsupply;
+            fairRatio[i] = temp;
             i += 1;
         }
     }
@@ -377,24 +375,28 @@ contract UniswapV2Router02 is IUniswapV2Router01 {
             if(x < section) {
                 tot[1] += fairRatio[x];
                 tot[3] += poolreserve[x];
-            } else {
+            }
+            if(x == section) {
+                if(proxytoken == BAYR) {
+                    tot[1] += fairRatio[x];
+                    tot[3] += poolreserve[x];
+                } else {
+                    tot[0] += fairRatio[x];
+                    tot[2] += poolreserve[x];
+                }
+            }
+            if(x > section) {
                 tot[0] += fairRatio[x];
                 tot[2] += poolreserve[x];
             }
             x += 1;
         }        
         if(proxytoken == BAYR) {
-            if(section == pegsteps - 1) {
-                return true;
-            }
             Math.compareFractions((liquidDesired * liqTolerance) / 100, amount, tot[0], tot[0]+tot[1]);
             if (enforcePoolRatio) {
                 Math.compareFractions((liquidDesired * liqTolerance) / 100, amount, tot[2], tot[2]+tot[3]);
             }
         } else {
-            if(section == 0) {
-                return true;
-            }
             Math.compareFractions(((amount - liquidDesired) * resTolerance) / 100, amount, tot[1], tot[0]+tot[1]);
             if (enforcePoolRatio) {
                 Math.compareFractions(((amount - liquidDesired) * resTolerance) / 100, amount, tot[3], tot[2]+tot[3]);
