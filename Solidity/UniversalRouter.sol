@@ -336,6 +336,7 @@ contract UniswapV2Router02 is IUniswapV2Router01 {
             fairRatio[i] = temp;
             i += 1;
         }
+        fairRatio[pegsteps - 1] += newtot;
     }
 
     function donateLiquidity(address pair, uint amount, uint BAY_BAYR) public {
