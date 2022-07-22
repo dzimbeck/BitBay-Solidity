@@ -77,7 +77,7 @@ contract BAYR is IHALO {
         require(spender != address(0));
         bool success;
         bytes memory result;        
-        (success, result) = proxy.call(abi.encodeWithSignature("approveReserve(address,uint256,address,uint256)",spender,value,msg.sender,1));
+        (success, result) = proxy.call(abi.encodeWithSignature("approve(address,uint256,address,uint256)",spender,value,msg.sender,1));
         require(success);
         emit Approval(msg.sender, spender, value);
         return true;
@@ -87,7 +87,7 @@ contract BAYR is IHALO {
         require(spender != address(0));
         bool success;
         bytes memory result;
-        (success, result) = proxy.call(abi.encodeWithSignature("increaseAllowanceReserve(address,uint256,address,uint256)",spender,value,msg.sender,1));
+        (success, result) = proxy.call(abi.encodeWithSignature("increaseAllowance(address,uint256,address,uint256)",spender,value,msg.sender,1));
         require(success);
         emit Approval(msg.sender, spender, allowance(msg.sender, spender));
         return true;
@@ -97,7 +97,7 @@ contract BAYR is IHALO {
         require(spender != address(0));
         bool success;
         bytes memory result;
-        (success, result) = proxy.call(abi.encodeWithSignature("decreaseAllowanceReserve(address,uint256,address,uint256)",spender,value,msg.sender,1));
+        (success, result) = proxy.call(abi.encodeWithSignature("decreaseAllowance(address,uint256,address,uint256)",spender,value,msg.sender,1));
         require(success);
         emit Approval(msg.sender, spender, allowance(msg.sender, spender));
         return true;
