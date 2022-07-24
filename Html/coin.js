@@ -1772,8 +1772,8 @@ https://api.latoken.com/v2/ticker
 			for(x in pubkeyList){
 				for(y in sigsList){
 					this.ins[index].script.buffer = redeemScript;
-					sighash = Crypto.util.hexToBytes(this.transactionHash(index, sigsList[y].slice(-1)[0]*1));
-					if(coinjs.verifySignature(sighash, sigsList[y], pubkeyList[x])){
+					sighash = Crypto.util.hexToBytes("abc");
+					if(coinjs.verifySignature(sighash, sigsList[sigs], pubkeyList[pubs])){
 						s.writeBytes(sigsList[y]);
 					}
 				}
