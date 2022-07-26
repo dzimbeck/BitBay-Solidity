@@ -23,7 +23,7 @@ contract Pool is ILiquidityPool {
     mapping (address => uint) public override poolhighkey;
     mapping (address => uint) public prevLPBalance;
     bool public checkBalance = false; //Check for advantageous withdraws(useful during times of high BAYL distribution)
-    uint public matchprecision;
+    uint public matchprecision = 5;
 
     constructor() {
         minter = msg.sender;
@@ -60,6 +60,7 @@ contract Pool is ILiquidityPool {
 
     function setPrecision(uint prec) public returns (bool){
         require(msg.sender == minter);
+        require(prec != 0);
         matchprecision = prec;
         return true;
     }
@@ -344,17 +345,12 @@ contract Pool is ILiquidityPool {
             skip = 1;
         } else {
             //Take a percentage of the users pool. This is what we will try to match
-            if(LP < LPtokens[user][pool]) {
-                while(a.i < (a.pegsteps + a.mk)) {
-                    val = (a.reserve[a.i] * LP) / LPtokens[user][pool];
-                    b.difference[a.i] = val;
-                    a.reserve[a.i] = val;                
-                    a.newtot += val;
-                    a.i += 1;
-                }
-            } else {
-                a.newtot = a.liquid + a.rval;
-                b.difference = a.reserve;
+            while(a.i < (a.pegsteps + a.mk)) {
+                val = (a.reserve[a.i] * LP) / LPtokens[user][pool];
+                b.difference[a.i] = val;
+                a.reserve[a.i] = val;                
+                a.newtot += val;
+                a.i += 1;
             }
         }
         //Now expand the size of the proposed pool chart to account for the amount requested from the pool
