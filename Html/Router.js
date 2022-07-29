@@ -238,50 +238,6 @@ RouterABI = [
 		"inputs": [
 			{
 				"internalType": "address",
-				"name": "proxytoken",
-				"type": "address"
-			},
-			{
-				"internalType": "uint256",
-				"name": "liquidDesired",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "amountDesired",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "amount",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256[38]",
-				"name": "poolreserve",
-				"type": "uint256[38]"
-			},
-			{
-				"internalType": "uint256",
-				"name": "section",
-				"type": "uint256"
-			}
-		],
-		"name": "checkLiquidity",
-		"outputs": [
-			{
-				"internalType": "bool",
-				"name": "",
-				"type": "bool"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
 				"name": "pair",
 				"type": "address"
 			},
@@ -299,19 +255,6 @@ RouterABI = [
 		"name": "donateLiquidity",
 		"outputs": [],
 		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "enforcePoolRatio",
-		"outputs": [
-			{
-				"internalType": "bool",
-				"name": "",
-				"type": "bool"
-			}
-		],
-		"stateMutability": "view",
 		"type": "function"
 	},
 	{
@@ -451,19 +394,6 @@ RouterABI = [
 				"internalType": "uint256[]",
 				"name": "amounts",
 				"type": "uint256[]"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "liqTolerance",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
 			}
 		],
 		"stateMutability": "view",
@@ -769,40 +699,42 @@ RouterABI = [
 	},
 	{
 		"inputs": [],
-		"name": "resTolerance",
+		"name": "showVariables",
 		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			},
 			{
 				"internalType": "uint256",
 				"name": "",
 				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "showProxies",
-		"outputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
 			},
 			{
-				"internalType": "address",
+				"internalType": "uint256",
 				"name": "",
-				"type": "address"
+				"type": "uint256"
 			},
 			{
-				"internalType": "address",
+				"internalType": "bool",
 				"name": "",
-				"type": "address"
-			},
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
+				"type": "bool"
 			}
 		],
 		"stateMutability": "view",
