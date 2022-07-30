@@ -1625,6 +1625,7 @@ async function addLiquidity() {
     try {
         await routercontract.methods.addLiquidity([coin1,bayaddy], [coin1val,totalval],otherval,amount1min,amount2min,currentaccount,deadline,exchange).send({"from":currentaccount,"gasLimit": 9000000});
     } catch (e) {
+        console.log(e);
         document.getElementById("addliquidtext").innerHTML = 'Transaction failed';
         return;
     }
@@ -1805,7 +1806,7 @@ async function Swap() {
         }
         if(bayselect == 2) {
             //Selling BitBay coins
-            if(el == "SwapAmount") { //Minimum coins received
+            if(lastSelect == "SwapAmount") { //Minimum coins received
                 await routercontract.methods.swapExactTokensForTokens(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 9000000});
             } else { //Maximum BAY paid
                 await routercontract.methods.swapTokensForExactTokens(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 9000000});
@@ -1813,7 +1814,7 @@ async function Swap() {
         }
         if(bayselect == 3) {
             //Selling BitBay Reserve coins
-            if(el == "SwapAmount") { //Minimum coins received
+            if(lastSelect == "SwapAmount") { //Minimum coins received
                 await routercontract.methods.swapExactTokensForTokens(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 9000000});
             } else { //Maximum BAY paid
                 await routercontract.methods.swapTokensForExactTokens(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 9000000});
