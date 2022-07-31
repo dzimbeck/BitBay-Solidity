@@ -327,6 +327,8 @@ prevselect = 10;
 precision = 5;
 lastSelect = '';
 lastMinMax = 0;
+withdrawMin1 = 0;
+withdrawMin2 = 0;
 document.getElementById("CoinPercent").value = '10';
 
 function defaultvars() {
@@ -378,6 +380,8 @@ function defaultvars() {
     precision = 5;
     lastSelect = '';
     lastMinMax = 0;
+    withdrawMin1 = 0;
+    withdrawMin2 = 0;
     document.getElementById("Coin1amount").value = '';
     document.getElementById("Coin2amount").value = '';
     document.getElementById("CoinPercent").value = '10';
@@ -539,14 +543,17 @@ async function getMarketData(calcbal = 0) {
     exchange = Object.values(exchanges[exchange])[0];
     var bayselect = document.getElementById("Coin2").value;   
     var totSupply = 0;
-    var bayname = ''
+    var bayname = '';
+    var bayname2 = '';
     if(bayselect == 0) {
-        bayname = "BitBay"
+        bayname = "BitBay";
         bayaddy = BAYLaddy;
+        bayname = "BitBay Reserve";
     }
     if(bayselect == 1) {
-        bayname = "BitBay Reserve"
+        bayname = "BitBay Reserve";
         bayaddy = BAYRaddy;
+        bayname2 = "BitBay";
     }
     var myrouter = Object.values(routers[0])[0];
     var routercontract = new web3.eth.Contract(RouterABI, myrouter);
@@ -590,6 +597,17 @@ async function getMarketData(calcbal = 0) {
         text = "Exchange details for the pair " + Object.keys(pairs[coin1]) + "/" + bayname + ":<br>";
         text += "Total coins available for " + Object.keys(pairs[coin1]) + ": " + myval1 + "<br>";
         text += "Total coins available for " + bayname + ": " + myval2 + "<br>";
+        var otherbal;
+        if(bayselect == 0) {
+            await bayrcontract.methods.balanceOf(myaccounts).call().then(function (result3) {
+                otherbal = parseFloat((web3.utils.fromWei(result3, 'gwei')*10).toFixed(8));
+            });
+        } else {
+           await baylcontract.methods.balanceOf(myaccounts).call().then(function (result3) {
+                otherbal = parseFloat((web3.utils.fromWei(result3, 'gwei')*10).toFixed(8));
+            });
+        }
+        text += bayname2 + " coins overage at this pair: " + otherbal + "<br>";
         text += "Total LP token supply for this pair: " + totSupply + "<br>";
         text += "Your LP token balance for this pair: " + LPtokens + "(" + parseFloat(((LPtokens / totSupply) * 100).toFixed(5)) + "% of the pool)<br><br>";
         var text2 = "";
@@ -1630,6 +1648,7 @@ async function addLiquidity() {
         return;
     }
     document.getElementById("addliquidtext").innerHTML = 'Success!';
+    checkbalances();
 }
 
 function show(){
@@ -1791,33 +1810,33 @@ async function Swap() {
         if(bayselect == 0) {
             //Buying BitBay coins
             if(lastSelect == "SwapAmount") { //Maximum coins paid
-                await routercontract.methods.swapTokensForExactTokens(swapval,lastMinMax2,[coin1,bayaddy],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 9000000});
+                await routercontract.methods.swapTokensForExactTokens(swapval,lastMinMax2,[coin1,bayaddy],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000});
             } else { //Minimum BAY received
-                await routercontract.methods.swapExactTokensForTokens(swapval,lastMinMax2,[coin1,bayaddy],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 9000000});
+                await routercontract.methods.swapExactTokensForTokens(swapval,lastMinMax2,[coin1,bayaddy],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000});
             }
         }
         if(bayselect == 1) {
             //Buying BitBay Reserve coins
             if(lastSelect == "SwapAmount") { //Maximum coins paid
-                await routercontract.methods.swapTokensForExactTokens(swapval,lastMinMax2,[coin1,bayaddy],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 9000000});
+                await routercontract.methods.swapTokensForExactTokens(swapval,lastMinMax2,[coin1,bayaddy],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000});
             } else { //Minimum BAY received
-                await routercontract.methods.swapExactTokensForTokens(swapval,lastMinMax2,[coin1,bayaddy],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 9000000});
+                await routercontract.methods.swapExactTokensForTokens(swapval,lastMinMax2,[coin1,bayaddy],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000});
             }
         }
         if(bayselect == 2) {
             //Selling BitBay coins
             if(lastSelect == "SwapAmount") { //Minimum coins received
-                await routercontract.methods.swapExactTokensForTokens(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 9000000});
+                await routercontract.methods.swapExactTokensForTokens(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000});
             } else { //Maximum BAY paid
-                await routercontract.methods.swapTokensForExactTokens(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 9000000});
+                await routercontract.methods.swapTokensForExactTokens(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000});
             }
         }
         if(bayselect == 3) {
             //Selling BitBay Reserve coins
             if(lastSelect == "SwapAmount") { //Minimum coins received
-                await routercontract.methods.swapExactTokensForTokens(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 9000000});
+                await routercontract.methods.swapExactTokensForTokens(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000});
             } else { //Maximum BAY paid
-                await routercontract.methods.swapTokensForExactTokens(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 9000000});
+                await routercontract.methods.swapTokensForExactTokens(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000});
             }
         }
     } catch (e) {
@@ -1826,6 +1845,100 @@ async function Swap() {
         return;
     }
     document.getElementById("SwapSummary").innerHTML = 'Success!<br><br>' + prevtext;
+}
+
+async function withdrawLP() {
+    var wval = document.getElementById("WithdrawAmount").value;
+    var waccount = myaccounts;
+    var prevtext = document.getElementById("LPdetails1").innerHTML;
+    var coin1 = document.getElementById("Coin1").value;
+    coin1 = Object.values(pairs[coin1])[0];
+    var exchange = document.getElementById("exchangeSelect").value;
+    exchange = Object.values(exchanges[exchange])[0];
+    var myrouter = Object.values(routers[0])[0];
+    var routercontract = new web3.eth.Contract(RouterABI, myrouter);
+    var exchangecontract = new web3.eth.Contract(FactoryABI, exchange);
+    var bayselect = document.getElementById("Coin2").value;
+    var bayaddy = '';
+    var mypair = '';
+    var myhighkey = 0;
+    var section = 0;
+    var returnthis = 0;
+    var allowance = 0;
+    if(bayselect == 0) {
+        bayaddy = BAYLaddy;
+    }
+    if(bayselect == 1) {
+        bayaddy = BAYRaddy;
+    }
+    await exchangecontract.methods.getPair(bayaddy, coin1).call().then(function (wresult) {
+        mypair = wresult;
+    });
+    var paircontract = new web3.eth.Contract(PairABI, mypair);
+    try {
+        await paircontract.methods.allowance(waccount, myrouter).call().then(function (wresult) {
+            allowance = wresult;
+        });
+        if(allowance == 0) {
+            document.getElementById("LPdetails1").innerHTML = 'Waiting for router allowance authorization on the blockchain for the LP Tokens...<br><br>' + prevtext;
+            await paircontract.methods.approve(myrouter, "9999999999999999999999999999999999999999999999999999999999999999999999").send({"from":waccount,"gasLimit": 2500000});
+        }
+    } catch (e) {
+        console.log(e);
+        document.getElementById("LPdetails1").innerHTML = 'Approval failed';
+    }
+    if(/^0x0+$/.test(mypair) == false) {
+        await liquiditypool.methods.poolhighkey(mypair).call().then(function (wresult) {
+            myhighkey = parseInt(wresult);
+        });
+        section = Math.floor(networkvars[0] / networkvars[2]);
+        if(myhighkey != section) {
+            document.getElementById("LPdetails1").innerHTML = 'Syncing AMM...<br><br>' + prevtext;
+            try {
+                await liquiditypool.methods.syncAMM(mypair).send({"from":waccount,"gasLimit": 2500000});
+            } catch (e) {
+                console.log(e);
+                document.getElementById("LPdetails1").innerHTML = 'Syncing failed';
+                return;
+            }
+            document.getElementById("LPdetails1").value = '';
+        }
+    } else {
+        document.getElementById("LPdetails1").innerHTML = 'Pair does not exist yet. Please deposit liquidity to the pair.';
+        return;
+    }
+    if(myhighkey != section) {
+        document.getElementById("LPdetails1").innerHTML = 'This pair is now in sync. Please recalculate your withdrawal.';
+        return;
+    }
+    if(parseFloat(wval) == 0) {
+        document.getElementById("LPdetails1").innerHTML = 'Amount can not be zero';
+        return;
+    }
+    await paircontract.methods.balanceOf(waccount).call().then(function (wval2) {
+        if(parseInt(wval) > parseInt(wval2)) {
+            document.getElementById("LPdetails1").innerHTML = 'Not enough LP tokens for withdrawal';
+            returnthis = 1;
+        }
+    })
+    if(returnthis == 1) {
+        return;
+    }
+    var block = await web3.eth.getBlock(await web3.eth.getBlockNumber());
+    var deadline = block.timestamp + 1200;
+
+    console.log(wval);
+
+    document.getElementById("LPdetails1").innerHTML = 'Attempting to perform the withdrawal, please approve the transaction...<br><br>' + prevtext;
+    try {
+        await routercontract.methods.removeLiquidity(coin1,bayaddy,wval,withdrawMin1,withdrawMin2,waccount,deadline,exchange).send({"from":waccount,"gasLimit": 9000000});
+    } catch (e) {
+        console.log(e);
+        document.getElementById("LPdetails1").innerHTML = 'Withdrawal failed';
+        return;
+    }
+    document.getElementById("LPdetails1").innerHTML = 'Success!<br><br>' + prevtext;
+    checkbalances();
 }
 
 setInterval(checkbalances, 90000);
