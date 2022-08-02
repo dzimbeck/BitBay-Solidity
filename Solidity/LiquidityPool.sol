@@ -23,6 +23,7 @@ contract Pool is ILiquidityPool {
     mapping (address => uint) public override poolhighkey;
     mapping (address => uint) public prevLPBalance;
     bool public checkBalance = false; //Check for advantageous withdraws(useful during times of high BAYL distribution)
+    bool public magnify = true;
     uint public matchprecision = 5;
 
     constructor() {
@@ -55,6 +56,12 @@ contract Pool is ILiquidityPool {
     function setCheckBalance(bool status) public returns (bool){
         require(msg.sender == minter);
         checkBalance = status;
+        return true;
+    }
+
+    function setMagnify(bool status) public returns (bool){
+        require(msg.sender == minter);
+        magnify = status;
         return true;
     }
 
@@ -360,6 +367,9 @@ contract Pool is ILiquidityPool {
         if(a.newtot != b.amount && skip == 0) {            
             while(a.i < (a.pegsteps + a.mk)) {
                 val = (a.reserve[a.i] * b.amount) / a.newtot;
+                if((b.amount > a.newtot) && magnify == false) {
+                    val = a.reserve[a.i];
+                }
                 a.reserve[a.i] = val;
                 a.j += val;
                 if(val != 0) {
@@ -493,8 +503,7 @@ contract Pool is ILiquidityPool {
         if (val < b.amount) {
             a.highkey = (b.poolliquid + b.poolrval) - val; //the total left in the pool
             val = b.amount - val;
-            a.i = 0;            
-            a.liquid = 0;
+            a.i = 0;
             a.newtot = 0;
             while (a.i < a.mk) {
                 a.liquid = mul(b.poolreserve[a.pegsteps + a.i],val) / a.highkey;
