@@ -45,6 +45,7 @@ contract Administration is IAdministration {
     mapping (uint => uint) public processingTime;
     uint public nonce;
     uint public intervaltime = 43200; //12 hour batches of transactions. And stakers can wait a few hours to finalize data.
+    uint public timeLimit = 15552000; //Curators should be encouraged to stay active
     
     uint public isActive = 1; //Initially proxies may be immediately changed
     bool public enableSpecialTX = false;
@@ -135,17 +136,33 @@ contract Administration is IAdministration {
         return true;
     }
 
+    function removeCurator(address curator) public returns (bool){
+        require(msg.sender == minter || isCurator[msg.sender]);
+        uint x = 0;
+        while (x < 14) {
+            if (myvotetimes[msg.sender][x] + timeLimit > block.timestamp) {
+                return false;
+            }
+            x += 1;
+        }
+        isCurator[curator] = false;
+        totalvotes = sub(totalvotes, myweight[curator]);
+        return true;
+    }
+
     function checkProposal(bytes32 myprop, uint mytype) private returns (bool){
         require(isCurator[msg.sender],"User is not a curator");
         require (block.timestamp >= myvotetimes[msg.sender][mytype],"Voting too frequently on proposal type");
         if (block.timestamp > proposals[myprop][1]) {
             proposals[myprop][1] = block.timestamp + votetimelimit[mytype];
             proposals[myprop][0] = 0;
-        }        
+        }
+        require(proposals[myprop][0] != 1,"Voting is complete and will reset after the time limit");
         //Try to have voting times that aren't back to back, so users can time their votes early into the process
         myvotetimes[msg.sender][mytype] = block.timestamp + votetimelimit[mytype];
         proposals[myprop][0] = add(proposals[myprop][0], myweight[msg.sender]);
         if ((mul(proposals[myprop][0], 100) / totalvotes) >= voteperc) {
+            proposals[myprop][0] = 1;
             return true;
         }
         return false;
@@ -179,8 +196,9 @@ contract Administration is IAdministration {
     }
 
     function changecurator(address curator, uint weight) public returns (bool){        
-        require(add(weight, 1) <= add(maxweight, 1));
+        require(weight <= maxweight);
         require(weight >= 0);
+        require(weight != 1);
         bytes32 proposal = keccak256(abi.encodePacked("changecurator",curator, weight));
         bool res = checkProposal(proposal, 2);
         if (res) {            
@@ -188,9 +206,13 @@ contract Administration is IAdministration {
                 isCurator[curator] = false;
                 totalvotes = sub(totalvotes, myweight[curator]); 
             } else {
+                if(isCurator[curator] == false) {
+                    curators.push(curator);
+                }
                 isCurator[curator] = true;
+                myvotetimes[curator][7] = block.timestamp;
+                totalvotes = sub(totalvotes, myweight[curator]);
                 totalvotes = add(totalvotes, weight);
-                curators.push(curator);
             }
             myweight[curator] = weight;
         }
@@ -358,11 +380,12 @@ contract Administration is IAdministration {
         return res;
     }
 
+    //For verifying important proposals users can look at the state of major variables before and after consensus
     function checkProxyLock() private view {
         require(proxylock < block.timestamp);
         require(isActive != 0);
         if(isActive > 1) {
-            require(isActive + 907200 > block.timestamp); //Proxies must be changed within 2 weeks to give users 2 weeks to review
+            require(isActive + 907200 > block.timestamp); //Proxies must be changed within 10.5 days to give users time to review changes
         }
     }
 
