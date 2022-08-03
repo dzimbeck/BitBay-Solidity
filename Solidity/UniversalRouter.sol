@@ -564,9 +564,9 @@ contract UniswapV2Router02 is IUniswapV2Router01 {
         (amountToken, amountETH) = _addLiquidity(
             token,
             WETH[factory],
-            amountTokenDesired,
-            Liquid,
+            amountTokenDesired,            
             msg.value,
+            Liquid,
             amountTokenMin,
             amountETHMin
         );
