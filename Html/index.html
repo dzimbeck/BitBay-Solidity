@@ -119,6 +119,7 @@ Min/Max price fluctuation for swaps or deposits:
 <script type="text/javascript" src="./ERC20.js"></script>
 <script type="text/javascript" src="./Factory.js"></script>
 <script type="text/javascript" src="./Pair.js"></script>
+<script type="text/javascript" src="./WETH.js"></script>
 <link rel="stylesheet" type="text/css" href="./chartist.min.css">
 <script type="text/javascript" src="./coin.js"></script>
 <script type="text/javascript" src="./crypto-sha256.js"></script>
@@ -606,11 +607,11 @@ async function getMarketData(calcbal = 0) {
         text += "Total coins available for " + bayname + ": " + myval2 + "<br>";
         var otherbal;
         if(bayselect == 0) {
-            await bayrcontract.methods.balanceOf(myaccounts).call().then(function (result3) {
+            await bayrcontract.methods.balanceOf(mycurrentpair).call().then(function (result3) {
                 otherbal = parseFloat((web3.utils.fromWei(result3, 'gwei')*10).toFixed(8));
             });
         } else {
-           await baylcontract.methods.balanceOf(myaccounts).call().then(function (result3) {
+           await baylcontract.methods.balanceOf(mycurrentpair).call().then(function (result3) {
                 otherbal = parseFloat((web3.utils.fromWei(result3, 'gwei')*10).toFixed(8));
             });
         }
@@ -1002,7 +1003,6 @@ async function calculateDeposit() {
                     return;
                 }
             }
-            //<p id="additionalCoins">Reserve required for deposit(in addition to liquid coins): </p>     
             var myBAYval = parseInt(parseInt(parseFloat(document.getElementById("Coin2amount").value) * 1e8).toFixed(0));
             var ratioBAY = 0;
             var ratioBAYR = 0;
@@ -2022,6 +2022,14 @@ async function withdrawLP() {
     }
     document.getElementById("LPdetails1").innerHTML = 'Success!<br><br>' + prevtext;
     checkbalances();
+}
+
+//Useful for situations where pair becomes illiquid and ratio of funds has to be fixed manually
+async function depositToWETH(wethval, wethcont) {
+    var wethcontract = new web3.eth.Contract(WETHabi, wethcont);
+    console.log("Adding funds to WETH contract...");
+    await wethcontract.methods.deposit().send({"from":myaccounts,"value":wethval,"gasLimit": 1000000});
+    console.log("Success!");
 }
 
 setInterval(checkbalances, 90000);
