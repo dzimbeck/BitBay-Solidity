@@ -455,7 +455,7 @@ contract UniswapV2Router02 is IUniswapV2Router01 {
                 if(isProxy[tokenB]) {
                     (amountA, amountB) = (a.acomp, amountBDesired.mul(a.amountBOptimal) / a.bcomp);
                 } else {
-                    (amountA, amountB) = (a.acomp, a.amountBOptimal);
+                    (amountA, amountB) = (amountADesired, a.amountBOptimal);
                 }
             } else {
                 a.amountAOptimal = UniswapV2Library.quote(a.bcomp, reserveB, reserveA);
@@ -464,7 +464,7 @@ contract UniswapV2Router02 is IUniswapV2Router01 {
                 if(isProxy[tokenA]) {
                     (amountA, amountB) = (amountADesired.mul(a.amountAOptimal) / a.acomp, a.bcomp);
                 } else {
-                    (amountA, amountB) = (a.amountAOptimal, a.bcomp);
+                    (amountA, amountB) = (a.amountAOptimal, amountBDesired);
                 }
             }
         }
