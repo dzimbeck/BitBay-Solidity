@@ -617,7 +617,7 @@ contract UniswapV2Router02 is IUniswapV2Router01 {
         require(INIT_FILLED[fact] != false);
         require(!locked);
         locked = true;
-        factory = fact;        
+        factory = fact;
         address pair = UniswapV2Library.pairFor(factory, tokenA, tokenB, INIT_CODE[factory]);
         regBalance(pair);
         IUniswapV2Pair(pair).transferFrom(msg.sender, pair, liquidity); // send liquidity to pair
