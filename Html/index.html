@@ -335,6 +335,7 @@ lastSelect = '';
 lastMinMax = 0;
 withdrawMin1 = 0;
 withdrawMin2 = 0;
+lastrun = 0;
 document.getElementById("CoinPercent").value = '10';
 
 function defaultvars() {
@@ -1172,6 +1173,10 @@ async function showFrozen() {
 }
 
 function sendFrozen() {
+    if(lastrun > (Math.floor(Date.now() / 1000))) {
+        return;
+    }
+    lastrun = (Math.floor(Date.now() / 1000)) + 7;
     baydatacontract.methods.ReleaseFrozenFunds(myaccounts).send({"from":myaccounts,"gasLimit": 2500000});
 }
 
@@ -1355,6 +1360,10 @@ async function mintFromBitBay(jsondata) {
 }
 
 async function registerBitBay(regaddy) {
+    if(lastrun > (Math.floor(Date.now() / 1000))) {
+        return;
+    }
+    lastrun = (Math.floor(Date.now() / 1000)) + 7;
     if(regaddy[0] != 'b' && regaddy[0] != "B") {
         document.getElementById("text1").innerHTML += "<br><br>Invalid BitBay address.";
         return;
@@ -1379,6 +1388,10 @@ async function registerBitBay(regaddy) {
 }
 
 async function burnToBitBay(burnamount) {
+    if(lastrun > (Math.floor(Date.now() / 1000))) {
+        return;
+    }
+    lastrun = (Math.floor(Date.now() / 1000)) + 7;
     if(await web3.eth.net.getId() != currentChainId) {
         document.getElementById("text1").innerHTML += "<br><br>The selected chain was recently changed or you are not logged in, please log in again.";
         return;
@@ -1502,6 +1515,10 @@ async function copyNonce() {
 }
 
 async function addLiquidity() {
+    if(lastrun > (Math.floor(Date.now() / 1000))) {
+        return;
+    }
+    lastrun = (Math.floor(Date.now() / 1000)) + 7;
     //make sure to secure the variables
     var coin1val = document.getElementById('Coin1amount').value;
     var coin2val = document.getElementById('Coin2amount').value;
@@ -1681,11 +1698,11 @@ async function addLiquidity() {
     checkbalances();
 }
 
-function show(){
-    console.log(text);
-}
-
 async function Swap() {
+    if(lastrun > (Math.floor(Date.now() / 1000))) {
+        return;
+    }
+    lastrun = (Math.floor(Date.now() / 1000)) + 7;
     if(lastSelect == '') {
         document.getElementById("SwapSummary").innerHTML = "Error";
         return;       
@@ -1924,6 +1941,10 @@ async function Swap() {
 }
 
 async function withdrawLP() {
+    if(lastrun > (Math.floor(Date.now() / 1000))) {
+        return;
+    }
+    lastrun = (Math.floor(Date.now() / 1000)) + 7;
     var wval = document.getElementById("WithdrawAmount").value;
     var waccount = myaccounts;
     var prevtext = document.getElementById("LPdetails1").innerHTML;
@@ -2026,6 +2047,10 @@ async function withdrawLP() {
 
 //Useful for situations where pair becomes illiquid and ratio of funds has to be fixed manually
 async function depositToWETH(wethval, wethcont) {
+    if(lastrun > (Math.floor(Date.now() / 1000))) {
+        return;
+    }
+    lastrun = (Math.floor(Date.now() / 1000)) + 7;
     var wethcontract = new web3.eth.Contract(WETHabi, wethcont);
     console.log("Adding funds to WETH contract...");
     await wethcontract.methods.deposit().send({"from":myaccounts,"value":wethval,"gasLimit": 1000000});
