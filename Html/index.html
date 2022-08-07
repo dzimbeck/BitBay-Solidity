@@ -22,6 +22,7 @@
 <input class="textBox" id="range2" type="text" maxlength="30" required/>
 <div id="chartContainer" style="height: 150px; width: 50%; border: 5px solid #d9dbda"></div>
 <br><br>
+<p id="contractinfo"></p>
 <p id="networkinfo"></p>
 <br><br>
 <p id="BridgeInfo">Bridge Tools:</p><br>
@@ -132,6 +133,7 @@ var web3 = [];
 var contractInst = [];
 //web3[0] = new Web3("https://cloudflare-eth.com");
 //web3[1] = new Web3("https://bsc-dataseed.binance.org");
+//web3[2] = new Web3("https://api-goerli.etherscan.io/");
 var isConnected = false;
 window.addEventListener('ethereum#initialized', login, {
     once: true,
@@ -476,6 +478,7 @@ async function checkbalances() {
             document.getElementById("text1").innerHTML += "<br>NOTICE: Spending is currently disabled as this contract may be under maintenance."
         }
     })
+    document.getElementById("contractinfo").innerHTML = "Contracts to import into Metamask so that you may interact with BitBay: <br>BitBay - " +  BAYLaddy + "<br>BitBay Reserve - " + BAYRaddy + "<br>BitBay Frozen - " + BAYFaddy + "<br><br>";
     await getNetworkInfo();
     await getMarketData();    
 }
