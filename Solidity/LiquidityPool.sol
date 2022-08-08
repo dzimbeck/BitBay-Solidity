@@ -120,17 +120,17 @@ contract Pool is ILiquidityPool {
         }
         bool isProxy;
         (success, result) = AMM.staticcall(abi.encodeWithSignature("token0()"));
-        require(success);        
+        require(success);
         (myaddy[0]) = abi.decode(result, (address));
+        (success, result) = AMM.staticcall(abi.encodeWithSignature("token1()"));
+        require(success);
+        (myaddy[1]) = abi.decode(result, (address));
         (success, result) = proxy.staticcall(abi.encodeWithSignature("isProxy(address)",myaddy[0]));
         require(success);
         (isProxy) = abi.decode(result, (bool));
         if(isProxy == false) {
             pairtoken[AMM] = myaddy[0];
         } else {
-            (success, result) = AMM.staticcall(abi.encodeWithSignature("token1()"));
-            require(success);
-            (myaddy[1]) = abi.decode(result, (address));
             (success, result) = proxy.staticcall(abi.encodeWithSignature("isProxy(address)",myaddy[1]));
             require(success);
             (isProxy) = abi.decode(result, (bool));
