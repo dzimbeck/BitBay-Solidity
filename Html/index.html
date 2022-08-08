@@ -429,12 +429,12 @@ async function checkbalances() {
     if (currentChainId == 5) {
         netname = "Goerli Testnet";
         netname2 = "ETH";
-        BAYLaddy = "0x65677339699ff2a527Ba9f7B86C85e28E3c9e580";
-        BAYRaddy = "0xDd9d1Dc759128Cc822a0837fc30568ABEbd819f9";
-        BAYFaddy = "0x86Cdb04353f44D200b7a1ADc612b45Ad861Da4A3";
-        BAYDataAddy = "0x5227d0BB9499dBe41b51B7c4Cd8f45634d2eA3A4";
+        BAYLaddy = "0xE404dE3CC81d47e2CF4a22801030ac8447e556ab";
+        BAYRaddy = "0x8Dbd2630fD170D02A8fA130232Dc5FA674cCd4EC";
+        BAYFaddy = "0xec8Ef8d72671D1DbA1EC27CC2bAB34176d2129bd";
+        BAYDataAddy = "0xaEAad31B7214297E9a3089a3A619fBAdacd9930d";
         BAYAdmin = "0x92fCBde3052a5bC168078713EA6849Be6A50F7bB";
-        liquidityAddy = "0x855361aCa92c3FaD0F3bA5617015cb639Cb76146";
+        liquidityAddy = "0xbeEc4AC6D044EACb25bd277c543BA30d99704594";
         pegsteps = 30;
         microsteps = 8;
         deflationrate = 99;
@@ -513,14 +513,14 @@ async function getMarketData(calcbal = 0) {
         exchangeImages = [];
         prevChainId = currentChainId;
         if (currentChainId == 5) {        
-            pairs.push({'HappyWalrusCoin': '0x1af76A71a15AB312DC58742bAA439c29190CF44F'});
+            pairs.push({'HappyWalrusCoin': '0x77aEdA374eA716881176d805407D3b785Db0d50d'});
             pairs.push({'Wrapped ETH': '0xCC23B64B67c242D0bA9Ff8D999065Cd32b8387b2'});
             knowndecimals.push(8);
             knowndecimals.push(18);
             exchanges.push({'WalrusSwap': '0xc501f758B87c7e831C84229F95766341Ac32aBf7'});
             exchangenum.push(997)
             exchangeImages.push('<img src="./walrus.png" style="height: 75px; width: 75px;"/>');
-            routers.push({'UniversalRouter': '0xE625a76e44D6B18515EaE3D260Ae168ddc576Bc8'});
+            routers.push({'UniversalRouter': '0x7655eaAFC2b75E0D7D202F9283165AfCF3DFa989'});
         }
         document.getElementById("exchangeImage").innerHTML="";
         document.getElementById("Coin1").innerHTML="";
@@ -753,7 +753,7 @@ async function calculateDeposit() {
                 var poolres = [];
                 if(/^0x0+$/.test(mypair) == false) {
                     console.log("Checking pool balance...");
-                    await liquiditypool.methods.calculateBalance(mypair,mypair,true,0).call().then(function (thisresult) {                        
+                    await liquiditypool.methods.calculateBalance(myaccounts,mypair,true,0).call().then(function (thisresult) {                        
                         poolres = thisresult[2];
                     })
                     x = 0;
@@ -1204,7 +1204,7 @@ async function showPegChart(selectedChart = 0) {
             })
         }
         if(selectedChart == 1) {
-            await liquiditypool.methods.calculateBalance(mycurrentpair, mycurrentpair, true, 0).call().then(function (myresult4) {
+            await liquiditypool.methods.calculateBalance(myaccounts, mycurrentpair, true, 0).call().then(function (myresult4) {
                 result = myresult4[2];
             })
         }
@@ -1698,6 +1698,8 @@ async function addLiquidity() {
         return;
     }
     document.getElementById("addliquidtext").innerHTML = 'Success!';
+    document.getElementById("Coin1amount").value = '';
+    document.getElementById("Coin2amount").value = '';
     checkbalances();
 }
 
@@ -1802,6 +1804,7 @@ async function Swap() {
                 return;
             }
             document.getElementById("SwapAmount").value = '';
+            document.getElementById("SwapAmount2").value = '';
         }
     } else {
         document.getElementById("SwapSummary").innerHTML = 'Pair does not exist yet. Please deposit liquidity to the pair.';
@@ -1941,6 +1944,8 @@ async function Swap() {
         return;
     }
     document.getElementById("SwapSummary").innerHTML = 'Success!<br><br>' + prevtext;
+    document.getElementById("SwapAmount").value = '';
+    document.getElementById("SwapAmount2").value = '';
 }
 
 async function withdrawLP() {
