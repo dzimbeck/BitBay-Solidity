@@ -59,7 +59,7 @@ contract BAYR is IHALO {
     function balanceOf(address user) public virtual override view returns (uint) {
         bool success;
         bytes memory result;
-        (success, result) = proxy.staticcall(abi.encodeWithSignature("reserveBalanceOf(address)",user));
+        (success, result) = proxy.staticcall(abi.encodeWithSignature("reserveBalanceOf(address,address)",user,msg.sender));
         require(success);
         uint rval = abi.decode(result, (uint));
         return rval;

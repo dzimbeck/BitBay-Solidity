@@ -25,6 +25,9 @@ contract Pool is ILiquidityPool {
     bool public checkBalance = false; //Check for advantageous withdraws(useful during times of high BAYL distribution)
     bool public magnify = true;
     uint public matchprecision = 5;
+    mapping (address => address) public pairtoken;
+    uint public prevtokenbalance;
+    address public addresscheck;
 
     constructor() {
         minter = msg.sender;
@@ -115,18 +118,35 @@ contract Pool is ILiquidityPool {
             (uint supply,,uint mk,,) = abi.decode(result, (uint,uint,uint,uint,uint));
             poolhighkey[AMM] = (supply / mk); //It can start in sync because checkAMM is called only on first LP deposit
         }
+        bool isProxy;
         (success, result) = AMM.staticcall(abi.encodeWithSignature("token0()"));
+        require(success);        
         (myaddy[0]) = abi.decode(result, (address));
-        (success, result) = AMM.staticcall(abi.encodeWithSignature("token1()"));
-        (myaddy[1]) = abi.decode(result, (address));
+        (success, result) = proxy.staticcall(abi.encodeWithSignature("isProxy(address)",myaddy[0]));
+        require(success);
+        (isProxy) = abi.decode(result, (bool));
+        if(isProxy == false) {
+            pairtoken[AMM] = myaddy[0];
+        } else {
+            (success, result) = AMM.staticcall(abi.encodeWithSignature("token1()"));
+            require(success);
+            (myaddy[1]) = abi.decode(result, (address));
+            (success, result) = proxy.staticcall(abi.encodeWithSignature("isProxy(address)",myaddy[1]));
+            require(success);
+            (isProxy) = abi.decode(result, (bool));
+            if(isProxy == false) {
+                pairtoken[AMM] = myaddy[1];
+            }
+        }
         (success, result) = AMM.staticcall(abi.encodeWithSignature("factory()"));
         (myaddy[2]) = abi.decode(result, (address));
         return (myaddy[0], myaddy[1], myaddy[2]);
     }
-    function syncAMM(address AMM) public {
+    function syncAMM(address AMM) external {
         bool success;
         bytes memory result;
         calcLocals memory a;
+        addresscheck = address(0);
         (a.liquid, a.rval, a.reserve) = calculateBalance(AMM,AMM,true,0);
         (success, result) = proxy.staticcall(abi.encodeWithSignature("getState()"));
         (a.supply,a.pegsteps,a.mk,a.pegrate,a.i) = abi.decode(result, (uint,uint,uint,uint,uint));
@@ -174,6 +194,12 @@ contract Pool is ILiquidityPool {
             }
             reserveatpool[user][pool] = reserve2;
             highkeyatpool[user][pool] = (a.supply / a.mk);
+        }
+        if(trade == 3) {
+            addresscheck = user;
+            (success, result) = pairtoken[pool].staticcall(abi.encodeWithSignature("balanceOf(address)",user));
+            require(success);
+            prevtokenbalance = abi.decode(result, (uint));
         }
         poolbalance[pool] = a.reserve;
         poolhighkey[pool] = (a.supply / a.mk);
@@ -229,6 +255,7 @@ contract Pool is ILiquidityPool {
         (success, result) = pool.staticcall(abi.encodeWithSignature("balanceOf(address)",pool));
         require(success);
         prevLPBalance[pool] = abi.decode(result, (uint));
+        addresscheck = address(0);
     }
     function calculateBalance(address user, address pool, bool isPool, uint buffer)  public view virtual override returns (uint, uint, uint[38] memory) {
         calcLocals memory a;
@@ -246,15 +273,20 @@ contract Pool is ILiquidityPool {
                 if(prevLPBalance[pool] != abi.decode(result, (uint))) {
                     (success, result) = proxy.staticcall(abi.encodeWithSignature("withdrawAddy(address)",pool));
                     require(success);
-                    require(abi.decode(result, (address)) != address(0));
+                    require(abi.decode(result, (address)) != address(0), "Action was not performed by the official BitBay router");
                 }
+            }
+            if(user == pool && addresscheck != address(0)) {
+                (success, result) = pairtoken[pool].staticcall(abi.encodeWithSignature("balanceOf(address)",addresscheck));
+                require(success);
+                require(prevtokenbalance < abi.decode(result, (uint)), "Action was not performed by the official BitBay router");
             }
         }
         (success, result) = proxy.staticcall(abi.encodeWithSignature("getState()"));
         (a.supply,a.pegsteps,a.mk,a.pegrate,deflationrate) = abi.decode(result, (uint,uint,uint,uint,uint));
         if (isPool) {
-            a.reserve = poolbalance[user];
-            a.highkey = poolhighkey[user];
+            a.reserve = poolbalance[pool];
+            a.highkey = poolhighkey[pool];
         } else {
             a.reserve = reserveatpool[user][pool];
             a.highkey = highkeyatpool[user][pool];
@@ -552,291 +584,291 @@ contract Pool is ILiquidityPool {
         //b.difference is what is taken from a users pool based on the percent of LP tokens taken
         return (b.amount, newreserve, b.difference);
     }
-
-    //This pooling method lets users share liquid for a "smoother deflation". They first check to see if there is enough liquid
-    //funds, if not they take the most premium reserve they can. Then, they take the pools pattern. Then they check to see if
-    //there is enough reserve and if not take from liquid and finally they try to find the "best match" for the reserve sections.
-    //Careful, this function might get expensive. It's useful for a user to check gas cost of recipient/sender balances in advance.
-    //This function is not necessarily for AMM exchanges. It's used to illustrate how to give all users a predictable deflation.
-    function calculatePoolBalanceV2(address user, address pool, uint buffer) public view returns (uint, uint, uint[38] memory) {
-        calcLocals memory a;
-        uint deflationrate;
-        bool success;
-        bytes memory result;
-        (success, result) = proxy.staticcall(abi.encodeWithSignature("getState()"));
-        (a.supply,a.pegsteps,a.mk,a.pegrate,deflationrate) = abi.decode(result, (uint,uint,uint,uint,uint));
-        if (buffer != 0) {
-            //To check supply at 0 just add liquid + reserve balances
-            a.supply = buffer;
-        }
-        (a.liquid, a.rval, a.reserve) = calculateBalance(user,pool,false,buffer);
-        (uint poolliquid, uint poolrval, uint[38] memory poolreserve) = calculateBalance(pool,pool,true,buffer);
-        a.section = (a.supply / a.mk);
-        a.i = 0;
-        a.k = a.supply % a.mk;
-        
-        uint val;
-        uint[38] memory newreserve;
-        //First compare two balances, if user is owed L they get reserve starting from right to left
-        if (a.liquid > poolliquid) { //There isn't enough liquid, so we take from reserve
-            val = a.liquid - poolliquid;
-            a.liquid -= val;
-            poolrval -= val; //There must be funds here if not in liquid pool
-            while (a.i < a.k) {
-                a.i += 1; //add first because we want reserve only
-                if (poolreserve[a.pegsteps + a.k - a.i] < val) {
-                    newreserve[a.pegsteps + a.k - a.i] += poolreserve[a.pegsteps + a.k - a.i];
-                    val -= poolreserve[a.pegsteps + a.k - a.i];
-                    poolreserve[a.pegsteps + a.k - a.i] = 0;
-                } else {
-                    newreserve[a.pegsteps + a.k - a.i] += val;
-                    poolreserve[a.pegsteps + a.k - a.i] -= val;
-                    val = 0;
-                    break;
-                }
-            }
-            a.i = 0;
-            if (val > 0) {                
-                while (a.i < a.section) {
-                    a.i += 1;
-                    if (poolreserve[a.section - a.i] < val) {
-                        newreserve[a.section - a.i] += poolreserve[a.section - a.i];
-                        val -= poolreserve[a.section - a.i];
-                        poolreserve[a.section - a.i] = 0;
-                    } else {
-                        newreserve[a.section - a.i] += val;
-                        poolreserve[a.section - a.i] -= val;
-                        val = 0;
-                        break;
-                    }
-                }
-            }
-            require(val == 0, "Pool is missing funds");
-        }
-        //Now take an even ratio from the pool since it's shared.
-        uint remainder = 0;
-        if (a.liquid > 0) {
-            a.i = 0;
-            val = a.liquid;
-            a.liquid = 0;
-            a.newtot = 0;
-            while (a.i < a.mk - a.k) {
-                a.liquid = mul(poolreserve[a.pegsteps + a.k + a.i],val) / poolliquid;
-                poolreserve[a.pegsteps + a.k + a.i] -= a.liquid;
-                newreserve[a.pegsteps + a.k + a.i] += a.liquid;
-                a.newtot += a.liquid;
-                a.i += 1;
-            }
-            a.i = a.section + 1;
-            while (a.i < a.pegsteps) {
-                a.liquid = mul(poolreserve[a.i],val) / poolliquid;
-                poolreserve[a.i] -= a.liquid;
-                newreserve[a.i] += a.liquid;
-                a.newtot += a.liquid;
-                a.i += 1;
-            }
-            remainder = sub(val, a.newtot);
-            a.i = 0;
-            while (a.i < a.mk - a.k) {
-                if (remainder == 0) {
-                    break;
-                }
-                if (poolreserve[a.pegsteps + a.k + a.i] > 0) {
-                    poolreserve[a.pegsteps + a.k + a.i] -= 1;
-                    newreserve[a.pegsteps + a.k + a.i] += 1;
-                    remainder -= 1;
-                    a.newtot += 1;
-                }
-                a.i += 1;
-            }
-            a.i = a.section + 1;
-            while (a.i < a.pegsteps) {
-                if (remainder == 0) {
-                    break;
-                }
-                if (poolreserve[a.i] > 0) {
-                    poolreserve[a.i] -= 1;
-                    newreserve[a.i] += 1;
-                    remainder -= 1;
-                    a.newtot += 1;
-                }
-                a.i += 1;
-            }
-            require(remainder == 0, "Calculation error");
-            require(a.newtot == val, "Value mismatch");
-            poolliquid -= val;
-        }
-        //First check to see if there is enough reserve in the pool, if not take from liquid side
-        //Also we remove some of what is owed from the previous reserve pool since we look for the best match after
-        if (a.rval > poolrval) {
-            a.i = 0;
-            val = a.rval - poolrval;            
-            poolliquid -= val;
-            while (a.i < (a.mk - a.k)) {
-                if (poolreserve[a.pegsteps + a.k + a.i] < val) {
-                    newreserve[a.pegsteps + a.k + a.i] += poolreserve[a.pegsteps + a.k + a.i];
-                    val -= poolreserve[a.pegsteps + a.k + a.i];
-                    poolreserve[a.pegsteps + a.k + a.i] = 0;
-                } else {
-                    newreserve[a.pegsteps + a.k + a.i] += val;
-                    poolreserve[a.pegsteps + a.k + a.i] -= val;
-                    val = 0;
-                    break;
-                }
-                a.i += 1;
-            }
-            a.i = 0;
-            if (val > 0) {                
-                while (a.i < a.pegsteps - (a.section + 1)) {
-                    a.i += 1;
-                    if (poolreserve[a.section + a.i] < val) {
-                        newreserve[a.section + a.i] += poolreserve[a.section + a.i];
-                        val -= poolreserve[a.section + a.i];
-                        poolreserve[a.section + a.i] = 0;
-                    } else {
-                        newreserve[a.section + a.i] += val;
-                        poolreserve[a.section + a.i] -= val;
-                        val = 0;
-                        break;
-                    }                    
-                }
-            }
-            require(val == 0, "Pool is missing funds");
-            val = a.rval - poolrval;
-            a.rval -= val;
-            a.i = 0;
-            while (a.i < a.k) {
-                a.i += 1;
-                if (a.reserve[a.pegsteps + a.k - a.i] < val) {
-                    val -= a.reserve[a.pegsteps + a.k - a.i];
-                    a.reserve[a.pegsteps + a.k - a.i] = 0;
-                } else {
-                    a.reserve[a.pegsteps + a.k - a.i] -= val;
-                    val = 0;
-                    break;
-                }                
-            }
-            a.i = 0;
-            if (val > 0) {                
-                while (a.i < a.section) {
-                    a.i += 1;
-                    if (a.reserve[a.section - a.i] < val) {
-                        val -= a.reserve[a.section - a.i];
-                        a.reserve[a.section - a.i] = 0;
-                    } else {
-                        a.reserve[a.section - a.i] -= val;
-                        val = 0;
-                        break;
-                    }
-                }
-            }
-            require(val == 0, "Reserve section is missing funds");
-        }
-        //Great, now we just have to match the reserve as closely as possible. A lot of iterations are possible here.
-        a.i = 0;
-        uint[3] memory inx;
-        while (a.i < (a.section + a.k)) {
-            if (a.i >= a.section) {
-                inx[1] = a.pegsteps + (a.i - a.section);
-            } else {
-                inx[1] = a.i;
-            }
-            if (a.reserve[inx[1]] == 0) {
-                a.i += 1;
-                continue;
-            }
-            a.j = 0;
-            while (a.j < a.pegsteps + a.mk) { //Here we check for the nearest neighbor that can match our reserve deposit
-                if (inx[1] >= a.pegsteps) {
-                     val = inx[1] - a.pegsteps;
-                    if (a.j > val && (a.j - val) > a.section) {
-                        inx[0] = 0; //Out of bounds
-                    } else {
-                        if (a.j > val) {
-                            inx[0] = a.section - (a.j - val);
-                        } else {
-                            inx[0] = inx[1] - a.j;
-                        }
-                    }
-                    if (val + a.j >= a.mk && ((val + a.j) - a.mk) + 1 + a.section >= a.pegsteps) {
-                        inx[2] = 0; //Out of bounds
-                    } else {
-                        if (val + a.j >= a.mk) {
-                            inx[2] = ((val + a.j) - a.mk) + 1 + a.section;
-                        } else {
-                            inx[2] = inx[1] + a.j;
-                        }
-                    }
-                } else {
-                    if (a.j > inx[1]) {
-                        inx[0] = 0; //Out of bounds
-                    } else {
-                        inx[0] = inx[1] - a.j;
-                    }
-                    if (inx[1] + a.j >= a.section) {
-                        if ((inx[1] + a.j) - a.section < a.mk) {
-                            inx[2] = ((inx[1] + a.j) - a.section) + a.pegsteps;
-                        } else {
-                            if ((((inx[1] + a.j) - a.section) - a.mk) + 1 + a.section >= a.pegsteps) {
-                                inx[2] = 0; //Out of bounds
-                            }
-                            inx[2] = (((inx[1] + a.j) - a.section) - a.mk) + 1 + a.section;
-                        }
-                    } else {
-                        inx[2] = inx[1] + a.j;
-                    }
-                }
-                if (poolreserve[inx[0]] != 0) {
-                    if (a.reserve[inx[1]] > poolreserve[inx[0]]) {
-                        newreserve[inx[0]] += poolreserve[inx[0]];
-                        a.reserve[inx[1]] -= poolreserve[inx[0]];
-                        poolreserve[inx[0]] = 0;
-                    } else {
-                        newreserve[inx[0]] += a.reserve[inx[1]];
-                        poolreserve[inx[0]] -= a.reserve[inx[1]];
-                        a.reserve[inx[1]] = 0;
-                        break;
-                    }
-                }
-                if (poolreserve[inx[2]] != 0) {
-                    if (a.reserve[inx[1]] > poolreserve[inx[2]]) {
-                        newreserve[inx[2]] += poolreserve[inx[2]];
-                        a.reserve[inx[1]] -= poolreserve[inx[2]];
-                        poolreserve[inx[2]] = 0;
-                    } else {
-                        newreserve[inx[2]] += a.reserve[inx[1]];
-                        poolreserve[inx[2]] -= a.reserve[inx[1]];
-                        a.reserve[inx[1]] = 0;
-                        break;
-                    }
-                }
-                a.j += 1;
-            }
-            a.i += 1;
-        }
-        //Calculate balance of new pool
-        a.i = 0;
-        a.liquid = 0;
-        a.rval = 0;
-        while (a.i < a.pegsteps) {
-            if (a.i < a.section) {
-                a.rval += newreserve[a.i];
-            }
-            if (a.i > a.section) {
-                a.liquid += newreserve[a.i];
-            }
-            a.i += 1;
-        }
-        a.i = 0;
-        while (a.i < a.mk) {
-            if (a.i < a.k) {
-                a.rval += newreserve[a.pegsteps + a.i];
-            }
-            if (a.i >= a.k) {
-                a.liquid += newreserve[a.pegsteps + a.i];
-            }
-            a.i += 1;
-        }
-        return (a.liquid, a.rval, newreserve);
-    }
 }
+//This pooling method lets users share liquid for a "smoother deflation". They first check to see if there is enough liquid
+//funds, if not they take the most premium reserve they can. Then, they take the pools pattern. Then they check to see if
+//there is enough reserve and if not take from liquid and finally they try to find the "best match" for the reserve sections.
+//Careful, this function might get expensive. It's useful for a user to check gas cost of recipient/sender balances in advance.
+//This function is not necessarily for AMM exchanges. It's used to illustrate how to give all users a predictable deflation.
+//Therefore, this function is only shown as an example and it has not been audited or tested yet.
+//function calculatePoolBalanceV2(address user, address pool, uint buffer) public view returns (uint, uint, uint[38] memory) {
+//    calcLocals memory a;
+//    uint deflationrate;
+//    bool success;
+//    bytes memory result;
+//    (success, result) = proxy.staticcall(abi.encodeWithSignature("getState()"));
+//    (a.supply,a.pegsteps,a.mk,a.pegrate,deflationrate) = abi.decode(result, (uint,uint,uint,uint,uint));
+//    if (buffer != 0) {
+//        //To check supply at 0 just add liquid + reserve balances
+//        a.supply = buffer;
+//    }
+//    (a.liquid, a.rval, a.reserve) = calculateBalance(user,pool,false,buffer);
+//    (uint poolliquid, uint poolrval, uint[38] memory poolreserve) = calculateBalance(pool,pool,true,buffer);
+//    a.section = (a.supply / a.mk);
+//    a.i = 0;
+//    a.k = a.supply % a.mk;
+//    
+//    uint val;
+//    uint[38] memory newreserve;
+//    //First compare two balances, if user is owed L they get reserve starting from right to left
+//    if (a.liquid > poolliquid) { //There isn't enough liquid, so we take from reserve
+//        val = a.liquid - poolliquid;
+//        a.liquid -= val;
+//        poolrval -= val; //There must be funds here if not in liquid pool
+//        while (a.i < a.k) {
+//            a.i += 1; //add first because we want reserve only
+//            if (poolreserve[a.pegsteps + a.k - a.i] < val) {
+//                newreserve[a.pegsteps + a.k - a.i] += poolreserve[a.pegsteps + a.k - a.i];
+//                val -= poolreserve[a.pegsteps + a.k - a.i];
+//                poolreserve[a.pegsteps + a.k - a.i] = 0;
+//            } else {
+//                newreserve[a.pegsteps + a.k - a.i] += val;
+//                poolreserve[a.pegsteps + a.k - a.i] -= val;
+//                val = 0;
+//                break;
+//            }
+//        }
+//        a.i = 0;
+//        if (val > 0) {                
+//            while (a.i < a.section) {
+//                a.i += 1;
+//                if (poolreserve[a.section - a.i] < val) {
+//                    newreserve[a.section - a.i] += poolreserve[a.section - a.i];
+//                    val -= poolreserve[a.section - a.i];
+//                    poolreserve[a.section - a.i] = 0;
+//                } else {
+//                    newreserve[a.section - a.i] += val;
+//                    poolreserve[a.section - a.i] -= val;
+//                    val = 0;
+//                    break;
+//                }
+//            }
+//        }
+//        require(val == 0, "Pool is missing funds");
+//    }
+//    //Now take an even ratio from the pool since it's shared.
+//    uint remainder = 0;
+//    if (a.liquid > 0) {
+//        a.i = 0;
+//        val = a.liquid;
+//        a.liquid = 0;
+//        a.newtot = 0;
+//        while (a.i < a.mk - a.k) {
+//            a.liquid = mul(poolreserve[a.pegsteps + a.k + a.i],val) / poolliquid;
+//            poolreserve[a.pegsteps + a.k + a.i] -= a.liquid;
+//            newreserve[a.pegsteps + a.k + a.i] += a.liquid;
+//            a.newtot += a.liquid;
+//            a.i += 1;
+//        }
+//        a.i = a.section + 1;
+//        while (a.i < a.pegsteps) {
+//            a.liquid = mul(poolreserve[a.i],val) / poolliquid;
+//            poolreserve[a.i] -= a.liquid;
+//            newreserve[a.i] += a.liquid;
+//            a.newtot += a.liquid;
+//            a.i += 1;
+//        }
+//        remainder = sub(val, a.newtot);
+//        a.i = 0;
+//        while (a.i < a.mk - a.k) {
+//            if (remainder == 0) {
+//                break;
+//            }
+//            if (poolreserve[a.pegsteps + a.k + a.i] > 0) {
+//                poolreserve[a.pegsteps + a.k + a.i] -= 1;
+//                newreserve[a.pegsteps + a.k + a.i] += 1;
+//                remainder -= 1;
+//                a.newtot += 1;
+//            }
+//            a.i += 1;
+//        }
+//        a.i = a.section + 1;
+//        while (a.i < a.pegsteps) {
+//            if (remainder == 0) {
+//                break;
+//            }
+//            if (poolreserve[a.i] > 0) {
+//                poolreserve[a.i] -= 1;
+//                newreserve[a.i] += 1;
+//                remainder -= 1;
+//                a.newtot += 1;
+//            }
+//            a.i += 1;
+//        }
+//        require(remainder == 0, "Calculation error");
+//        require(a.newtot == val, "Value mismatch");
+//        poolliquid -= val;
+//    }
+//    //First check to see if there is enough reserve in the pool, if not take from liquid side
+//    //Also we remove some of what is owed from the previous reserve pool since we look for the best match after
+//    if (a.rval > poolrval) {
+//        a.i = 0;
+//        val = a.rval - poolrval;            
+//        poolliquid -= val;
+//        while (a.i < (a.mk - a.k)) {
+//            if (poolreserve[a.pegsteps + a.k + a.i] < val) {
+//                newreserve[a.pegsteps + a.k + a.i] += poolreserve[a.pegsteps + a.k + a.i];
+//                val -= poolreserve[a.pegsteps + a.k + a.i];
+//                poolreserve[a.pegsteps + a.k + a.i] = 0;
+//            } else {
+//                newreserve[a.pegsteps + a.k + a.i] += val;
+//                poolreserve[a.pegsteps + a.k + a.i] -= val;
+//                val = 0;
+//                break;
+//            }
+//            a.i += 1;
+//        }
+//        a.i = 0;
+//        if (val > 0) {                
+//            while (a.i < a.pegsteps - (a.section + 1)) {
+//                a.i += 1;
+//                if (poolreserve[a.section + a.i] < val) {
+//                    newreserve[a.section + a.i] += poolreserve[a.section + a.i];
+//                    val -= poolreserve[a.section + a.i];
+//                    poolreserve[a.section + a.i] = 0;
+//                } else {
+//                    newreserve[a.section + a.i] += val;
+//                    poolreserve[a.section + a.i] -= val;
+//                    val = 0;
+//                    break;
+//                }                    
+//            }
+//        }
+//        require(val == 0, "Pool is missing funds");
+//        val = a.rval - poolrval;
+//        a.rval -= val;
+//        a.i = 0;
+//        while (a.i < a.k) {
+//            a.i += 1;
+//            if (a.reserve[a.pegsteps + a.k - a.i] < val) {
+//                val -= a.reserve[a.pegsteps + a.k - a.i];
+//                a.reserve[a.pegsteps + a.k - a.i] = 0;
+//            } else {
+//                a.reserve[a.pegsteps + a.k - a.i] -= val;
+//                val = 0;
+//                break;
+//            }                
+//        }
+//        a.i = 0;
+//        if (val > 0) {                
+//            while (a.i < a.section) {
+//                a.i += 1;
+//                if (a.reserve[a.section - a.i] < val) {
+//                    val -= a.reserve[a.section - a.i];
+//                    a.reserve[a.section - a.i] = 0;
+//                } else {
+//                    a.reserve[a.section - a.i] -= val;
+//                    val = 0;
+//                    break;
+//                }
+//            }
+//        }
+//        require(val == 0, "Reserve section is missing funds");
+//    }
+//    //Great, now we just have to match the reserve as closely as possible. A lot of iterations are possible here.
+//    a.i = 0;
+//    uint[3] memory inx;
+//    while (a.i < (a.section + a.k)) {
+//        if (a.i >= a.section) {
+//            inx[1] = a.pegsteps + (a.i - a.section);
+//        } else {
+//            inx[1] = a.i;
+//        }
+//        if (a.reserve[inx[1]] == 0) {
+//            a.i += 1;
+//            continue;
+//        }
+//        a.j = 0;
+//        while (a.j < a.pegsteps + a.mk) { //Here we check for the nearest neighbor that can match our reserve deposit
+//            if (inx[1] >= a.pegsteps) {
+//                 val = inx[1] - a.pegsteps;
+//                if (a.j > val && (a.j - val) > a.section) {
+//                    inx[0] = 0; //Out of bounds
+//                } else {
+//                    if (a.j > val) {
+//                        inx[0] = a.section - (a.j - val);
+//                    } else {
+//                        inx[0] = inx[1] - a.j;
+//                    }
+//                }
+//                if (val + a.j >= a.mk && ((val + a.j) - a.mk) + 1 + a.section >= a.pegsteps) {
+//                    inx[2] = 0; //Out of bounds
+//                } else {
+//                    if (val + a.j >= a.mk) {
+//                        inx[2] = ((val + a.j) - a.mk) + 1 + a.section;
+//                    } else {
+//                        inx[2] = inx[1] + a.j;
+//                    }
+//                }
+//            } else {
+//                if (a.j > inx[1]) {
+//                    inx[0] = 0; //Out of bounds
+//                } else {
+//                    inx[0] = inx[1] - a.j;
+//                }
+//                if (inx[1] + a.j >= a.section) {
+//                    if ((inx[1] + a.j) - a.section < a.mk) {
+//                        inx[2] = ((inx[1] + a.j) - a.section) + a.pegsteps;
+//                    } else {
+//                        if ((((inx[1] + a.j) - a.section) - a.mk) + 1 + a.section >= a.pegsteps) {
+//                            inx[2] = 0; //Out of bounds
+//                        }
+//                        inx[2] = (((inx[1] + a.j) - a.section) - a.mk) + 1 + a.section;
+//                    }
+//                } else {
+//                    inx[2] = inx[1] + a.j;
+//                }
+//            }
+//            if (poolreserve[inx[0]] != 0) {
+//               if (a.reserve[inx[1]] > poolreserve[inx[0]]) {
+//                    newreserve[inx[0]] += poolreserve[inx[0]];
+//                    a.reserve[inx[1]] -= poolreserve[inx[0]];
+//                    poolreserve[inx[0]] = 0;
+//                } else {
+//                    newreserve[inx[0]] += a.reserve[inx[1]];
+//                    poolreserve[inx[0]] -= a.reserve[inx[1]];
+//                    a.reserve[inx[1]] = 0;
+//                    break;
+//                }
+//            }
+//            if (poolreserve[inx[2]] != 0) {
+//                if (a.reserve[inx[1]] > poolreserve[inx[2]]) {
+//                    newreserve[inx[2]] += poolreserve[inx[2]];
+//                    a.reserve[inx[1]] -= poolreserve[inx[2]];
+//                    poolreserve[inx[2]] = 0;
+//                } else {
+//                    newreserve[inx[2]] += a.reserve[inx[1]];
+//                    poolreserve[inx[2]] -= a.reserve[inx[1]];
+//                    a.reserve[inx[1]] = 0;
+//                    break;
+//                }
+//            }
+//            a.j += 1;
+//        }
+//        a.i += 1;
+//    }
+//    //Calculate balance of new pool
+//    a.i = 0;
+//    a.liquid = 0;
+//    a.rval = 0;
+//    while (a.i < a.pegsteps) {
+//        if (a.i < a.section) {
+//            a.rval += newreserve[a.i];
+//        }
+//        if (a.i > a.section) {
+//            a.liquid += newreserve[a.i];
+//        }
+//        a.i += 1;
+//    }
+//    a.i = 0;
+//    while (a.i < a.mk) {
+//        if (a.i < a.k) {
+//            a.rval += newreserve[a.pegsteps + a.i];
+//        }
+//        if (a.i >= a.k) {
+//            a.liquid += newreserve[a.pegsteps + a.i];
+//        }
+//        a.i += 1;
+//    }
+//    return (a.liquid, a.rval, newreserve);
+//}

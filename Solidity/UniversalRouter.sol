@@ -192,6 +192,7 @@ interface IBitBay {
 
 interface ILiquidityPool {
     function addLPTokens(address,address,uint256) external;
+    function syncAMM(address) external;
 }
 
 contract UniswapV2Router02 is IUniswapV2Router01 {
@@ -211,9 +212,9 @@ contract UniswapV2Router02 is IUniswapV2Router01 {
         require(deadline >= block.timestamp, 'EXPIRED');
         _;
     }
-
-    address public minter;
-    //To save on contract size, can get some private variables from showVariables
+    
+    //To save on contract size, can get private variables from showVariables
+    address minter;    
     address BAY;
     address BAYR;
     address LiquidityPool;
@@ -288,8 +289,8 @@ contract UniswapV2Router02 is IUniswapV2Router01 {
         proxyBAY = _proxyBAY;
     }
 
-    function showVariables() public view returns(address, address, address, address, uint, uint, bool) {
-        return (BAY, BAYR, LiquidityPool, proxyBAY, liqTolerance, resTolerance, enforcePoolRatio);
+    function showVariables() public view returns(address, address, address, address, uint, uint, bool, address) {
+        return (BAY, BAYR, LiquidityPool, proxyBAY, liqTolerance, resTolerance, enforcePoolRatio, minter);
     }
 
     function showfactory(address fact) public view returns(bytes memory, bool, address, uint, uint, uint) {
@@ -349,6 +350,7 @@ contract UniswapV2Router02 is IUniswapV2Router01 {
         }
         unlockBAYvars(path);
         TransferHelper.safeTransferFrom(path, msg.sender, pair, amount);
+        ILiquidityPool(LiquidityPool).syncAMM(pair);
         locked = false;
     }
 

@@ -59,10 +59,9 @@ contract BITBAY {
     mapping (address => address) mintTo;
     mapping (address => address) public withdrawAddy;
     address[] public registry; //Useful for upgrading liquidity or BitBay data contracts
-    mapping (address => bool) public isRegistered;
+    mapping (address => bool) isRegistered;
 
-    // Events allow clients to react to specific
-    // contract changes you declare
+    // Events allow clients to react to specific contract changes you declare
     event Approval(address from, address to, uint amount);
     event ApprovalReserve(address from, address to, uint amount);
     event Transfer(address from, address to, uint amount);
@@ -273,24 +272,24 @@ contract BITBAY {
     }
     
     //ERC20 Functions
-    function balanceOf(address user) public view returns (uint) {
+    function balanceOf(address user, address msgsend) public view returns (uint) {
         uint liquid;
         uint rval;
         uint[38] memory reserve;
         if (isAMM[user] == 1) {
-            (liquid, rval, reserve) = ILiquidityPool(LiquidityPool).calculateBalance(user,user,true,9999);
+            (liquid, rval, reserve) = ILiquidityPool(LiquidityPool).calculateBalance(msgsend,user,true,9999);
         } else {
             (liquid, rval, reserve) = calculateBalance(user, 0);
         }
         return liquid;
     }
     
-    function reserveBalanceOf(address user) public view returns (uint) {
+    function reserveBalanceOf(address user, address msgsend) public view returns (uint) {
         uint liquid;
         uint rval;
         uint[38] memory reserve;
         if (isAMM[user] == 1) {
-            (liquid, rval, reserve) = ILiquidityPool(LiquidityPool).calculateBalance(user,user,true,9999);
+            (liquid, rval, reserve) = ILiquidityPool(LiquidityPool).calculateBalance(msgsend,user,true,9999);
         } else {
             (liquid, rval, reserve) = calculateBalance(user, 0);
         }
@@ -546,7 +545,10 @@ contract BITBAY {
                 (,, reserve2) = calculateBalance(receiver, 0);
             }
         } else { //Deposit detected
-            require(routerVars[b.sender2][0] != 0); //"Deposits to this AMM must be made from the BitBay router"
+            if(routerVars[b.sender2][0] == 0) {
+                require(isRouter[b.sender2]); //Must be sent from a router that won't exploit deposits. This is to allow direct sales from an AMM
+                routerVars[b.sender2][0] = 3;
+            } //Deposits to this AMM must be made from the BitBay router. Therefore we register it as a trade and revert next balance check if it's not
         }
         a.i = 0;
         a.k = a.supply % a.mk;
@@ -599,7 +601,7 @@ contract BITBAY {
             if (routerVars[b.sender2][0] == 1) { //Deposit to a specific user
                 ILiquidityPool(LiquidityPool).deposit(mintTo[b.sender2],receiver,reserve2,0);
             } else { //Trade and send funds to the pool
-                ILiquidityPool(LiquidityPool).deposit(sender,receiver,reserve2,1);
+                ILiquidityPool(LiquidityPool).deposit(sender,receiver,reserve2,routerVars[b.sender2][0]);
             }
             if(routerVars[b.sender2][1] == 0) { //Check to see if reserve deposit is pending
                 mintTo[b.sender2] = address(0);
@@ -850,11 +852,14 @@ contract BITBAY {
         }
         //There is no time delay for deposits and sales to an approved AMM
         if (b.AMMstatus == 2) { //We have detected the user might be depositing to an AMM
-            require(routerVars[b.sender2][1] != 0); //"Deposits to this AMM must be made from the BitBay router"
+            if (routerVars[b.sender2][1] == 0) {
+                require(isRouter[b.sender2]); //Must be sent from a router that won't exploit deposits. This is to allow direct sales from an AMM
+                routerVars[b.sender2][1] = 3;
+            } //Deposits to this AMM must be made from the BitBay router, register as trade and decline balance check if it's not
             if (routerVars[b.sender2][1] == 1) { //Deposit
                 ILiquidityPool(LiquidityPool).deposit2(mintTo[b.sender2],receiver,reserve2,0);
             } else { //Trade
-                ILiquidityPool(LiquidityPool).deposit2(sender,receiver,reserve2,1);
+                ILiquidityPool(LiquidityPool).deposit2(sender,receiver,reserve2,routerVars[b.sender2][1]);
             }
             if(routerVars[b.sender2][0] == 0) { //Check if there is a pending liquid deposit
                 mintTo[b.sender2] = address(0);
