@@ -9,10 +9,8 @@ interface ILiquidityPool {
 
 contract Pool is ILiquidityPool {
     // --- ERC20 Data ---
-    string public constant name     = "BitBay Pools";
+    string public constant name = "BitBay Pools";
     string public version  = "1";
-    uint public decimals = 8;
-    uint public totalSupply;
     address public proxy; //Where all the peg functions and storage are
     address public minter;
 
