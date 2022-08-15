@@ -21,8 +21,6 @@ contract BITBAY {
     string public version = "1";
     uint public totalSupply;
     
-    // The keyword "public" makes variables
-    // accessible from other contracts
     address public minter;
     uint pegrate;
     uint deflationrate;
@@ -35,7 +33,6 @@ contract BITBAY {
     uint microsteps;
     bool lock;
     
-    //Governance
     bool active = true;
     bool specialEnabled = false;
     bool automaticUnfreeze = true;
@@ -158,13 +155,13 @@ contract BITBAY {
         automaticUnfreeze = status;
     }
 
-    function getState() public view returns (uint, uint, uint, uint, uint){
+    function getState() public view returns (uint, uint, uint, uint, uint) {
         return (currentSupply, pegsteps, microsteps, pegrate, deflationrate);
     }
 
     // Sends an amount of newly created coins to an address, used for the BAY bridge
     // Can only be called by the contract creator or routers
-    function mint(address receiver, uint[38] memory reserve) public returns (bool){
+    function mint(address receiver, uint[38] memory reserve) public returns (bool) {
         require(active);
         require(msg.sender == minter || isRouter[msg.sender]);
         calcLocals memory a;
@@ -217,7 +214,7 @@ contract BITBAY {
         return true;
     }
 
-    function register(address user) public {
+    function register(address user) private {
         if(isRegistered[user]) {
             return;
         } else {

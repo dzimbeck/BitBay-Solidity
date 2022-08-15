@@ -328,18 +328,36 @@ contract UniswapV2Router02 is IUniswapV2Router01 {
         fairRatio[pegsteps - 1] += newtot;
     }
 
-    function donateLiquidity(address pair, uint amount, uint BAY_BAYR) public {
+    function donateLiquidity(address pair, uint amount, uint amount2, uint BAY_BAYR) public {
         require(!locked);
         locked = true;
-        address path = address(0);
-        if(BAY_BAYR == 0) {
-            path = BAY;
+        if(amount2 == 0) {
+            require(msg.sender == minter);
+            address path = address(0);
+            if(BAY_BAYR == 0) {
+                path = BAY;
+            }
+            if(BAY_BAYR == 1) {
+                path = BAYR;
+            }
+            unlockBAYvars(path);
+            TransferHelper.safeTransferFrom(path, msg.sender, pair, amount);      
+        } else {
+            (,bytes memory result) = proxyBAY.staticcall(abi.encodeWithSignature("getState()"));
+            (uint supply,,uint mk,,) = abi.decode(result, (uint,uint,uint,uint,uint));
+            address tok = IUniswapV2Pair(pair).token0();
+            if(tok != BAY && tok != BAYR) {
+                tok = IUniswapV2Pair(pair).token1();
+            }
+            require(IERC20(tok).balanceOf(pair) < 100000000);
+            require(checkLiquidity(tok, amount, amount2, (supply / mk)));
+            unlockBAYvars(BAY);
+            TransferHelper.safeTransferFrom(BAY, msg.sender, pair, amount);            
+            if(amount2.sub(amount) > 0) {
+                unlockBAYvars(BAYR);
+                TransferHelper.safeTransferFrom(BAYR, msg.sender, pair, (amount2.sub(amount)));
+            }
         }
-        if(BAY_BAYR == 1) {
-            path = BAYR;
-        }
-        unlockBAYvars(path);
-        TransferHelper.safeTransferFrom(path, msg.sender, pair, amount);
         ILiquidityPool(LiquidityPool).syncAMM(pair);
         locked = false;
     }
@@ -715,7 +733,6 @@ contract UniswapV2Router02 is IUniswapV2Router01 {
         require(amounts[amounts.length - 1] >= amountOutMin, 'INSUFFICIENT_OUT');
         unlockBAYvars(path[0]);
         address pair = UniswapV2Library.pairFor(factory, path[0], path[1], INIT_CODE[factory]);
-        regBalance(pair);
         TransferHelper.safeTransferFrom(
             path[0], msg.sender, pair, amounts[0]
         );
@@ -738,7 +755,6 @@ contract UniswapV2Router02 is IUniswapV2Router01 {
         require(amounts[0] <= amountInMax, 'EXCESSIVE_IN');
         unlockBAYvars(path[0]);
         address pair = UniswapV2Library.pairFor(factory, path[0], path[1], INIT_CODE[factory]);
-        regBalance(pair);
         TransferHelper.safeTransferFrom(
             path[0], msg.sender, pair, amounts[0]
         );
@@ -781,7 +797,6 @@ contract UniswapV2Router02 is IUniswapV2Router01 {
         require(amounts[0] <= amountInMax, 'EXCESSIVE_IN');
         unlockBAYvars(path[0]);
         address pair = UniswapV2Library.pairFor(factory, path[0], path[1], INIT_CODE[factory]);
-        regBalance(pair);
         TransferHelper.safeTransferFrom(
             path[0], msg.sender, pair, amounts[0]
         );
@@ -806,7 +821,6 @@ contract UniswapV2Router02 is IUniswapV2Router01 {
         require(amounts[amounts.length - 1] >= amountOutMin, 'INSUFFICIENT_OUT');
         unlockBAYvars(path[0]);
         address pair = UniswapV2Library.pairFor(factory, path[0], path[1], INIT_CODE[factory]);
-        regBalance(pair);
         TransferHelper.safeTransferFrom(
             path[0], msg.sender, pair, amounts[0]
         );

@@ -30,6 +30,8 @@ contract BAYL is IHALO {
     
     address public minter;
     address public proxy; //Where all the peg functions and storage are
+    address public LiquidityPool;
+    address public lockpair; //An exception to not revert a temporary reentry
 
     uint public proxylock;
     
@@ -48,9 +50,21 @@ contract BAYL is IHALO {
         proxy = prox;
     }
 
-    function lockProxies(uint locktime) public returns (bool){
+    function setLiquidityPool(address prox) public {
+        require(block.timestamp > proxylock);
+        require(msg.sender == minter);
+        LiquidityPool = prox;
+    }
+
+    function lockProxies(uint locktime) public returns (bool) {
         require(msg.sender == minter);
         proxylock += block.timestamp + locktime;
+        return true;
+    }
+
+    function lockthis(address pair) public returns (bool) {
+        require(msg.sender == LiquidityPool);
+        lockpair = pair;
         return true;
     }
     
@@ -104,6 +118,10 @@ contract BAYL is IHALO {
     }
     
     function transfer(address to, uint value) public virtual override returns (bool) {
+        if(msg.sender == lockpair) {
+            lockpair = address(0);
+            return true;
+        }
         bool success;
         bytes memory result;
         (success, result) = proxy.call(abi.encodeWithSignature("sendLiquid(address,address,uint256,address)",msg.sender,to,value,msg.sender));
@@ -113,6 +131,10 @@ contract BAYL is IHALO {
     }
     
     function transferFrom(address from, address to, uint value) public virtual override returns (bool) {
+        if(msg.sender == lockpair) {
+            lockpair = address(0);
+            return true;
+        }
         bool success;
         bytes memory result;
         (success, result) = proxy.call(abi.encodeWithSignature("sendLiquid(address,address,uint256,address)",from,to,value,msg.sender));

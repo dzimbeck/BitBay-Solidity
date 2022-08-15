@@ -19,13 +19,16 @@ contract Pool is ILiquidityPool {
     mapping (address => mapping (address => uint)) public LPtokens;
     mapping (address => uint[38]) public poolbalance;
     mapping (address => uint) public override poolhighkey;
-    mapping (address => uint) public prevLPBalance;
-    bool public checkBalance = false; //Check for advantageous withdraws(useful during times of high BAYL distribution)
     bool public magnify = true;
     uint public matchprecision = 5;
     mapping (address => address) public pairtoken;
+    mapping (address => address) public myfactory;
     uint public prevtokenbalance;
     address public addresscheck;
+    bool public skipcheck;
+    address public BAYL;
+    address public BAYR;
+    mapping (address => bool) public isBAYpair;
 
     constructor() {
         minter = msg.sender;
@@ -47,26 +50,28 @@ contract Pool is ILiquidityPool {
         require(y == 0 || (z = x * y) / y == x, 'ds-math-mul-overflow');
     }
 
-    function setProxy(address myproxy) public returns (bool){
+    function setProxy(address myproxy) public returns (bool) {
         require(msg.sender == minter);
-        require(myproxy != address(0)); //Set this one time
+        require(proxy == address(0)); //Set this one time
         proxy = myproxy;
         return true;
     }
 
-    function setCheckBalance(bool status) public returns (bool){
+    function setProxies(address myBAYL, address myBAYR) public returns (bool) {
         require(msg.sender == minter);
-        checkBalance = status;
+        require(BAYL == address(0)); //Set this one time
+        BAYL = myBAYL;
+        BAYR = myBAYR;
         return true;
     }
 
-    function setMagnify(bool status) public returns (bool){
+    function setMagnify(bool status) public returns (bool) {
         require(msg.sender == minter);
         magnify = status;
         return true;
     }
 
-    function setPrecision(uint prec) public returns (bool){
+    function setPrecision(uint prec) public returns (bool) {
         require(msg.sender == minter);
         require(prec != 0);
         matchprecision = prec;
@@ -109,7 +114,9 @@ contract Pool is ILiquidityPool {
         //However users should proceed with caution and audit any AMM they wish to list on
         //This is because it's unclear if the functions operate like a standard AMM
         address[3] memory myaddy;
+        skipcheck = true;
         (bool success, bytes memory result) = AMM.call(abi.encodeWithSignature("sync()"));
+        skipcheck = false;
         //(bool success, bytes memory result) = AMM.staticcall(abi.encodeWithSignature("balanceOf(address),AMM"));
         if(msg.sender == proxy) {
             (success, result) = proxy.staticcall(abi.encodeWithSignature("getState()"));
@@ -126,18 +133,21 @@ contract Pool is ILiquidityPool {
         (success, result) = proxy.staticcall(abi.encodeWithSignature("isProxy(address)",myaddy[0]));
         require(success);
         (isProxy) = abi.decode(result, (bool));
-        if(isProxy == false) {
-            pairtoken[AMM] = myaddy[0];
+        if(isProxy == true) {
+            pairtoken[AMM] = myaddy[1];
+            isBAYpair[AMM] = true;
         } else {
             (success, result) = proxy.staticcall(abi.encodeWithSignature("isProxy(address)",myaddy[1]));
             require(success);
             (isProxy) = abi.decode(result, (bool));
-            if(isProxy == false) {
-                pairtoken[AMM] = myaddy[1];
+            if(isProxy == true) {
+                pairtoken[AMM] = myaddy[0];
+                isBAYpair[AMM] = true;
             }
         }
         (success, result) = AMM.staticcall(abi.encodeWithSignature("factory()"));
         (myaddy[2]) = abi.decode(result, (address));
+        myfactory[AMM] = myaddy[2];
         return (myaddy[0], myaddy[1], myaddy[2]);
     }
     function syncAMM(address AMM) external {
@@ -145,12 +155,14 @@ contract Pool is ILiquidityPool {
         bytes memory result;
         calcLocals memory a;
         addresscheck = address(0);
-        (a.liquid, a.rval, a.reserve) = calculateBalance(AMM,AMM,true,0);
+        (a.liquid, a.rval, a.reserve) = calculateBalance(msg.sender,AMM,true,0);
         (success, result) = proxy.staticcall(abi.encodeWithSignature("getState()"));
         (a.supply,a.pegsteps,a.mk,a.pegrate,a.i) = abi.decode(result, (uint,uint,uint,uint,uint));
         poolbalance[AMM] = a.reserve;
         poolhighkey[AMM] = (a.supply / a.mk);
+        skipcheck = true;
         (success, result) = AMM.call(abi.encodeWithSignature("sync()"));
+        skipcheck = false;
         require(success);
     }
     function deposit2(address user, address pool, uint[] memory reserve, uint trade) external {
@@ -173,7 +185,7 @@ contract Pool is ILiquidityPool {
         uint[38] memory reserve2;
         bool success;
         bytes memory result;
-        (a.liquid, a.rval, a.reserve) = calculateBalance(pool,pool,true,0);
+        (a.liquid, a.rval, a.reserve) = calculateBalance(msg.sender,pool,true,0);
         if(trade == 0) {
             (a.liquid, a.rval, reserve2) = calculateBalance(user,pool,false,0);
         }
@@ -194,8 +206,8 @@ contract Pool is ILiquidityPool {
             highkeyatpool[user][pool] = (a.supply / a.mk);
         }
         if(trade == 3) {
-            addresscheck = user;
-            (success, result) = pairtoken[pool].staticcall(abi.encodeWithSignature("balanceOf(address)",user));
+            addresscheck = pool;
+            (success, result) = pairtoken[pool].staticcall(abi.encodeWithSignature("balanceOf(address)",addresscheck));
             require(success);
             prevtokenbalance = abi.decode(result, (uint));
         }
@@ -214,7 +226,7 @@ contract Pool is ILiquidityPool {
         uint[38] memory difference;
         bool success;
         bytes memory result;
-        (a.liquid, a.rval, a.reserve) = calculateBalance(pool,pool,true,0);
+        (a.liquid, a.rval, a.reserve) = calculateBalance(msg.sender,pool,true,0);
         (a.liquid, a.rval, reserve2) = calculateBalance(user,pool,false,0);
         (a.liquid, newreserve, difference) = calculatePoolBalanceV1(user,pool,0,liquidity,matchprecision,liquidity);        
         (success, result) = proxy.staticcall(abi.encodeWithSignature("getState()"));
@@ -250,9 +262,26 @@ contract Pool is ILiquidityPool {
             success = abi.decode(result, (bool));
         }
         require(success || msg.sender == proxy);
-        (success, result) = pool.staticcall(abi.encodeWithSignature("balanceOf(address)",pool));
-        require(success);
-        prevLPBalance[pool] = abi.decode(result, (uint));
+        if(isBAYpair[pool] == true) {
+            (success, result) = pool.staticcall(abi.encodeWithSignature("balanceOf(address)",pool));
+            require(success);
+            uint LPbal = abi.decode(result, (uint));
+            if(LPbal != 0) { //This prevents spam so withdrawals can be accurately detected
+                skipcheck = true;
+                (success, result) = BAYL.staticcall(abi.encodeWithSignature("lockthis(address)",pool));
+                require(success);
+                (success, result) = BAYR.staticcall(abi.encodeWithSignature("lockthis(address)",pool));
+                require(success);
+                //Burn any spam funds found at the pair
+                (success, result) = pool.staticcall(abi.encodeWithSignature("burn(address)",address(this)));
+                require(success);
+                (success, result) = BAYL.staticcall(abi.encodeWithSignature("lockthis(address)",address(0)));
+                require(success);
+                (success, result) = BAYR.staticcall(abi.encodeWithSignature("lockthis(address)",address(0)));
+                require(success);
+            }
+        }
+        skipcheck = false;
         addresscheck = address(0);
     }
     function calculateBalance(address user, address pool, bool isPool, uint buffer)  public view virtual override returns (uint, uint, uint[38] memory) {
@@ -263,21 +292,21 @@ contract Pool is ILiquidityPool {
         //This is so users can still buy from AMM sites directly. If there is a change in LP token balance it can be
         //suspected as a withdraw. In some situations a buy can be declined if LP balance changes if someone sacrifices tokens.
         //So it's still recommended to trade from the official BitBay router.
-        if(buffer == 9999) { //Check for potential withdraw
+        if(buffer == 9999) { //Check for potential withdraw or deposit
             buffer = 0;
-            if(isPool && checkBalance) {
+            if(user == pool && skipcheck == false) { //Buying or withdrawing funds
                 (success, result) = pool.staticcall(abi.encodeWithSignature("balanceOf(address)",pool));
                 require(success);
-                if(prevLPBalance[pool] != abi.decode(result, (uint))) {
+                if(abi.decode(result, (uint)) != 0) {
                     (success, result) = proxy.staticcall(abi.encodeWithSignature("withdrawAddy(address)",pool));
                     require(success);
                     require(abi.decode(result, (address)) != address(0), "Action was not performed by the official BitBay router");
                 }
             }
-            if(user == pool && addresscheck != address(0)) {
+            if(user == pool && addresscheck != address(0)) { //If user didn't receive tokens then it's not a sale
                 (success, result) = pairtoken[pool].staticcall(abi.encodeWithSignature("balanceOf(address)",addresscheck));
                 require(success);
-                require(prevtokenbalance < abi.decode(result, (uint)), "Action was not performed by the official BitBay router");
+                require(prevtokenbalance > abi.decode(result, (uint)), "Action was not performed by the official BitBay router");
             }
         }
         (success, result) = proxy.staticcall(abi.encodeWithSignature("getState()"));
@@ -369,7 +398,7 @@ contract Pool is ILiquidityPool {
             a.supply = buffer;
         }
         (a.liquid, a.rval, a.reserve) = calculateBalance(user,pool,false,buffer);
-        (b.poolliquid, b.poolrval, b.poolreserve) = calculateBalance(pool,pool,true,buffer);
+        (b.poolliquid, b.poolrval, b.poolreserve) = calculateBalance(msg.sender,pool,true,buffer);
         a.section = (a.supply / a.mk);
         a.k = a.supply % a.mk;
         uint val;
@@ -601,7 +630,7 @@ contract Pool is ILiquidityPool {
 //        a.supply = buffer;
 //    }
 //    (a.liquid, a.rval, a.reserve) = calculateBalance(user,pool,false,buffer);
-//    (uint poolliquid, uint poolrval, uint[38] memory poolreserve) = calculateBalance(pool,pool,true,buffer);
+//    (uint poolliquid, uint poolrval, uint[38] memory poolreserve) = calculateBalance(msg.sender,pool,true,buffer);
 //    a.section = (a.supply / a.mk);
 //    a.i = 0;
 //    a.k = a.supply % a.mk;
