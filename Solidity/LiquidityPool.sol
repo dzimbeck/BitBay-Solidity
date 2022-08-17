@@ -20,6 +20,7 @@ contract Pool is ILiquidityPool {
     mapping (address => uint[38]) public poolbalance;
     mapping (address => uint) public override poolhighkey;
     bool public magnify = true;
+    bool public bothsides = true;
     uint public matchprecision = 5;
     mapping (address => address) public pairtoken;
     mapping (address => address) public myfactory;
@@ -56,7 +57,6 @@ contract Pool is ILiquidityPool {
         proxy = myproxy;
         return true;
     }
-
     function setProxies(address myBAYL, address myBAYR) public returns (bool) {
         require(msg.sender == minter);
         require(BAYL == address(0)); //Set this one time
@@ -64,13 +64,16 @@ contract Pool is ILiquidityPool {
         BAYR = myBAYR;
         return true;
     }
-
     function setMagnify(bool status) public returns (bool) {
         require(msg.sender == minter);
         magnify = status;
         return true;
     }
-
+    function setBothSides(bool status) public returns (bool) {
+        require(msg.sender == minter);
+        bothsides = status;
+        return true;
+    }
     function setPrecision(uint prec) public returns (bool) {
         require(msg.sender == minter);
         require(prec != 0);
@@ -94,7 +97,6 @@ contract Pool is ILiquidityPool {
         uint k;
         uint j;
     }
-
     struct calcLocals2 {
         bool success;
         bytes result;
@@ -104,6 +106,10 @@ contract Pool is ILiquidityPool {
         uint poolrval;
         uint deflationrate;
         uint amount;
+        uint rval2;
+        uint lval2;
+        uint prval;
+        uint plval;
     }
 
     //A person who wants to code a contract that is compatible with BAY can simply add these 4 functions.
@@ -416,16 +422,51 @@ contract Pool is ILiquidityPool {
                 b.difference[a.i] = val;
                 a.reserve[a.i] = val;                
                 a.newtot += val;
+                if(bothsides == true) {
+                    if(a.i < a.pegsteps) {
+                        if(a.i < a.section) {
+                            b.rval2 += val;
+                        } else {
+                            b.lval2 += val;
+                        }
+                    } else {
+                        if((a.i - a.pegsteps) < a.k) {
+                            b.rval2 += val;
+                        } else {
+                            b.lval2 += val;
+                        }
+                    }
+                }
                 a.i += 1;
             }
         }
         //Now expand the size of the proposed pool chart to account for the amount requested from the pool
         //The users liquid chart will be magnified or diminished depending on if the pool has gained or lost coins
         b.amount = (mul((b.poolliquid + b.poolrval),LP)) / LPsupply;
+        if(bothsides == true) {
+            b.prval = (mul((b.poolrval),LP)) / LPsupply;
+            b.plval = (mul((b.poolliquid),LP)) / LPsupply;
+        }
         a.i = 0;
         if(a.newtot != b.amount && skip == 0) {            
             while(a.i < (a.pegsteps + a.mk)) {
-                val = (a.reserve[a.i] * b.amount) / a.newtot;
+                if(bothsides == false) {
+                    val = (a.reserve[a.i] * b.amount) / a.newtot;
+                } else {
+                    if(a.i < a.pegsteps) {
+                        if(a.i < a.section) {
+                            val = (a.reserve[a.i] * b.prval) / b.rval2;
+                        } else {
+                            val = (a.reserve[a.i] * b.plval) / b.lval2;
+                        }
+                    } else {
+                        if((a.i - a.pegsteps) < a.k) {
+                            val = (a.reserve[a.i] * b.prval) / b.rval2;
+                        } else {
+                            val = (a.reserve[a.i] * b.plval) / b.lval2;
+                        }
+                    }
+                }
                 if((b.amount > a.newtot) && magnify == false) {
                     val = a.reserve[a.i];
                 }
@@ -525,6 +566,9 @@ contract Pool is ILiquidityPool {
                             }
                         }
                     }
+                    //Here it's possible for more precision to continue to calculate both sides independelty of their gains or losses.
+                    //You can subtract from the user and pool Liquid/Reserve totals and at the final step send the remaining proceeds
+                    //based on those ratios. This way, when more liquid is gained than reserve it's accurately distributed.
                     if (b.poolreserve[inx[0]] != 0) {
                         if (a.reserve[inx[1]] > b.poolreserve[inx[0]]) {
                             newreserve[inx[0]] += b.poolreserve[inx[0]];
@@ -559,7 +603,7 @@ contract Pool is ILiquidityPool {
             }
         }
         //If there is anything left over, we just give an equal distribution based on the pools remaining chart.
-        if (val < b.amount) {
+        if (val < b.amount) { //In future versions of this, you can alternatively calculate "both sides" here as well.
             a.highkey = (b.poolliquid + b.poolrval) - val; //the total left in the pool
             val = b.amount - val;
             a.i = 0;
