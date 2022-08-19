@@ -274,16 +274,16 @@ contract Pool is ILiquidityPool {
             uint LPbal = abi.decode(result, (uint));
             if(LPbal != 0) { //This prevents spam so withdrawals can be accurately detected
                 skipcheck = true;
-                (success, result) = BAYL.staticcall(abi.encodeWithSignature("lockthis(address)",pool));
+                (success, result) = BAYL.call(abi.encodeWithSignature("lockthis(address)",pool));
                 require(success);
-                (success, result) = BAYR.staticcall(abi.encodeWithSignature("lockthis(address)",pool));
+                (success, result) = BAYR.call(abi.encodeWithSignature("lockthis(address)",pool));
                 require(success);
                 //Burn any spam funds found at the pair
-                (success, result) = pool.staticcall(abi.encodeWithSignature("burn(address)",address(this)));
+                (success, result) = pool.call(abi.encodeWithSignature("burn(address)",address(this)));
                 require(success);
-                (success, result) = BAYL.staticcall(abi.encodeWithSignature("lockthis(address)",address(0)));
+                (success, result) = BAYL.call(abi.encodeWithSignature("lockthis(address)",address(0)));
                 require(success);
-                (success, result) = BAYR.staticcall(abi.encodeWithSignature("lockthis(address)",address(0)));
+                (success, result) = BAYR.call(abi.encodeWithSignature("lockthis(address)",address(0)));
                 require(success);
             }
         }
