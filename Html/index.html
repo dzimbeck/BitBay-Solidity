@@ -308,7 +308,6 @@ exchangeImages = [];
 BAYLaddy = '';
 BAYRaddy = '';
 fairRatio = [];
-enforcepoolratio = false;
 poolreserve = [];
 lastchecked = 0;
 lastchecked2 = 0;
@@ -320,8 +319,6 @@ reservebayval2 = 0;
 reservecoinval2 = 0;
 reservebayval3 = 0;
 reservecoinval3 = 0;
-resTolerance = 125;
-liqTolerance = 125;
 currentdecimals = 8;
 currentdecimals2 = 8;
 recommendedBAY = 0;
@@ -363,7 +360,6 @@ function defaultvars() {
     BAYLaddy = '';
     BAYRaddy = '';
     fairRatio = [];
-    enforcepoolratio = false;
     poolreserve = [];
     lastchecked = 0;
     lastchecked2 = 0;
@@ -374,8 +370,6 @@ function defaultvars() {
     reservecoinval2 = 0;
     reservebayval3 = 0;
     reservecoinval3 = 0;
-    resTolerance = 125;
-    liqTolerance = 125;
     currentdecimals = 8;
     currentdecimals2 = 8;
     recommendedBAY = 0;
@@ -429,12 +423,12 @@ async function checkbalances() {
     if (currentChainId == 5) {
         netname = "Goerli Testnet";
         netname2 = "ETH";
-        BAYLaddy = "0xE404dE3CC81d47e2CF4a22801030ac8447e556ab";
-        BAYRaddy = "0x8Dbd2630fD170D02A8fA130232Dc5FA674cCd4EC";
-        BAYFaddy = "0xec8Ef8d72671D1DbA1EC27CC2bAB34176d2129bd";
-        BAYDataAddy = "0xaEAad31B7214297E9a3089a3A619fBAdacd9930d";
+        BAYLaddy = "0x117b706aD64E9224e6cE4F8ef2cDF809b9575c10";
+        BAYRaddy = "0x790E1526014C5c32c1D06C528EbC070041c658B5";
+        BAYFaddy = "0xFd7702DD20908755276CC537d0a2687582e128E4";
+        BAYDataAddy = "0x8F093DBB0b56d99abBCD6fc8d283262641e12cA0";
         BAYAdmin = "0x92fCBde3052a5bC168078713EA6849Be6A50F7bB";
-        liquidityAddy = "0xbeEc4AC6D044EACb25bd277c543BA30d99704594";
+        liquidityAddy = "0x8A431E40353099868ADFE356eE035738adF52497";
         pegsteps = 30;
         microsteps = 8;
         deflationrate = 99;
@@ -520,7 +514,7 @@ async function getMarketData(calcbal = 0) {
             exchanges.push({'WalrusSwap': '0xc501f758B87c7e831C84229F95766341Ac32aBf7'});
             exchangenum.push(997)
             exchangeImages.push('<img src="./walrus.png" style="height: 75px; width: 75px;"/>');
-            routers.push({'UniversalRouter': '0x7655eaAFC2b75E0D7D202F9283165AfCF3DFa989'});
+            routers.push({'UniversalRouter': '0x780581bAaa37C56B08AcC760341Ce2c950c04DdC'});
         }
         document.getElementById("exchangeImage").innerHTML="";
         document.getElementById("Coin1").innerHTML="";
@@ -567,12 +561,6 @@ async function getMarketData(calcbal = 0) {
         bayaddy = BAYRaddy;
         bayname2 = "BitBay";
     }
-    var myrouter = Object.values(routers[0])[0];
-    var routercontract = new web3.eth.Contract(RouterABI, myrouter);
-    await routercontract.methods.showVariables().call().then(function (result3) {
-        liqTolerance = parseInt(result3[4]);
-        resTolerance = parseInt(result3[5]);
-    })
     await liquiditypool.methods.matchprecision().call().then(function (result3) {
         precision = parseInt(result3);
     })
@@ -704,8 +692,6 @@ async function calculateDeposit() {
     var exchange;
     var bayselect;
     var thisresult;
-    var myrouter;
-    var routercontract;
     var coin1contract;
     var exchangecontract;
     var paircontract;
@@ -738,38 +724,18 @@ async function calculateDeposit() {
                 if(bayselect == 1) {
                     bayaddy = BAYRaddy;
                 }
-                myrouter = Object.values(routers[0])[0];
-                routercontract = new web3.eth.Contract(RouterABI, myrouter);
-                await routercontract.methods.showVariables().call().then(function (thisresult) {
-                    liqTolerance = parseInt(thisresult[4]);
-                    resTolerance = parseInt(thisresult[5]);
-                    enforcepoolratio = thisresult[6];
-                })
                 exchangecontract = new web3.eth.Contract(FactoryABI, exchange);
                 mypair = '';
                 await exchangecontract.methods.getPair(bayaddy, coin1).call().then(function (thisresult) {
                     mypair = thisresult;
                 });
-                var poolres = [];
+                poolreserve = [];
                 if(/^0x0+$/.test(mypair) == false) {
                     console.log("Checking pool balance...");
                     await liquiditypool.methods.calculateBalance(myaccounts,mypair,true,0).call().then(function (thisresult) {                        
-                        poolres = thisresult[2];
+                        poolreserve[0] = thisresult[0];
+                        poolreserve[1] = thisresult[1];
                     })
-                    x = 0;
-                    while(x < networkvars[1]) {
-                        if(x == section) {
-                            j = 0;
-                            poolreserve[x] = 0;
-                            while(j < networkvars[2]) {
-                                poolreserve[x] += parseInt(poolres[parseInt(networkvars[1]) + j]);
-                                j += 1;
-                            }
-                        } else {
-                            poolreserve[x] = parseInt(poolres[x]);
-                        }
-                        x += 1;
-                    }
                     token0 = '';
                     reserves = [];
                     paircontract = new web3.eth.Contract(PairABI, mypair);
@@ -1013,60 +979,44 @@ async function calculateDeposit() {
             var ratioBAY2 = 0;
             var ratioBAYR2 = 0;
             var thedif;
-            var thedif2;
             x = 0;
-            while(x < networkvars[1]) {
-                if(x == section) {
-                    thedif = 0;
-                    thedif2 = 0;
-                    if(ak != 0) {
-                        if(autocompute == 1) {
-                            thedif = parseInt(parseInt((poolreserve[x] * ak) / parseInt(networkvars[2])).toFixed(0))
-                            ratioBAYR2 += thedif
+            if(autocompute == 0) {
+                while(x < networkvars[1]) {
+                    if(x == section) {
+                        thedif = 0;
+                        if(ak != 0) {
+                            thedif = parseInt(parseInt((fairRatio[x] * ak) / parseInt(networkvars[2])).toFixed(0))
+                            ratioBAYR += thedif
                         }
-                        thedif2 = parseInt(parseInt((fairRatio[x] * ak) / parseInt(networkvars[2])).toFixed(0))
-                        ratioBAYR += thedif2
-                    }
-                    if(autocompute == 1) {
-                        ratioBAY2 += poolreserve[x] - thedif;
-                    }
-                    ratioBAY += fairRatio[x] - thedif2;
-                } else {
-                    if(x > section) {
-                        if(autocompute == 1) {
-                            ratioBAY2 += poolreserve[x];
+                        ratioBAY += fairRatio[x] - thedif;
+                    } else {
+                        if(x > section) {
+                            ratioBAY += fairRatio[x];
                         }
-                        ratioBAY += fairRatio[x];
-                    }
-                    if(x < section) {
-                        if(autocompute == 1) {
-                            ratioBAYR2 += poolreserve[x];
+                        if(x < section) {
+                            ratioBAYR += fairRatio[x];
                         }
-                        ratioBAYR += fairRatio[x];
                     }
+                    x += 1;
                 }
-                x += 1;
+            } else {
+                ratioBAY2 = poolreserve[0];
+                ratioBAYR2 = poolreserve[1];
             }
             bayselect = document.getElementById("Coin2").value;
             if(bayselect == 0) {
                 document.getElementById("additionalCoins").innerHTML = "Reserve required for deposit(in addition to desired liquid coins):<br>";
                 recommended = parseFloat((parseFloat((myBAYval * ratioBAYR) / ratioBAY) / parseFloat(1e8)).toFixed(8));
-                if(autocompute == 1 && enforcepoolratio) {
-                    recommended2 = parseFloat((parseFloat((myBAYval * ratioBAYR2) / ratioBAY2) / parseFloat(1e8)).toFixed(8));
-                    if(recommended2 > recommended) {
-                        recommended = recommended2;
-                    }
+                if(autocompute == 1) {
+                    recommended = parseFloat((parseFloat((myBAYval * ratioBAYR2) / ratioBAY2) / parseFloat(1e8)).toFixed(8));
                 }
                 document.getElementById("additionalCoins").innerHTML += recommended;
                 recommendedBAY = recommended;
             } else {
                 document.getElementById("additionalCoins").innerHTML = "Liquid required for deposit(in addition to desired reserse coins):<br>";
                 recommended = parseFloat((parseFloat((myBAYval * ratioBAY) / ratioBAYR) / parseFloat(1e8)).toFixed(8));
-                if(autocompute == 1 && enforcepoolratio) {
-                    recommended2 = parseFloat((parseFloat((myBAYval * ratioBAY2) / ratioBAYR2) / parseFloat(1e8)).toFixed(8));
-                    if(recommended2 > recommended) {
-                        recommended = recommended2;
-                    }
+                if(autocompute == 1) {
+                    recommended = parseFloat((parseFloat((myBAYval * ratioBAY2) / ratioBAYR2) / parseFloat(1e8)).toFixed(8));
                 }
                 document.getElementById("additionalCoins").innerHTML += recommended;
                 recommendedBAY = recommended;
@@ -1636,11 +1586,11 @@ async function addLiquidity() {
         otherval = coin2val;
         recommended = parseInt((recommended * 1e8).toFixed(0));
         totalval = parseInt(recommended) + parseInt(otherval);
-        amount2min = parseInt((coin2val * (100-perc)) / 100).toFixed(0);
+        amount2min = parseInt(10000 * (perc / 100)).toFixed(0);
     } else {
         otherval = parseInt((recommended * 1e8).toFixed(0));
         totalval = parseInt(coin2val) + parseInt(otherval);
-        amount2min = parseInt((coin2val * (100-perc)) / 100).toFixed(0);
+        amount2min = parseInt(10000 * (perc / 100)).toFixed(0);
     }
     var returnthis = 0
     await baylcontract.methods.balanceOf(currentaccount).call().then(function (myliquid) {
@@ -1690,7 +1640,7 @@ async function addLiquidity() {
         if(weth) {
             await routercontract.methods.addLiquidityETH(bayaddy,totalval,otherval,amount2min,amount1min,currentaccount,deadline,exchange).send({"from":currentaccount,"value":coin1val,"gasLimit": 9000000});
         } else {
-            await routercontract.methods.addLiquidity([coin1,bayaddy], [coin1val,totalval],otherval,amount1min,amount2min,currentaccount,deadline,exchange).send({"from":currentaccount,"gasLimit": 9000000});
+            await routercontract.methods.addLiquidity([bayaddy,coin1],[totalval,coin1val],otherval,amount2min,amount1min,currentaccount,deadline,exchange).send({"from":currentaccount,"gasLimit": 9000000});
         }
     } catch (e) {
         console.log(e);
