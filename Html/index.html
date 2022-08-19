@@ -428,7 +428,7 @@ async function checkbalances() {
         BAYFaddy = "0xFd7702DD20908755276CC537d0a2687582e128E4";
         BAYDataAddy = "0x8F093DBB0b56d99abBCD6fc8d283262641e12cA0";
         BAYAdmin = "0x92fCBde3052a5bC168078713EA6849Be6A50F7bB";
-        liquidityAddy = "0x8A431E40353099868ADFE356eE035738adF52497";
+        liquidityAddy = "0xCA3Ce1fbc0912F8ceDb8971906C74Eb927F20798";
         pegsteps = 30;
         microsteps = 8;
         deflationrate = 99;
@@ -507,14 +507,14 @@ async function getMarketData(calcbal = 0) {
         exchangeImages = [];
         prevChainId = currentChainId;
         if (currentChainId == 5) {        
-            pairs.push({'HappyWalrusCoin': '0x77aEdA374eA716881176d805407D3b785Db0d50d'});
+            pairs.push({'HappyWalrusCoin': '0x9C9fA3F248EAD52E5bcC2bD7086c954f628452d8'});
             pairs.push({'Wrapped ETH': '0xCC23B64B67c242D0bA9Ff8D999065Cd32b8387b2'});
             knowndecimals.push(8);
             knowndecimals.push(18);
             exchanges.push({'WalrusSwap': '0xc501f758B87c7e831C84229F95766341Ac32aBf7'});
             exchangenum.push(997)
             exchangeImages.push('<img src="./walrus.png" style="height: 75px; width: 75px;"/>');
-            routers.push({'UniversalRouter': '0x780581bAaa37C56B08AcC760341Ce2c950c04DdC'});
+            routers.push({'UniversalRouter': '0xD5452C041022292cCACA36fa43dA295da2e118B2'});
         }
         document.getElementById("exchangeImage").innerHTML="";
         document.getElementById("Coin1").innerHTML="";
