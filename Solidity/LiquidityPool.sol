@@ -25,6 +25,7 @@ contract Pool is ILiquidityPool {
     mapping (address => address) public pairtoken;
     mapping (address => address) public myfactory;
     uint public prevtokenbalance;
+    uint public prevlpbalance;
     address public addresscheck;
     bool public skipcheck;
     address public BAYL;
@@ -116,8 +117,7 @@ contract Pool is ILiquidityPool {
     //These are functions typical to any AMM contract. Sync is required to keep balances up to date.
     //Users should be careful to set a gas limit when using regular BitBay payments to new addresses.
     function checkAMM(address AMM) external returns (address, address, address) {
-        //Static call avoids re-entrancy and these functions test for a "possible" AMM
-        //However users should proceed with caution and audit any AMM they wish to list on
+        //Users should proceed with caution and audit any AMM they wish to list on
         //This is because it's unclear if the functions operate like a standard AMM
         address[3] memory myaddy;
         skipcheck = true;
@@ -222,6 +222,13 @@ contract Pool is ILiquidityPool {
     }
     function withdrawBuy(address pool, uint[38] memory reserve, uint section) external {
         require(msg.sender == proxy);
+        //Detect potential withdrawal from unofficial router
+        (bool success, bytes memory result) = pool.staticcall(abi.encodeWithSignature("balanceOf(address)",pool));
+        require(success);
+        uint LPbal = abi.decode(result, (uint));
+        if(LPbal == 0 && prevlpbalance != 0) {
+            require(false, "Action was not performed by the official BitBay router");
+        }
         poolbalance[pool] = reserve;
         poolhighkey[pool] = section;
     }
@@ -272,19 +279,24 @@ contract Pool is ILiquidityPool {
             (success, result) = pool.staticcall(abi.encodeWithSignature("balanceOf(address)",pool));
             require(success);
             uint LPbal = abi.decode(result, (uint));
-            if(LPbal != 0) { //This prevents spam so withdrawals can be accurately detected
+            if(msg.sender != proxy) { //This prevents spam so withdrawals can be accurately detected
                 skipcheck = true;
                 (success, result) = BAYL.call(abi.encodeWithSignature("lockthis(address)",pool));
                 require(success);
                 (success, result) = BAYR.call(abi.encodeWithSignature("lockthis(address)",pool));
                 require(success);
-                //Burn any spam funds found at the pair
-                (success, result) = pool.call(abi.encodeWithSignature("burn(address)",address(this)));
+                //Burn any LP token spam found at the pair. To save on gas, BAY is not moved
+                (success, result) = pool.call(abi.encodeWithSignature("burn(address)",pool));
                 require(success);
                 (success, result) = BAYL.call(abi.encodeWithSignature("lockthis(address)",address(0)));
                 require(success);
                 (success, result) = BAYR.call(abi.encodeWithSignature("lockthis(address)",address(0)));
                 require(success);
+                prevlpbalance = 0;
+            } else {
+                if(LPbal != 0) { //Only an official withdrawal can reset this to zero
+                    prevlpbalance = LPbal;
+                }
             }
         }
         skipcheck = false;
@@ -303,7 +315,8 @@ contract Pool is ILiquidityPool {
             if(user == pool && skipcheck == false) { //Buying or withdrawing funds
                 (success, result) = pool.staticcall(abi.encodeWithSignature("balanceOf(address)",pool));
                 require(success);
-                if(abi.decode(result, (uint)) != 0) {
+                a.i = abi.decode(result, (uint));
+                if(a.i - prevlpbalance != 0) {
                     (success, result) = proxy.staticcall(abi.encodeWithSignature("withdrawAddy(address)",pool));
                     require(success);
                     require(abi.decode(result, (address)) != address(0), "Action was not performed by the official BitBay router");

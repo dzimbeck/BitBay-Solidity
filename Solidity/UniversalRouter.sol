@@ -1,4 +1,5 @@
-pragma solidity =0.6.6;
+// SPDX-License-Identifier: GPL-3.0
+pragma solidity =0.7.0;
 
 interface IUniswapV2Factory {
     event PairCreated(address indexed token0, address indexed token1, address pair, uint);
@@ -259,7 +260,7 @@ contract UniswapV2Router02 is IUniswapV2Router01 {
         uint liq2;
     }
 
-    constructor(address _factory, address _WETH, address _minter, bytes memory init, uint mynumerator, uint fnum, uint fden) public {
+    constructor(address _factory, address _WETH, address _minter, bytes memory init, uint mynumerator, uint fnum, uint fden) {
         factory = _factory;
         INIT_CODE[factory] = init;
         INIT_FILLED[factory] = true;
@@ -411,7 +412,7 @@ contract UniswapV2Router02 is IUniswapV2Router01 {
         if (addy == address(0)) {
             addy = IUniswapV2Factory(factory).createPair(tokenA, tokenB);
         }
-        regBalance(addy);
+        regBalance(address(0));
         
         (uint reserveA, uint reserveB) = UniswapV2Library.getReserves(factory, tokenA, tokenB, INIT_CODE[factory]);        
         (a.success, a.result) = LiquidityPool.staticcall(abi.encodeWithSignature("calculateBalance(address,address,bool,uint256)",msg.sender,addy,true,0));
@@ -592,7 +593,6 @@ contract UniswapV2Router02 is IUniswapV2Router01 {
         }
         require(IBitBay(proxyBAY).changeVars(liquidity,0,msg.sender,pair,address(this)));
         (uint amount0, uint amount1) = IUniswapV2Pair(pair).burn(to);
-        regBalance(pair);
         (a.token0,) = UniswapV2Library.sortTokens(tokenA, tokenB);
         (amountA, amountB) = tokenA == a.token0 ? (amount0, amount1) : (amount1, amount0);
         require(amountA >= amountAMin, 'INSUFFICIENT_A');
@@ -711,7 +711,7 @@ contract UniswapV2Router02 is IUniswapV2Router01 {
             (uint amount0Out, uint amount1Out) = input == token0 ? (uint(0), amountOut) : (amountOut, uint(0));
             address to = i < path.length - 2 ? UniswapV2Library.pairFor(factory, output, path[i + 2], INIT_CODE[factory]) : _to;
             address pair = UniswapV2Library.pairFor(factory, input, output, INIT_CODE[factory]);
-            regBalance(pair);
+            regBalance(address(0));
             IUniswapV2Pair(pair).swap(
                 amount0Out, amount1Out, to, new bytes(0)
             );
