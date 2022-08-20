@@ -411,8 +411,7 @@ contract UniswapV2Router02 is IUniswapV2Router01 {
         myLocals memory a;
         if (addy == address(0)) {
             addy = IUniswapV2Factory(factory).createPair(tokenA, tokenB);
-        }
-        regBalance(address(0));
+        }        
         
         (uint reserveA, uint reserveB) = UniswapV2Library.getReserves(factory, tokenA, tokenB, INIT_CODE[factory]);        
         (a.success, a.result) = LiquidityPool.staticcall(abi.encodeWithSignature("calculateBalance(address,address,bool,uint256)",msg.sender,addy,true,0));
@@ -711,7 +710,6 @@ contract UniswapV2Router02 is IUniswapV2Router01 {
             (uint amount0Out, uint amount1Out) = input == token0 ? (uint(0), amountOut) : (amountOut, uint(0));
             address to = i < path.length - 2 ? UniswapV2Library.pairFor(factory, output, path[i + 2], INIT_CODE[factory]) : _to;
             address pair = UniswapV2Library.pairFor(factory, input, output, INIT_CODE[factory]);
-            regBalance(address(0));
             IUniswapV2Pair(pair).swap(
                 amount0Out, amount1Out, to, new bytes(0)
             );

@@ -24,13 +24,13 @@ contract Pool is ILiquidityPool {
     uint public matchprecision = 5;
     mapping (address => address) public pairtoken;
     mapping (address => address) public myfactory;
-    uint public prevtokenbalance;
-    uint public prevlpbalance;
-    address public addresscheck;
-    bool public skipcheck;
+    mapping (address => uint) public prevtokenbalance;
+    mapping (address => bool) public addresscheck;
+    mapping (address => uint) public prevlpbalance;
+    mapping (address => bool) public isBAYpair;    
     address public BAYL;
     address public BAYR;
-    mapping (address => bool) public isBAYpair;
+    bool public skipcheck;    
 
     constructor() {
         minter = msg.sender;
@@ -121,6 +121,7 @@ contract Pool is ILiquidityPool {
         //This is because it's unclear if the functions operate like a standard AMM
         address[3] memory myaddy;
         skipcheck = true;
+        addresscheck[AMM] = false;
         (bool success, bytes memory result) = AMM.call(abi.encodeWithSignature("sync()"));
         skipcheck = false;
         //(bool success, bytes memory result) = AMM.staticcall(abi.encodeWithSignature("balanceOf(address),AMM"));
@@ -160,7 +161,7 @@ contract Pool is ILiquidityPool {
         bool success;
         bytes memory result;
         calcLocals memory a;
-        addresscheck = address(0);
+        addresscheck[AMM] = false;
         (a.liquid, a.rval, a.reserve) = calculateBalance(msg.sender,AMM,true,0);
         (success, result) = proxy.staticcall(abi.encodeWithSignature("getState()"));
         (a.supply,a.pegsteps,a.mk,a.pegrate,a.i) = abi.decode(result, (uint,uint,uint,uint,uint));
@@ -212,10 +213,10 @@ contract Pool is ILiquidityPool {
             highkeyatpool[user][pool] = (a.supply / a.mk);
         }
         if(trade == 3) {
-            addresscheck = pool;
-            (success, result) = pairtoken[pool].staticcall(abi.encodeWithSignature("balanceOf(address)",addresscheck));
+            addresscheck[pool] = true;
+            (success, result) = pairtoken[pool].staticcall(abi.encodeWithSignature("balanceOf(address)",pool));
             require(success);
-            prevtokenbalance = abi.decode(result, (uint));
+            prevtokenbalance[pool] = abi.decode(result, (uint));
         }
         poolbalance[pool] = a.reserve;
         poolhighkey[pool] = (a.supply / a.mk);
@@ -226,7 +227,7 @@ contract Pool is ILiquidityPool {
         (bool success, bytes memory result) = pool.staticcall(abi.encodeWithSignature("balanceOf(address)",pool));
         require(success);
         uint LPbal = abi.decode(result, (uint));
-        if(LPbal == 0 && prevlpbalance != 0) {
+        if(LPbal == 0 && prevlpbalance[pool] != 0) {
             require(false, "Action was not performed by the official BitBay router");
         }
         poolbalance[pool] = reserve;
@@ -279,7 +280,7 @@ contract Pool is ILiquidityPool {
             (success, result) = pool.staticcall(abi.encodeWithSignature("balanceOf(address)",pool));
             require(success);
             uint LPbal = abi.decode(result, (uint));
-            if(msg.sender != proxy) { //This prevents spam so withdrawals can be accurately detected
+            if(LPbal != 0 && msg.sender != proxy) { //This prevents spam so withdrawals can be accurately detected
                 skipcheck = true;
                 (success, result) = BAYL.call(abi.encodeWithSignature("lockthis(address)",pool));
                 require(success);
@@ -292,15 +293,15 @@ contract Pool is ILiquidityPool {
                 require(success);
                 (success, result) = BAYR.call(abi.encodeWithSignature("lockthis(address)",address(0)));
                 require(success);
-                prevlpbalance = 0;
+                prevlpbalance[pool] = 0;
             } else {
                 if(LPbal != 0) { //Only an official withdrawal can reset this to zero
-                    prevlpbalance = LPbal;
+                    prevlpbalance[pool] = LPbal;
                 }
             }
         }
         skipcheck = false;
-        addresscheck = address(0);
+        addresscheck[pool] = false;
     }
     function calculateBalance(address user, address pool, bool isPool, uint buffer)  public view virtual override returns (uint, uint, uint[38] memory) {
         calcLocals memory a;
@@ -316,16 +317,16 @@ contract Pool is ILiquidityPool {
                 (success, result) = pool.staticcall(abi.encodeWithSignature("balanceOf(address)",pool));
                 require(success);
                 a.i = abi.decode(result, (uint));
-                if(a.i - prevlpbalance != 0) {
+                if(a.i - prevlpbalance[pool] != 0) {
                     (success, result) = proxy.staticcall(abi.encodeWithSignature("withdrawAddy(address)",pool));
                     require(success);
                     require(abi.decode(result, (address)) != address(0), "Action was not performed by the official BitBay router");
                 }
             }
-            if(user == pool && addresscheck != address(0)) { //If user didn't receive tokens then it's not a sale
-                (success, result) = pairtoken[pool].staticcall(abi.encodeWithSignature("balanceOf(address)",addresscheck));
+            if(user == pool && addresscheck[pool] == true) { //If user didn't receive tokens from an official router then it's not a sale
+                (success, result) = pairtoken[pool].staticcall(abi.encodeWithSignature("balanceOf(address)",pool));
                 require(success);
-                require(prevtokenbalance > abi.decode(result, (uint)), "Action was not performed by the official BitBay router");
+                require(prevtokenbalance[pool] > abi.decode(result, (uint)), "Action was not performed by the official BitBay router");
             }
         }
         (success, result) = proxy.staticcall(abi.encodeWithSignature("getState()"));
