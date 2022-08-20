@@ -46,7 +46,7 @@
 <br><br>
 <p id="exchangeImage"></p>
 <p id="swapintro">Decentralized exchange through Uniswap, Pancakeswap and more</p>
-Please note: All sales, deposits and withdraws must take place using the official BitBay router contract.
+Please note: All deposits and withdraws must take place using the official BitBay router contract.
 <a href="./information.html">See the FAQ to learn why.</a><br>
 <br>
 <select id="exchangeSelect">
@@ -428,7 +428,7 @@ async function checkbalances() {
         BAYFaddy = "0xFd7702DD20908755276CC537d0a2687582e128E4";
         BAYDataAddy = "0x8F093DBB0b56d99abBCD6fc8d283262641e12cA0";
         BAYAdmin = "0x92fCBde3052a5bC168078713EA6849Be6A50F7bB";
-        liquidityAddy = "0xCA3Ce1fbc0912F8ceDb8971906C74Eb927F20798";
+        liquidityAddy = "0x52257C92487d76345C0969519746a2713B701e96";
         pegsteps = 30;
         microsteps = 8;
         deflationrate = 99;
@@ -507,14 +507,14 @@ async function getMarketData(calcbal = 0) {
         exchangeImages = [];
         prevChainId = currentChainId;
         if (currentChainId == 5) {        
-            pairs.push({'HappyWalrusCoin': '0x9C9fA3F248EAD52E5bcC2bD7086c954f628452d8'});
+            pairs.push({'HappyWalrusCoin': '0xb3460166784fd07A022E51547379352De4E98dF5'});
             pairs.push({'Wrapped ETH': '0xCC23B64B67c242D0bA9Ff8D999065Cd32b8387b2'});
             knowndecimals.push(8);
             knowndecimals.push(18);
             exchanges.push({'WalrusSwap': '0xc501f758B87c7e831C84229F95766341Ac32aBf7'});
             exchangenum.push(997)
             exchangeImages.push('<img src="./walrus.png" style="height: 75px; width: 75px;"/>');
-            routers.push({'UniversalRouter': '0xD5452C041022292cCACA36fa43dA295da2e118B2'});
+            routers.push({'UniversalRouter': '0x981C5963529FB555414286a042E2D3E9412b0987'});
         }
         document.getElementById("exchangeImage").innerHTML="";
         document.getElementById("Coin1").innerHTML="";
@@ -571,6 +571,7 @@ async function getMarketData(calcbal = 0) {
     if(/^0x0+$/.test(mycurrentpair) == false) {
         var token0 = '';
         var reserves = [];
+        var LPtokensPair;
         var paircontract = new web3.eth.Contract(PairABI, mycurrentpair);
         await paircontract.methods.getReserves().call().then(function (result3) {
             reserves = result3;
@@ -584,6 +585,12 @@ async function getMarketData(calcbal = 0) {
         await liquiditypool.methods.LPtokens(myaccounts, mycurrentpair).call().then(function (result3) {
             LPtokens = result3;
         });
+        await paircontract.methods.balanceOf(myaccounts).call().then(function (result3) {
+            LPtokensPair = result3;
+        });
+        if(LPtokensPair < LPtokens) {
+            LPtokens = LPtokensPair;
+        }
         if(token0 == BAYLaddy || token0 == BAYRaddy) {
             reservebayval3 = parseInt(reserves[0]);
             reservecoinval3 = parseInt(reserves[1]);
