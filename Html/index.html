@@ -583,10 +583,10 @@ async function getMarketData(calcbal = 0) {
             totSupply = result3;
         });
         await liquiditypool.methods.LPtokens(myaccounts, mycurrentpair).call().then(function (result3) {
-            LPtokens = result3;
+            LPtokens = parseInt(result3);
         });
         await paircontract.methods.balanceOf(myaccounts).call().then(function (result3) {
-            LPtokensPair = result3;
+            LPtokensPair = parseInt(result3);
         });
         if(LPtokensPair < LPtokens) {
             LPtokens = LPtokensPair;
