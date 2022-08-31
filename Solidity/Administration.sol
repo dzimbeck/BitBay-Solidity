@@ -28,6 +28,7 @@ contract Administration is IAdministration {
     mapping (bytes32 => uint[2]) public proposals; //Hash of proposal
     mapping (address => uint[14]) public myvotetimes; //Time limits to vote on specific things
     mapping (address => uint) public myweight;
+    mapping (uint => uint) public startingtime;
     address[] public curators;
 
     //The safest method is to store the burn data persistently. To mint back to BAY we have to assume that
@@ -156,6 +157,9 @@ contract Administration is IAdministration {
         if (block.timestamp > proposals[myprop][1]) {
             proposals[myprop][1] = block.timestamp + votetimelimit[mytype];
             proposals[myprop][0] = 0;
+        }
+        if (startingtime[mytype] + ((votetimelimit[mytype] * 15) / 10) < block.timestamp) {
+            startingtime[mytype] = block.timestamp;
         }
         require(proposals[myprop][0] != 1,"Voting is complete and will reset after the time limit");
         //Try to have voting times that aren't back to back, so users can time their votes early into the process
@@ -538,7 +542,7 @@ contract Administration is IAdministration {
             nonce += 1; //Start making a new tree
             processingTime[nonce] = block.timestamp;
         }
-        if(filled[nonce][sender] == false) {            
+        if(filled[nonce][sender] == false) {
             BAYdata[nonce][sender] = reserve;
             highkey[nonce][sender] = section;
             recipient[nonce][sender] = BAYaddress[sender];
@@ -568,7 +572,7 @@ contract Administration is IAdministration {
                     //It's okay to divide microshards evenly because liquid/reserve ratios don't precisely convert between networks on the bridge either way
                     //This is because BAY network has many more shards and the microshards system is done to save in storage costs
                     a.liquid = a.newtot / a.mk;
-                    while (a.i < a.mk - 1) {                        
+                    while (a.i < a.mk - 1) {
                         a.newtot -= a.liquid;
                         a.reserve[a.pegsteps + a.i] += a.liquid;
                         a.i += 1;
@@ -595,15 +599,19 @@ contract Administration is IAdministration {
         BAYaddress[msg.sender] = addy;
     }
 
-    function listNonces(address user) public view returns(uint[] memory) {        
+    function listNonces(address user) public view returns(uint[] memory) {
         return mynonces[user];
     }
 
-    function showReserve(address user, uint mynonce) public view returns(uint[38] memory) {        
+    function showReserve(address user, uint mynonce) public view returns(uint[38] memory) {
         return BAYdata[mynonce][user];
     }
 
-    function listHashes(uint mynonce) public view returns(bytes32[] memory) {        
+    function listHashes(uint mynonce) public view returns(bytes32[] memory) {
         return hashes[mynonce];
+    }
+
+    function showLimits()  public view returns(uint[14] memory) {
+        return votetimelimit;
     }
 }
