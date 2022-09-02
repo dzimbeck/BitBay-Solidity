@@ -129,6 +129,12 @@ Min/Max price fluctuation for swaps or deposits:
 <script type="text/javascript" src="chartist-plugin-tooltip.js"></script>
 <script type="text/javascript" src="./purify.js"></script>
 <script type="text/javascript">
+//For further security improvements to these tools it's possible to add a
+//section which allows a custom approval where users can set manually or
+//possibly have a dialog box move into focus when asked for the authorization
+//which lets them specify the amount. Also in the security tab advise users
+//on how to run the page locally.
+
 var web3 = [];
 var contractInst = [];
 //web3[0] = new Web3("https://cloudflare-eth.com");
@@ -1587,7 +1593,6 @@ async function addLiquidity() {
     coin1val = parseInt((coin1val * mydecimals).toFixed(0));
     coin2val = parseInt((web3.utils.toWei(coin2val,'gwei')/10).toFixed(0));
     otherval = 0;
-    //SET MINS BASED ON CHOSEN NOT TOTAL
     amount1min = ((coin1val * (100-perc)) / 100).toFixed(0);
     if(bayselect == 0) {
         otherval = coin2val;
