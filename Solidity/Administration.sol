@@ -549,7 +549,7 @@ contract Administration is IAdministration {
             index[nonce][sender] = addresses[nonce].length;
             filled[nonce][sender] = true;
             mynonces[sender].push(nonce);
-            hashes[nonce].push(keccak256(abi.encode(BAYaddress[sender],reserve,section,nonce)));
+            hashes[nonce].push(keccak256(abi.encode(BAYaddress[sender],reserve,section,nonce,sender)));
             addresses[nonce].push(sender);
         } else {
             bytes memory result;
@@ -589,7 +589,7 @@ contract Administration is IAdministration {
             highkey[nonce][sender] = section;
             recipient[nonce][sender] = BAYaddress[sender];
             require(addresses[nonce][index[nonce][sender]] == sender);
-            hashes[nonce][index[nonce][sender]] = keccak256(abi.encode(BAYaddress[sender],reserve,section,nonce));
+            hashes[nonce][index[nonce][sender]] = keccak256(abi.encode(BAYaddress[sender],reserve,section,nonce,sender));
         }
     }
 
