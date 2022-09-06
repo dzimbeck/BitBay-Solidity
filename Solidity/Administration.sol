@@ -73,10 +73,10 @@ contract Administration is IAdministration {
         voteperc = 55; //55 percent consensus
         uint x = 0;
         while(x < 12) {
-            votetimelimit[x] = 120;
+            votetimelimit[x] = 300;
             x += 1;
         }
-        votetimelimit[9] = 120; //Add merkle root
+        votetimelimit[9] = 300; //Add merkle root
         maxweight = 100000;
     }
 
@@ -148,6 +148,7 @@ contract Administration is IAdministration {
         }
         isCurator[curator] = false;
         totalvotes = sub(totalvotes, myweight[curator]);
+        require(totalvotes != 0);
         return true;
     }
 
