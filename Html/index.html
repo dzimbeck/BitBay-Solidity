@@ -1422,8 +1422,8 @@ async function showNonces() {
     var intervaltime = 0;
     var processingTime = 0;
 
-    jsonreceipt = {'nonce':item};
-    await bayadmincontract.methods.BAYaddress(currentaccount).call().then(function (myresults) {
+    jsonreceipt = {'nonce':item,'from':currentaccount};
+    await bayadmincontract.methods.recipient(item, currentaccount).call().then(function (myresults) {
         jsonreceipt['address'] = myresults;
     });
     await bayadmincontract.methods.showReserve(currentaccount, item).call().then(function (myresults) {
@@ -1439,7 +1439,7 @@ async function showNonces() {
         processingTime = myresults;
     });
     var steps = parseInt(networkvars[1]) + parseInt(networkvars[2]);
-    var myhash = web3.utils.keccak256(web3.eth.abi.encodeParameters(['string','uint256[' + steps.toString() + ']','uint','uint'],[jsonreceipt['address'],jsonreceipt['reserve'],jsonreceipt['section'],jsonreceipt['nonce']]));
+    var myhash = web3.utils.keccak256(web3.eth.abi.encodeParameters(['string','uint256[' + steps.toString() + ']','uint256','uint256','address'],[jsonreceipt['address'],jsonreceipt['reserve'],jsonreceipt['section'],jsonreceipt['nonce'],currentaccount]));
     var x = 0;
     var amt = 0;
     while(x < steps) {
