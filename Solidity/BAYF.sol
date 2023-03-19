@@ -44,7 +44,7 @@ contract BAYF is IHALO {
 
     function lockProxies(uint locktime) public returns (bool){
         require(msg.sender == minter);
-        proxylock += block.timestamp + locktime;
+        proxylock = block.timestamp + locktime;
         return true;
     }
     
