@@ -1060,13 +1060,13 @@ async function checkbalances() {
     var BAYRBal;
     var BAYFBal;
     await baylcontract.methods.balanceOf(myaccounts).call().then(function (liquid1) {
-        BAYLBal = parseFloat((web3.utils.fromWei(liquid1, 'gwei')*10).toFixed(8));         
+        BAYLBal = parseFloat((web3.utils.fromWei(DOMPurify.sanitize(liquid1), 'gwei')*10).toFixed(8));         
     })
     await bayrcontract.methods.balanceOf(myaccounts).call().then(function (rval1) {
-        BAYRBal = parseFloat((web3.utils.fromWei(rval1, 'gwei')*10).toFixed(8));  
+        BAYRBal = parseFloat((web3.utils.fromWei(DOMPurify.sanitize(rval1), 'gwei')*10).toFixed(8));  
     })
     await bayfcontract.methods.balanceOf(myaccounts).call().then(function (val1) {
-        BAYFBal = parseFloat((web3.utils.fromWei(val1, 'gwei')*10).toFixed(8));
+        BAYFBal = parseFloat((web3.utils.fromWei(DOMPurify.sanitize(val1), 'gwei')*10).toFixed(8));
     })
     await window.web3.eth.getBalance(myaccounts, function(err, result1) {
         if (err) {
@@ -1079,7 +1079,7 @@ async function checkbalances() {
         }
     })
     await bayadmincontract.methods.isActive().call().then(function (isActive) { //May also check if automatic unfreeze and special transactions are enabled
-        if(isActive > 1) {
+        if(DOMPurify.sanitize(isActive) > 1) {
             //document.getElementById("text1").innerHTML += "<br>NOTICE: Spending is currently disabled as this contract may be under maintenance."
             modalDialog('Connect', "NOTICE: Spending is currently disabled as this contract may be under maintenance.", "warning");
         }
@@ -1091,7 +1091,7 @@ async function checkbalances() {
 
 async function getNetworkInfo() {
     await baydatacontract.methods.getState().call().then(function (netvars) {
-        networkvars = netvars;
+        networkvars = DOMPurify.sanitize(netvars);
     })
     document.getElementById("networkinfo").innerHTML = DOMPurify.sanitize("Current Total Network Supply: " + calculateSupply(networkvars[0],networkvars[4],networkvars[3]) + "% (" + networkvars[0] + " / " + (networkvars[1] * networkvars[2]) + ")<br>Peg compression(steps, microsteps): " + networkvars[1] + ", "+ networkvars[2] + "<br>Deflation rate and compound rate: (" + networkvars[4] + "% ^ " + (100 - networkvars[3]) + ")<br>Three way factor to BitBay's 1200 possible supplies: (" + networkvars[1] + " * " + networkvars[2] + " * " + (100 - networkvars[3]) + ")<br>Time delay for reserve payments(in seconds): " + reservetimelock);
 }
@@ -1174,11 +1174,11 @@ async function getMarketData(calcbal = 0) {
         bayname2 = "BitBay";
     }
     await liquiditypool.methods.matchprecision().call().then(function (result3) {
-        precision = parseInt(result3);
+        precision = parseInt(DOMPurify.sanitize(result3));
     })
     var exchangecontract = new web3.eth.Contract(FactoryABI, exchange);
     await exchangecontract.methods.getPair(bayaddy, coin1).call().then(function (result3) {
-        mycurrentpair = result3;
+        mycurrentpair = DOMPurify.sanitize(result3);
     });
     if(/^0x0+$/.test(mycurrentpair) == false) {
         var token0 = '';
@@ -1186,19 +1186,19 @@ async function getMarketData(calcbal = 0) {
         var LPtokensPair;
         var paircontract = new web3.eth.Contract(PairABI, mycurrentpair);
         await paircontract.methods.getReserves().call().then(function (result3) {
-            reserves = result3;
+            reserves = DOMPurify.sanitize(result3);
         });
         await paircontract.methods.token0().call().then(function (result3) {
-            token0 = result3;
+            token0 = DOMPurify.sanitize(result3);
         });
         await paircontract.methods.totalSupply().call().then(function (result3) {
-            totSupply = result3;
+            totSupply = DOMPurify.sanitize(result3);
         });
         await liquiditypool.methods.LPtokens(myaccounts, mycurrentpair).call().then(function (result3) {
-            LPtokens = parseInt(result3);
+            LPtokens = parseInt(DOMPurify.sanitize(result3));
         });
         await paircontract.methods.balanceOf(myaccounts).call().then(function (result3) {
-            LPtokensPair = parseInt(result3);
+            LPtokensPair = parseInt(DOMPurify.sanitize(result3));
         });
         if(LPtokensPair < LPtokens) {
             LPtokens = LPtokensPair;
@@ -1219,11 +1219,11 @@ async function getMarketData(calcbal = 0) {
         var otherbal;
         if(bayselect == 0) {
             await bayrcontract.methods.balanceOf(mycurrentpair).call().then(function (result3) {
-                otherbal = parseFloat((web3.utils.fromWei(result3, 'gwei')*10).toFixed(8));
+                otherbal = parseFloat((web3.utils.fromWei(DOMPurify.sanitize(result3), 'gwei')*10).toFixed(8));
             });
         } else {
            await baylcontract.methods.balanceOf(mycurrentpair).call().then(function (result3) {
-                otherbal = parseFloat((web3.utils.fromWei(result3, 'gwei')*10).toFixed(8));
+                otherbal = parseFloat((web3.utils.fromWei(DOMPurify.sanitize(result3), 'gwei')*10).toFixed(8));
             });
         }
         text += bayname2 + " coins overage at this pair: " + otherbal + "<br>";
@@ -1241,7 +1241,8 @@ async function getMarketData(calcbal = 0) {
                     }
                 } else {
                     await liquiditypool.methods.calculatePoolBalanceV1(myaccounts, mycurrentpair, 0, LPtokens2, precision, 0).call().then(function (result3) {
-                        reserveatpool = result3[1];
+                      result3 = DOMPurify.sanitize(result3);
+                      reserveatpool = result3[1];
                     });
                     var section = parseInt(Math.floor(networkvars[0] / networkvars[2]));
                     var ak = parseInt(Math.floor(networkvars[0] % networkvars[2]));
@@ -1290,7 +1291,7 @@ async function getDecimals(myobj) {
     var thiscontract = new web3.eth.Contract(ERC20ABI, Object.values(pairs[myobj])[0]);
     var thedecimals = 0;
     await thiscontract.methods.decimals().call().then(function (dresult) {
-        thedecimals = dresult;
+        thedecimals = DOMPurify.sanitize(dresult);
     });
     return thedecimals;
 }
@@ -1346,12 +1347,13 @@ async function calculateDeposit() {
                 exchangecontract = new web3.eth.Contract(FactoryABI, exchange);
                 mypair = '';
                 await exchangecontract.methods.getPair(bayaddy, coin1).call().then(function (thisresult) {
-                    mypair = thisresult;
+                    mypair = DOMPurify.sanitize(thisresult);
                 });
                 poolreserve = [];
                 if(/^0x0+$/.test(mypair) == false) {
                     console.log("Checking pool balance...");
-                    await liquiditypool.methods.calculateBalance(myaccounts,mypair,true,0).call().then(function (thisresult) {                        
+                    await liquiditypool.methods.calculateBalance(myaccounts,mypair,true,0).call().then(function (thisresult) {
+                        thisresult = DOMPurify.sanitize(thisresult);
                         poolreserve[0] = thisresult[0];
                         poolreserve[1] = thisresult[1];
                     })
@@ -1359,10 +1361,10 @@ async function calculateDeposit() {
                     reserves = [];
                     paircontract = new web3.eth.Contract(PairABI, mypair);
                     await paircontract.methods.getReserves().call().then(function (thisresult) {
-                        reserves = thisresult;
+                        reserves = DOMPurify.sanitize(thisresult);
                     });
                     await paircontract.methods.token0().call().then(function (thisresult) {
-                        token0 = thisresult;
+                        token0 = DOMPurify.sanitize(thisresult);
                     });
                     if(token0 == BAYLaddy || token0 == BAYRaddy) {
                         reservebayval = parseInt(reserves[0]);
@@ -1398,17 +1400,17 @@ async function calculateDeposit() {
                 exchangecontract = new web3.eth.Contract(FactoryABI, exchange);
                 mypair = '';
                 await exchangecontract.methods.getPair(bayaddy, coin1).call().then(function (thisresult) {
-                    mypair = thisresult;
+                    mypair = DOMPurify.sanitize(thisresult);
                 });
                 if(/^0x0+$/.test(mypair) == false) {                    
                     token0 = '';
                     reserves = [];
                     paircontract = new web3.eth.Contract(PairABI, mypair);
                     await paircontract.methods.getReserves().call().then(function (thisresult) {
-                        reserves = thisresult;
+                        reserves = DOMPurify.sanitize(thisresult);
                     });
                     await paircontract.methods.token0().call().then(function (thisresult) {
-                        token0 = thisresult;
+                        token0 = DOMPurify.sanitize(thisresult);
                     });
                     if(token0 == BAYLaddy || token0 == BAYRaddy) {
                         reservebayval2 = parseInt(reserves[0]);
@@ -1705,7 +1707,7 @@ async function showFrozen() {
     var result = [];
     var result2 = [];
     await baydatacontract.methods.getFrozen(myaccounts).call().then(function (myresult) {
-        result = myresult;
+        result = DOMPurify.sanitize(myresult);
     })
     var result2 = networkvars;
     var x = 0;
@@ -1713,15 +1715,16 @@ async function showFrozen() {
     var ftext = "";
     var val2;
     var amt;
-    var myblock = await web3.eth.getBlock(await web3.eth.getBlockNumber());
+    var myblock = DOMPurify.sanitize(await web3.eth.getBlock(await web3.eth.getBlockNumber()));
     var release;
     while(x < 4) {
         val2 = 0;
         await baydatacontract.methods.FrozenTXDBTimeSpent(myaccounts,x,0).call().then(function (newval) {
-            val2 = parseInt(newval);
+            val2 = parseInt(DOMPurify.sanitize(newval));
         });
         if(val2 == 1) {
             await baydatacontract.methods.FrozenTXDBTimeSpent(myaccounts,x,1).call().then(function (newval) {
+                newval = DOMPurify.sanitize(newval);
                 y = 0;
                 amt = 0;
                 //If you want you can calculate both liquid and reserve for each payment if you follow the release frozen calculation protocol
@@ -1782,17 +1785,17 @@ async function showPegChart(selectedChart = 0) {
     if(prevtime + 120 < (Math.floor(Date.now() / 1000))) {        
         if(selectedChart == 0) {
             await baydatacontract.methods.calculateBalance(myaccounts,0).call().then(function (myresult4) {
-                result = myresult4[2];
+                result = DOMPurify.sanitize(myresult4[2]);
             })
         }
         if(selectedChart == 1) {
             await liquiditypool.methods.calculateBalance(myaccounts, mycurrentpair, true, 0).call().then(function (myresult4) {
-                result = myresult4[2];
+                result = DOMPurify.sanitize(myresult4[2]);
             })
         }
         if(selectedChart == 2) {
             await liquiditypool.methods.calculatePoolBalanceV1(myaccounts, mycurrentpair, 0, LPtokens, precision, 0).call().then(function (myresult4) {
-                result = myresult4[1];
+                result = DOMPurify.sanitize(myresult4[1]);
             })
         }
         prevresult = result;
@@ -1971,7 +1974,7 @@ async function registerBitBay(regaddy) {
     var found = 1;
     var selectedaccount = myaccounts;
     await bayadmincontract.methods.BAYaddress(selectedaccount).call().then(function (myresult5) {
-        if(myresult5 == regaddy){
+        if(DOMPurify.sanitize(myresult5) == regaddy){
             found = 0;
             //document.getElementById("text1").innerHTML += "<br><br>A BitBay address is already registered to your address.";
             modalDialog('Connect', "A BitBay address is already registered to your address.", "danger");
@@ -1999,10 +2002,11 @@ async function burnToBitBay(burnamount) {
     var selectedaccount = myaccounts;
     var myadmin = "";
     await baydatacontract.methods.minter().call().then(function (dataadmin) {
-        myadmin = dataadmin;
+        myadmin = DOMPurify.sanitize(dataadmin);
     })    
     var found = 1;
     await bayadmincontract.methods.BAYaddress(selectedaccount).call().then(function (results) {
+        results = DOMPurify.sanitize(results);
         if(!results && results.length == 0){
             //document.getElementById("text1").innerHTML += "<br><br>You need to register your BitBay address before burning.";
             modalDialog('Connect', "You need to register your BitBay address before burning.", "danger");
@@ -2035,6 +2039,7 @@ async function showNonces() {
     var returnthis = 0;
     var currentaccount = myaccounts;
     await bayadmincontract.methods.listNonces(currentaccount).call().then(function (myresults) {
+        myresults = DOMPurify.sanitize(myresults);
         if(myresults.length == 0) {
             document.getElementById("merkletext").innerHTML = 'No history of burned funds to BitBay network from this account.';
             returnthis = 1;
@@ -2059,19 +2064,19 @@ async function showNonces() {
 
     jsonreceipt = {'nonce':item,'from':currentaccount};
     await bayadmincontract.methods.recipient(item, currentaccount).call().then(function (myresults) {
-        jsonreceipt['address'] = myresults;
+        jsonreceipt['address'] = DOMPurify.sanitize(myresults);
     });
     await bayadmincontract.methods.showReserve(currentaccount, item).call().then(function (myresults) {
-        jsonreceipt['reserve'] = myresults;
+        jsonreceipt['reserve'] = DOMPurify.sanitize(myresults);
     });
     await bayadmincontract.methods.highkey(item, currentaccount).call().then(function (myresults) {
-        jsonreceipt['section'] = myresults;
+        jsonreceipt['section'] = DOMPurify.sanitize(myresults);
     });
     await bayadmincontract.methods.intervaltime().call().then(function (myresults) {
-        intervaltime = myresults;
+        intervaltime = DOMPurify.sanitize(myresults);
     });
     await bayadmincontract.methods.processingTime(item).call().then(function (myresults) {
-        processingTime = myresults;
+        processingTime = DOMPurify.sanitize(myresults);
     });
     var steps = parseInt(networkvars[1]) + parseInt(networkvars[2]);
     var myhash = web3.utils.keccak256(web3.eth.abi.encodeParameters(['string','uint256[' + steps.toString() + ']','uint256','uint256','address'],[jsonreceipt['address'],jsonreceipt['reserve'],jsonreceipt['section'],jsonreceipt['nonce'],currentaccount]));
@@ -2088,7 +2093,7 @@ async function showNonces() {
         document.getElementById("merkletext").innerHTML += "<br>Merkle Proof: Merkle tree ready, you may copy the receipt to the clipboard.";
         var leaves = [];
         await bayadmincontract.methods.listHashes(item).call().then(function (myresults) {
-            leaves = myresults;
+            leaves = DOMPurify.sanitize(myresults);
         });
         var tree = new MerkleTree(leaves, web3.utils.keccak256, { sort: true });
         var root = tree.getRoot().toString('hex');
@@ -2157,11 +2162,11 @@ async function addLiquidity() {
         bayaddy = BAYRaddy;
     }
     await exchangecontract.methods.getPair(bayaddy, coin1).call().then(function (liqresult) {
-        mypair = liqresult;
+        mypair = DOMPurify.sanitize(liqresult);
     });
     try {
         await coin1contract.methods.allowance(currentaccount, myrouter).call().then(function (liqresult) {
-            allowance = liqresult;
+            allowance = DOMPurify.sanitize(liqresult);
         });
         if(allowance == 0) {
             //document.getElementById("addliquidtext").innerHTML = 'Waiting for router allowance authorization on the blockchain for the first coin...';
@@ -2170,7 +2175,7 @@ async function addLiquidity() {
         }
         allowance = 0;
         await baydatacontract.methods.allowance(currentaccount, myrouter).call().then(function (liqresult) {
-            allowance = liqresult;
+            allowance = DOMPurify.sanitize(liqresult);
         });
         if(allowance == 0) {
             //document.getElementById("addliquidtext").innerHTML = 'Waiting for router allowance authorization on the blockchain for BAY...';
@@ -2179,7 +2184,7 @@ async function addLiquidity() {
         }
         allowance = 0;
         await baydatacontract.methods.allowanceReserve(currentaccount, myrouter).call().then(function (liqresult) {
-            allowance = liqresult;
+            allowance = DOMPurify.sanitize(liqresult);
         });
         if(allowance == 0) {
             //document.getElementById("addliquidtext").innerHTML = 'Waiting for router allowance authorization on the blockchain for BAYR...';
@@ -2194,7 +2199,7 @@ async function addLiquidity() {
     }
     if(/^0x0+$/.test(mypair) == false) {
         await liquiditypool.methods.poolhighkey(mypair).call().then(function (liqresult) {
-            myhighkey = parseInt(liqresult);
+            myhighkey = parseInt(DOMPurify.sanitize(liqresult));
         });
         section = Math.floor(networkvars[0] / networkvars[2]);
         if(myhighkey != section) {
@@ -2251,14 +2256,14 @@ async function addLiquidity() {
     }
     var returnthis = 0
     await baylcontract.methods.balanceOf(currentaccount).call().then(function (myliquid) {
-        if(otherval > myliquid) {
+        if(otherval > DOMPurify.sanitize(myliquid)) {
             //document.getElementById("addliquidtext").innerHTML = 'Not enough liquid funds for deposit';
             modalDialog('Connect', "Not enough liquid funds for deposit", "danger");
             returnthis = 1;
         }
     });
     await bayrcontract.methods.balanceOf(currentaccount).call().then(function (myrval) {
-        if((totalval - parseInt(otherval)) > parseInt(myrval)) {
+        if((totalval - parseInt(otherval)) > parseInt(DOMPurify.sanitize(myrval))) {
             //document.getElementById("addliquidtext").innerHTML = 'Not enough reserve funds for deposit';
             modalDialog('Connect', "Not enough reserve funds for deposit", "danger");
             returnthis = 1;
@@ -2274,7 +2279,7 @@ async function addLiquidity() {
         });
     } else {
         await coin1contract.methods.balanceOf(currentaccount).call().then(function (myliquid) {
-            if(coin1val > parseInt(myliquid)) {
+            if(coin1val > parseInt(DOMPurify.sanitize(myliquid))) {
                 //document.getElementById("addliquidtext").innerHTML = 'Not enough coins for deposit';
                 modalDialog('Connect', "Not enough coins for deposit", "danger");
                 returnthis = 1;
@@ -2370,13 +2375,13 @@ async function Swap() {
         bayaddy = BAYRaddy;
     }
     await exchangecontract.methods.getPair(bayaddy, coin1).call().then(function (swapresult) {
-        mypair = swapresult;
+        mypair = DOMPurify.sanitize(swapresult);
     });
     decimals = await getDecimals(mycoin1);
     decimals = "1e" + decimals;
     try {
         await coin1contract.methods.allowance(chosenaccount, myrouter).call().then(function (swapresult) {
-            allowance = swapresult;
+            allowance = DOMPurify.sanitize(swapresult);
         });
         if(allowance == 0) {
             document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-warning" >Waiting for router allowance authorization on the blockchain for the first coin...</div><br>' + prevtext;
@@ -2384,7 +2389,7 @@ async function Swap() {
         }
         allowance = 0;
         await baydatacontract.methods.allowance(chosenaccount, myrouter).call().then(function (swapresult) {
-            allowance = swapresult;
+            allowance = DOMPurify.sanitize(swapresult);
         });
         if(allowance == 0) {
             document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-warning" >Waiting for router allowance authorization on the blockchain for BAY...</div><br>' + prevtext;
@@ -2392,7 +2397,7 @@ async function Swap() {
         }
         allowance = 0;
         await baydatacontract.methods.allowanceReserve(chosenaccount, myrouter).call().then(function (swapresult) {
-            allowance = swapresult;
+            allowance = DOMPurify.sanitize(swapresult);
         });
         if(allowance == 0) {
             document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-warning" >Waiting for router allowance authorization on the blockchain for BAYR...</div><br>' + prevtext;
@@ -2406,7 +2411,7 @@ async function Swap() {
     }
     if(/^0x0+$/.test(mypair) == false) {
         await liquiditypool.methods.poolhighkey(mypair).call().then(function (swapresult) {
-            myhighkey = parseInt(swapresult);
+            myhighkey = parseInt(DOMPurify.sanitize(swapresult));
         });
         section = Math.floor(networkvars[0] / networkvars[2]);
         if(myhighkey != section) {
@@ -2450,7 +2455,7 @@ async function Swap() {
             });
         } else {
             await coin1contract.methods.balanceOf(chosenaccount).call().then(function (myliquid2) {
-                if(org2 > parseInt(myliquid2)) {
+                if(org2 > parseInt(DOMPurify.sanitize(myliquid2))) {
                     document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-warning" >Not enough coins for deposit</div>';
                     returnthis = 1;
                 }
@@ -2459,14 +2464,14 @@ async function Swap() {
     } else {
         if(bayselect == 2) {
             await baylcontract.methods.balanceOf(chosenaccount).call().then(function (myliquid2) {
-                if(org1 > parseInt(myliquid2)) {
+                if(org1 > parseInt(DOMPurify.sanitize(myliquid2))) {
                     document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-warning" >Not enough liquid funds for deposit</div>';
                     returnthis = 1;
                 }
             });
         } else {
             await bayrcontract.methods.balanceOf(chosenaccount).call().then(function (myrval2) {
-                if(org1 > parseInt(myrval2)) {
+                if(org1 > parseInt(DOMPurify.sanitize(myrval2))) {
                     document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-warning" >Not enough reserve funds for deposit</div>';
                     returnthis = 1;
                 }
@@ -2598,12 +2603,12 @@ async function withdrawLP() {
         bayaddy = BAYRaddy;
     }
     await exchangecontract.methods.getPair(bayaddy, coin1).call().then(function (wresult) {
-        mypair = wresult;
+        mypair = DOMPurify.sanitize(wresult);
     });
     var paircontract = new web3.eth.Contract(PairABI, mypair);
     try {
         await paircontract.methods.allowance(waccount, myrouter).call().then(function (wresult) {
-            allowance = wresult;
+            allowance = DOMPurify.sanitize(wresult);
         });
         if(allowance == 0) {
             document.getElementById("LPdetails1").innerHTML = 'Waiting for router allowance authorization on the blockchain for the LP Tokens...<br><br>' + prevtext;
@@ -2615,7 +2620,7 @@ async function withdrawLP() {
     }
     if(/^0x0+$/.test(mypair) == false) {
         await liquiditypool.methods.poolhighkey(mypair).call().then(function (wresult) {
-            myhighkey = parseInt(wresult);
+            myhighkey = parseInt(DOMPurify.sanitize(wresult));
         });
         section = Math.floor(networkvars[0] / networkvars[2]);
         if(myhighkey != section) {
@@ -2642,6 +2647,7 @@ async function withdrawLP() {
         return;
     }
     await paircontract.methods.balanceOf(waccount).call().then(function (wval2) {
+        wval2 = DOMPurify.sanitize(wval2)
         if(parseInt(wval) > parseInt(wval2)) {
             document.getElementById("LPdetails1").innerHTML = 'Not enough LP tokens for withdrawal';
             returnthis = 1;
