@@ -215,7 +215,6 @@ contract Administration is IAdministration {
                     curators.push(curator);
                 }
                 isCurator[curator] = true;
-                myvotetimes[curator][7] = block.timestamp;
                 totalvotes = sub(totalvotes, myweight[curator]);
                 totalvotes = add(totalvotes, weight);
             }
@@ -588,6 +587,7 @@ contract Administration is IAdministration {
             }
             BAYdata[nonce][sender] = reserve;
             highkey[nonce][sender] = section;
+            regNonce[sender] = nonce;
             recipient[nonce][sender] = BAYaddress[sender];
             require(addresses[nonce][index[nonce][sender]] == sender);
             hashes[nonce][index[nonce][sender]] = keccak256(abi.encode(BAYaddress[sender],reserve,section,nonce,sender));
