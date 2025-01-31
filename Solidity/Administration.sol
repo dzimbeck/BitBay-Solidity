@@ -47,6 +47,7 @@ contract Administration is IAdministration {
     uint public nonce;
     uint public intervaltime = 43200; //12 hour batches of transactions. And stakers can wait a few hours to finalize data.
     uint public timeLimit = 15552000; //Curators should be encouraged to stay active
+    uint public startingNonce = 0; //Increment this by a billion for each new bridge to keep hashes unique
     
     uint public isActive = 1; //Initially proxies may be immediately changed
     bool public enableSpecialTX = false;
@@ -63,6 +64,7 @@ contract Administration is IAdministration {
     //to participate in data validation by requiring a consensus in order to make advances.
     //Initially, the curators are based on the most active and trusted BAY holders and stakers.
     constructor() {
+        nonce = startingNonce;
         minter = msg.sender;
         mintmode = 1;
         totalSupply = 1e17;
@@ -614,5 +616,9 @@ contract Administration is IAdministration {
 
     function showLimits()  public view returns(uint[14] memory) {
         return votetimelimit;
+    }
+
+    function merkleLen() public view returns(uint) {
+        return Merkles.length;
     }
 }
