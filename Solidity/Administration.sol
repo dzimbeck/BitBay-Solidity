@@ -57,6 +57,17 @@ contract Administration is IAdministration {
     mapping (bytes32 => uint) public MerkleConfirm; //Gives time for users to react to a bad Merkle
     uint unlock = 0;
 
+    struct ProxyChangeRequest {
+        uint256 timestamp;
+        uint8 changeType; // 0 = changeProxy, can define other types later
+        address newProxy;
+        bool status;
+        address targetProxy;
+    }
+    ProxyChangeRequest[] public delayedChanges;
+    uint public delayTime;
+    uint public lastProxyPosition;
+
     event emitProposal(address from, uint myprop, bytes packed);
 
     //Any structure of majority and curators can be made this way. Also once volume picks up
@@ -80,22 +91,7 @@ contract Administration is IAdministration {
         }
         votetimelimit[9] = 300; //Add merkle root
         maxweight = 100000;
-    }
-
-    //Safe math functions
-    function mulDiv(uint x, uint y, uint z) internal pure returns (uint) {
-      uint a = x / z; uint b = x % z; // x = a * z + b
-      uint c = y / z; uint d = y % z; // y = c * z + d
-      return a * b * z + a * d + b * c + b * d / z;
-    }
-    function add(uint x, uint y) internal pure returns (uint z) {
-        require((z = x + y) >= x, 'ds-math-add-overflow');
-    }
-    function sub(uint x, uint y) internal pure returns (uint z) {
-        require((z = x - y) <= x, 'ds-math-sub-underflow');
-    }
-    function mul(uint x, uint y) internal pure returns (uint z) {
-        require(y == 0 || (z = x * y) / y == x, 'ds-math-mul-overflow');
+        delayTime = 7257600; //3 month delay for major proxy changes
     }
 
     //Unfortunately solidity limits the number of variables to a function so a struct is used here
@@ -116,7 +112,8 @@ contract Administration is IAdministration {
     }
 
     function changeMinter(address newminter) public returns (bool){
-        require(msg.sender == minter);
+        require(msg.sender == minter || msg.sender == address(this));
+        require(newminter != address(this));
         minter = newminter;
         return true;
     }
@@ -127,9 +124,14 @@ contract Administration is IAdministration {
         return true;
     }
 
-    function changePoolProxy(address newpool) public returns (bool){
-        require(msg.sender == minter);
-        poolProxy = newpool;
+    function changeLiquidityPool(address newpool) public returns (bool){
+        if(poolProxy==address(0)) {
+            require(msg.sender == minter || msg.sender == address(this));
+            poolProxy = newpool;
+        } else {
+            require(msg.sender == address(this));
+            poolProxy = newpool;            
+        }        
         return true;
     }
 
@@ -149,7 +151,7 @@ contract Administration is IAdministration {
             x += 1;
         }
         isCurator[curator] = false;
-        totalvotes = sub(totalvotes, myweight[curator]);
+        totalvotes = totalvotes - myweight[curator];
         require(totalvotes != 0);
         return true;
     }
@@ -167,8 +169,8 @@ contract Administration is IAdministration {
         require(proposals[myprop][0] != 1,"Voting is complete and will reset after the time limit");
         //Try to have voting times that aren't back to back, so users can time their votes early into the process
         myvotetimes[msg.sender][mytype] = block.timestamp + votetimelimit[mytype];
-        proposals[myprop][0] = add(proposals[myprop][0], myweight[msg.sender]);
-        if ((mul(proposals[myprop][0], 100) / totalvotes) >= voteperc) {
+        proposals[myprop][0] = proposals[myprop][0] + myweight[msg.sender];
+        if (((proposals[myprop][0] * 100) / totalvotes) >= voteperc) {
             proposals[myprop][0] = 1;
             return true;
         }
@@ -180,8 +182,12 @@ contract Administration is IAdministration {
         checkProxyLock();
         bytes32 proposal = keccak256(abi.encodePacked("setProxy",myproxy));
         bool res = checkProposal(proposal, 0);
-        if (res) {            
-            proxy = myproxy;
+        if (res) {
+            if(proxy==address(0)) {
+                proxy = myproxy;
+            } else {
+                delayedChanges.push(ProxyChangeRequest(block.timestamp + delayTime, 0, myproxy, true, address(0)));
+            }
         }
         emit emitProposal(msg.sender, 0, abi.encodePacked("setProxy",myproxy));
         return res;
@@ -193,10 +199,7 @@ contract Administration is IAdministration {
         bytes32 proposal = keccak256(abi.encodePacked("changeAdminMinter",targetproxy,newminter));
         bool res = checkProposal(proposal, 1);
         if (res) {
-            bool success;
-            bytes memory result;
-            (success, result) = targetproxy.call(abi.encodeWithSignature("changeMinter(address)",newminter));
-            require(success);
+            delayedChanges.push(ProxyChangeRequest(block.timestamp + delayTime, 1, newminter, true, targetproxy));
         }
         emit emitProposal(msg.sender, 1, abi.encodePacked("changeAdminMinter",targetproxy,newminter));
         return res;
@@ -211,14 +214,14 @@ contract Administration is IAdministration {
         if (res) {            
             if (weight == 0) {
                 isCurator[curator] = false;
-                totalvotes = sub(totalvotes, myweight[curator]); 
+                totalvotes = totalvotes - myweight[curator];
             } else {
                 if(isCurator[curator] == false) {
                     curators.push(curator);
                 }
                 isCurator[curator] = true;
-                totalvotes = sub(totalvotes, myweight[curator]);
-                totalvotes = add(totalvotes, weight);
+                totalvotes = totalvotes - myweight[curator];
+                totalvotes = totalvotes + weight;
             }
             myweight[curator] = weight;
         }
@@ -231,10 +234,7 @@ contract Administration is IAdministration {
         bytes32 proposal = keccak256(abi.encodePacked("changeProxy",newproxy,status));
         bool res = checkProposal(proposal, 3);
         if (res) {
-            bool success;
-            bytes memory result;
-            (success, result) = proxy.call(abi.encodeWithSignature("changeProxy(address,bool)",newproxy,status));
-            require(success);
+            delayedChanges.push(ProxyChangeRequest(block.timestamp + delayTime, 3, newproxy, status, address(0)));
         }
         emit emitProposal(msg.sender, 3, abi.encodePacked("changeProxy",newproxy,status));
         return res;
@@ -337,27 +337,20 @@ contract Administration is IAdministration {
         bytes32 proposal = keccak256(abi.encodePacked("changeRouter",myAMM,status));
         bool res = checkProposal(proposal, 10);
         if (res) {
-            bool success;
-            bytes memory result;
-            (success, result) = proxy.call(abi.encodeWithSignature("changeRouter(address,bool)",myAMM,status));
-            require(success);
+            delayedChanges.push(ProxyChangeRequest(block.timestamp + delayTime, 10, myAMM, status, address(0)));
         }
         emit emitProposal(msg.sender, 10, abi.encodePacked("changeRouter",myAMM,status));
         return res;
     }
 
-    function setLiquidityPool(address LP) public returns (bool){
+    function setLiquidityPool(address targetProxy, address LP) public returns (bool){
         checkProxyLock();
-        bytes32 proposal = keccak256(abi.encodePacked("setLiquidityPool",LP));
+        bytes32 proposal = keccak256(abi.encodePacked("setLiquidityPool",targetProxy,LP));
         bool res = checkProposal(proposal, 11);
         if (res) {
-            bool success;
-            bytes memory result;
-            (success, result) = proxy.call(abi.encodeWithSignature("changeLiquidityPool(address)",LP));
-            require(success);
-            poolProxy = LP;
+            delayedChanges.push(ProxyChangeRequest(block.timestamp + delayTime, 11, LP, true, targetProxy));
         }
-        emit emitProposal(msg.sender, 11, abi.encodePacked("setLiquidityPool",LP));
+        emit emitProposal(msg.sender, 11, abi.encodePacked("setLiquidityPool",targetProxy,LP));
         return res;
     }
 
@@ -371,18 +364,15 @@ contract Administration is IAdministration {
         return res;
     }
 
-    //This will change the admin contract so proceed with caution
-    function changeTargetProxy(address targetproxy, address newminter) public returns (bool){
+    //This will change the proxy contract of a target contract so proceed with caution
+    function changeTargetProxy(address targetproxy, address newproxy) public returns (bool){
         checkProxyLock();
-        bytes32 proposal = keccak256(abi.encodePacked("changeTargetProxy",targetproxy,newminter));
+        bytes32 proposal = keccak256(abi.encodePacked("changeTargetProxy",targetproxy,newproxy));
         bool res = checkProposal(proposal, 13);
         if (res) {
-            bool success;
-            bytes memory result;
-            (success, result) = targetproxy.call(abi.encodeWithSignature("setProxy(address)",newminter));
-            require(success);
+            delayedChanges.push(ProxyChangeRequest(block.timestamp + delayTime, 13, newproxy, true, targetproxy));
         }
-        emit emitProposal(msg.sender, 13, abi.encodePacked("changeTargetProxy",targetproxy,newminter));
+        emit emitProposal(msg.sender, 13, abi.encodePacked("changeTargetProxy",targetproxy,newproxy));
         return res;
     }
 
@@ -433,15 +423,14 @@ contract Administration is IAdministration {
         a.liquid = 0;
         if (a.section != MerkleRoot[root][1]) {
             while(a.i < a.mk) {
-                a.newtot = add(a.newtot, reserve[a.pegsteps + a.i]);
+                a.newtot = a.newtot + reserve[a.pegsteps + a.i];
                 reserve[a.pegsteps + a.i] = 0;
                 a.i += 1;
             }
             reserve[MerkleRoot[root][1]]= a.newtot;
             if (reserve[a.section] != 0) {
                 a.i = 0;
-                a.newtot = add(reserve[a.section], 1);
-                a.newtot = sub(a.newtot, 1);
+                a.newtot = reserve[a.section];
                 reserve[a.section] = 0;
                 //It's okay to divide microshards evenly because liquid/reserve ratios don't precisely convert between networks on the bridge either way
                 //This is because BAY network has many more shards and the microshards system is done to save in storage costs
@@ -454,7 +443,7 @@ contract Administration is IAdministration {
                 reserve[a.pegsteps + a.i] += a.newtot; //Last section gets whatever is left over
             }
         }
-        (success, result) = proxy.call(abi.encodeWithSignature("mint(address,uint256[38])",msg.sender,reserve));
+        (success, result) = proxy.call(abi.encodeWithSignature("mint(address,uint64[38])",msg.sender,typeCast64(reserve)));
         require(success);
         return leaf;
     }
@@ -462,8 +451,8 @@ contract Administration is IAdministration {
     function mintNew(address receiver, uint amount) public returns (uint[38] memory){
         require(mintmode == 1);
         require(msg.sender == minter);
-        require(add(totalMinted, amount) <= totalSupply);
-        totalMinted = add(totalMinted, amount);
+        require((totalMinted + amount) <= totalSupply);
+        totalMinted = totalMinted + amount;
         bool success;
         bytes memory result;
         (success, result) = proxy.staticcall(abi.encodeWithSignature("getState()"));        
@@ -504,7 +493,7 @@ contract Administration is IAdministration {
             }
             a.i += 1;
         }
-        uint remainder = sub(amount, tot);
+        uint remainder = amount - tot;
         if(remainder > 0) {
             tot += remainder;
             if(a.section == a.pegsteps - 1) {
@@ -515,7 +504,7 @@ contract Administration is IAdministration {
             
         }
         require(tot == amount, "Calculation error");
-        (success, result) = proxy.call(abi.encodeWithSignature("mint(address,uint256[38])",receiver,reserve));
+        (success, result) = proxy.call(abi.encodeWithSignature("mint(address,uint64[38])",receiver,typeCast64(reserve)));
         require(success);
         return reserve;
     }
@@ -561,15 +550,14 @@ contract Administration is IAdministration {
             (a.supply,a.pegsteps,a.mk,a.pegrate,) = abi.decode(result, (uint,uint,uint,uint,uint));
             if (section != a.section) {
                 while(a.i < a.mk) {
-                    a.newtot = add(a.newtot, a.reserve[a.pegsteps + a.i]);
+                    a.newtot = a.newtot + a.reserve[a.pegsteps + a.i];
                     a.reserve[a.pegsteps + a.i] = 0;
                     a.i += 1;
                 }
                 a.reserve[a.section]= a.newtot;
                 if (a.reserve[section] != 0) {
                     a.i = 0;
-                    a.newtot = add(a.reserve[section], 1);
-                    a.newtot = sub(a.newtot, 1);
+                    a.newtot = a.reserve[section];
                     a.reserve[section] = 0;
                     //It's okay to divide microshards evenly because liquid/reserve ratios don't precisely convert between networks on the bridge either way
                     //This is because BAY network has many more shards and the microshards system is done to save in storage costs
@@ -584,7 +572,7 @@ contract Administration is IAdministration {
             }
             a.i = 0;
             while(a.i < a.pegsteps + a.mk) {
-                reserve[a.i] = add(reserve[a.i], a.reserve[a.i]);
+                reserve[a.i] = reserve[a.i] + a.reserve[a.i];
                 a.i += 1;
             }
             BAYdata[nonce][sender] = reserve;
@@ -620,5 +608,49 @@ contract Administration is IAdministration {
 
     function merkleLen() public view returns(uint) {
         return Merkles.length;
+    }
+
+    function typeCast64(uint[38] memory inputArray) public pure returns (uint64[38] memory) {
+        uint64[38] memory outputArray;        
+        for (uint i = 0; i < 38; i++) {
+            outputArray[i] = uint64(inputArray[i]); // Explicitly cast uint256 to uint64
+        }        
+        return outputArray;
+    }
+
+    function updateProxies() public returns(bool) {
+        require(msg.sender == minter);
+        uint i = lastProxyPosition;
+        uint count;
+        bool success;
+        while (i < delayedChanges.length && count < 30) {
+            ProxyChangeRequest storage request = delayedChanges[i];
+            if (block.timestamp < request.timestamp) {
+                break;
+            }
+            if (request.changeType == 0) {
+                proxy = request.newProxy;
+            }
+            if (request.changeType == 1) {
+                (success, ) = request.targetProxy.call(abi.encodeWithSignature("changeMinter(address)",request.newProxy));
+            }
+            if (request.changeType == 3) {
+                (success, ) = proxy.call(abi.encodeWithSignature("changeProxy(address,bool)",request.newProxy,request.status));
+            }
+            if (request.changeType == 10) {
+                (success, ) = proxy.call(abi.encodeWithSignature("changeRouter(address,bool)",request.newProxy,request.status));
+            }
+            if (request.changeType == 11) {
+                (success, ) = request.targetProxy.call(abi.encodeWithSignature("changeLiquidityPool(address)",request.newProxy));
+                poolProxy = request.newProxy;
+            }
+            if (request.changeType == 13) {
+                (success, ) = request.targetProxy.call(abi.encodeWithSignature("setProxy(address)",request.newProxy));
+            }
+            i++;
+            count++;
+        }
+        lastProxyPosition = i;
+        return success;
     }
 }
