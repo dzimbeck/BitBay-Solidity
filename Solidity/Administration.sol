@@ -16,7 +16,6 @@ contract Administration is IAdministration {
     uint public totalSupply;
     address public proxy; //Where all the peg functions and storage are
     address public poolProxy;
-
     uint public totalvotes;
     uint public voteperc;
     uint[14] public votetimelimit;
@@ -47,19 +46,17 @@ contract Administration is IAdministration {
     uint public nonce;
     uint public intervaltime = 43200; //12 hour batches of transactions. And stakers can wait a few hours to finalize data.
     uint public timeLimit = 15552000; //Curators should be encouraged to stay active
-    uint public startingNonce = 0; //Increment this by a billion for each new bridge to keep hashes unique
-    
-    uint public isActive = 1; //Initially proxies may be immediately changed
+    uint public startingNonce = 0; //Increment this by a billion for each new bridge to keep hashes unique    
     bool public enableSpecialTX = false;
     bool public automaticUnfreeze = true;
-    uint public proxylock;
+    uint[2] public proxylock;
     bytes32[] public Merkles; //This can be validated by looking at the BitBay network.
     mapping (bytes32 => uint) public MerkleConfirm; //Gives time for users to react to a bad Merkle
     uint unlock = 0;
 
     struct ProxyChangeRequest {
         uint256 timestamp;
-        uint8 changeType; // 0 = changeProxy, can define other types later
+        uint8 changeType;
         address newProxy;
         bool status;
         address targetProxy;
@@ -86,15 +83,14 @@ contract Administration is IAdministration {
         voteperc = 55; //55 percent consensus
         uint x = 0;
         while(x < 14) {
-            votetimelimit[x] = 300;
+            votetimelimit[x] = 5400;
             x += 1;
         }
-        votetimelimit[9] = 300; //Add merkle root
         maxweight = 100000;
         delayTime = 7257600; //3 month delay for major proxy changes
     }
 
-    //Unfortunately solidity limits the number of variables to a function so a struct is used here
+    //Solidity limits the number of variables to a function so a struct is used here
     struct calcLocals {
         uint[38] reserve;
         uint highkey;
@@ -131,27 +127,40 @@ contract Administration is IAdministration {
         } else {
             require(msg.sender == address(this));
             poolProxy = newpool;            
-        }        
+        }
         return true;
     }
 
     function lockProxies(uint locktime) public returns (bool){
         require(msg.sender == minter);
-        proxylock = block.timestamp + locktime;
+        require(proxylock[0] < block.timestamp);
+        if(proxylock[1] < 3) {
+            require(locktime < 7257600);
+            require(locktime > 1209600);
+        }
+        proxylock[0] = block.timestamp + locktime;
+        proxylock[1] += 1;
         return true;
     }
 
-    function removeCurator(address curator) public returns (bool){
+    function removeCurator(address curator, bool reset) public returns (bool){
         require(msg.sender == minter || isCurator[msg.sender]);
+        if(reset == true && msg.sender == minter) {
+            if(myvotetimes[curator][0] + (votetimelimit[0] * 10) < block.timestamp) {
+                myvotetimes[curator][0] = block.timestamp;
+            }
+            return true;
+        }
         uint x = 0;
         while (x < 14) {
-            if (myvotetimes[msg.sender][x] + timeLimit > block.timestamp) {
+            if (myvotetimes[curator][x] + timeLimit > block.timestamp) {
                 return false;
             }
             x += 1;
         }
         isCurator[curator] = false;
         totalvotes = totalvotes - myweight[curator];
+        myweight[curator] = 0;
         require(totalvotes != 0);
         return true;
     }
@@ -179,7 +188,7 @@ contract Administration is IAdministration {
 
     //This will specify the BitBay contract
     function setProxy(address myproxy) public returns (bool){
-        checkProxyLock();
+        require(proxylock[0] < block.timestamp);
         bytes32 proposal = keccak256(abi.encodePacked("setProxy",myproxy));
         bool res = checkProposal(proposal, 0);
         if (res) {
@@ -195,7 +204,7 @@ contract Administration is IAdministration {
 
     //This will change the admin contract so proceed with caution
     function changeAdminMinter(address targetproxy, address newminter) public returns (bool){
-        checkProxyLock();
+        require(proxylock[0] < block.timestamp);
         bytes32 proposal = keccak256(abi.encodePacked("changeAdminMinter",targetproxy,newminter));
         bool res = checkProposal(proposal, 1);
         if (res) {
@@ -230,7 +239,7 @@ contract Administration is IAdministration {
     }
     
     function changeBAYProxy(address newproxy, bool status) public returns (bool){
-        checkProxyLock();
+        require(proxylock[0] < block.timestamp);
         bytes32 proposal = keccak256(abi.encodePacked("changeProxy",newproxy,status));
         bool res = checkProposal(proposal, 3);
         if (res) {
@@ -241,19 +250,15 @@ contract Administration is IAdministration {
     }
     
     function setActive(bool status) public returns (bool){
-        require(isActive + 1814400 < block.timestamp); //Everything must be paused for 3 weeks to update the contract
+        if(proxylock[1] > 3) {
+            require(proxylock[0] < block.timestamp);
+        }
         bytes32 proposal = keccak256(abi.encodePacked("setActive",status));
         bool res = checkProposal(proposal, 4);
         if (res) {
             bool success;
             bytes memory result;
             (success, result) = proxy.call(abi.encodeWithSignature("setActive(bool)",status));
-            if(status == true) {
-                isActive = 0; //This makes it so to change proxies all contracts must be locked for some time
-            }
-            if(status == false) {
-                isActive = block.timestamp;
-            }
             require(success);
         }
         emit emitProposal(msg.sender, 4, abi.encodePacked("setActive",status));
@@ -334,6 +339,7 @@ contract Administration is IAdministration {
     //Custom routers are needed to set temporary variables to authorize correct AMM trades
     //Since users choose to use these exchanges they can also audit new routers.
     function changeRouter(address myAMM, bool status) public returns (bool){
+        require(proxylock[0] < block.timestamp);
         bytes32 proposal = keccak256(abi.encodePacked("changeRouter",myAMM,status));
         bool res = checkProposal(proposal, 10);
         if (res) {
@@ -344,7 +350,7 @@ contract Administration is IAdministration {
     }
 
     function setLiquidityPool(address targetProxy, address LP) public returns (bool){
-        checkProxyLock();
+        require(proxylock[0] < block.timestamp);
         bytes32 proposal = keccak256(abi.encodePacked("setLiquidityPool",targetProxy,LP));
         bool res = checkProposal(proposal, 11);
         if (res) {
@@ -366,7 +372,7 @@ contract Administration is IAdministration {
 
     //This will change the proxy contract of a target contract so proceed with caution
     function changeTargetProxy(address targetproxy, address newproxy) public returns (bool){
-        checkProxyLock();
+        require(proxylock[0] < block.timestamp);
         bytes32 proposal = keccak256(abi.encodePacked("changeTargetProxy",targetproxy,newproxy));
         bool res = checkProposal(proposal, 13);
         if (res) {
@@ -374,15 +380,6 @@ contract Administration is IAdministration {
         }
         emit emitProposal(msg.sender, 13, abi.encodePacked("changeTargetProxy",targetproxy,newproxy));
         return res;
-    }
-
-    //For verifying important proposals users can look at the state of major variables before and after consensus
-    function checkProxyLock() private view {
-        require(proxylock < block.timestamp);
-        require(isActive != 0);
-        if(isActive > 1) {
-            require(isActive + 907200 > block.timestamp); //Proxies must be changed within 10.5 days to give users time to review changes
-        }
     }
 
     function verify(bytes32 root, bytes32 leaf, bytes32[] memory proof) public pure returns (bool){
