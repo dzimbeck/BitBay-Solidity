@@ -6,9 +6,8 @@ interface IAdministration {
 }
 
 contract Administration is IAdministration {
-    // --- ERC20 Data ---
-    string public constant name     = "BitBay Community";
-    string public version  = "1";
+    string public constant name = "BitBay Community";
+    string public version = "1";
        
     address public minter;
     uint public mintmode; //0 is bridge mode and 1 is testing mode
@@ -440,7 +439,7 @@ contract Administration is IAdministration {
                 reserve[a.pegsteps + a.i] += a.newtot; //Last section gets whatever is left over
             }
         }
-        (success, result) = proxy.call(abi.encodeWithSignature("mint(address,uint64[38])",msg.sender,typeCast64(reserve)));
+        (success, result) = proxy.call(abi.encodeWithSignature("mint(address,uint[38])",msg.sender,reserve));
         require(success);
         return leaf;
     }
@@ -501,7 +500,7 @@ contract Administration is IAdministration {
             
         }
         require(tot == amount, "Calculation error");
-        (success, result) = proxy.call(abi.encodeWithSignature("mint(address,uint64[38])",receiver,typeCast64(reserve)));
+        (success, result) = proxy.call(abi.encodeWithSignature("mint(address,uint[38])",receiver,reserve));
         require(success);
         return reserve;
     }
@@ -605,14 +604,6 @@ contract Administration is IAdministration {
 
     function merkleLen() public view returns(uint) {
         return Merkles.length;
-    }
-
-    function typeCast64(uint[38] memory inputArray) public pure returns (uint64[38] memory) {
-        uint64[38] memory outputArray;        
-        for (uint i = 0; i < 38; i++) {
-            outputArray[i] = uint64(inputArray[i]); // Explicitly cast uint256 to uint64
-        }        
-        return outputArray;
     }
 
     function updateProxies() public returns(bool) {
