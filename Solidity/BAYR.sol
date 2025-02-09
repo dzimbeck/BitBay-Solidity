@@ -23,8 +23,7 @@ contract BAYR is IHALO {
     uint public decimals = 8;
     uint public override totalSupply = 1e17;
     
-    // Events allow clients to react to specific
-    // contract changes you declare
+    // Events allow clients to react to specific contract changes you declare
     event Approval(address indexed from, address indexed to, uint amount);
     event Transfer(address indexed from, address indexed to, uint amount);
     
@@ -32,6 +31,7 @@ contract BAYR is IHALO {
     address public proxy; //Where all the peg functions and storage are
     address public LiquidityPool;
     address public lockpair; //An exception to not revert a temporary reentry
+    mapping (address => uint8) public checked; //Users should send to approved contracts or send through base contract
 
     uint public proxylock;
 
@@ -66,6 +66,53 @@ contract BAYR is IHALO {
         require(msg.sender == LiquidityPool);
         lockpair = pair;
         return true;
+    }
+
+    //This check is to see if a user is sending to an unknown contract without knowing the nature of the peg and its    
+    //effect on pools and transactions. They will get denied if they attempt to send this way. This method does not prevent
+    //them from sending before the contract exists. If they must interact with contracts they should use the base contract.
+    function checkAddress(address verify) public returns (bool) {
+        bool success;
+        bytes memory result;
+        if(checked[verify] == 1) {
+            return true;
+        }
+        if(checked[verify] == 2) {
+            return false;
+        }
+        if(verify == LiquidityPool) {
+            checked[verify] = 1;
+            return true;
+        }
+        (success, result) = proxy.staticcall(abi.encodeWithSignature("isRouter(address)",verify));
+        require(success);
+        bool isRouter = abi.decode(result, (bool));
+        if(isRouter) {
+            checked[verify] = 1;
+            return true;
+        } else {
+            (success, result) = proxy.staticcall(abi.encodeWithSignature("minter()"));
+            require(success);
+            address isMinter = abi.decode(result, (address));
+            if(isMinter == verify) {
+                checked[verify] = 1;
+                return true;
+            } else {
+                (success, result) = proxy.call(abi.encodeWithSignature("isAMMExchange(address)",verify));
+                require(success);
+                bool isAMM = abi.decode(result, (bool));
+                if(isAMM) {
+                    checked[verify] = 1;
+                    return true;
+                }
+            }
+        }
+        if(verify.code.length == 0) {
+            checked[verify] = 1;
+            return true;
+        }
+        checked[verify] = 2;
+        return false;
     }
     
     //ERC20 Functions
@@ -122,6 +169,7 @@ contract BAYR is IHALO {
             lockpair = address(0);
             return true;
         }
+        require(checkAddress(to));
         uint[] memory a;
         bool success;
         bytes memory result;
@@ -136,6 +184,7 @@ contract BAYR is IHALO {
             lockpair = address(0);
             return true;
         }
+        require(checkAddress(to));
         uint[] memory a;
         bool success;
         bytes memory result;

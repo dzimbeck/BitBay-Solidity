@@ -429,7 +429,7 @@ contract BITBAY {
         return (a.liquid, a.rval, a.reserve);
     }
 
-    function isAMMExchange(address AMM) private returns (bool) {
+    function isAMMExchange(address AMM) public returns (bool) {
         bool success;
         bytes memory result;
         if (AMM.code.length == 0) {
@@ -455,7 +455,7 @@ contract BITBAY {
                     isAMM[AMM] = 1;
                     return true;
                 }
-            }            
+            }
         }
         isAMM[AMM] = 2;
         return false;

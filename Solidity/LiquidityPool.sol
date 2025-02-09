@@ -27,10 +27,10 @@ contract Pool is ILiquidityPool {
     mapping (address => uint) public prevtokenbalance;
     mapping (address => bool) public addresscheck;
     mapping (address => uint) public prevlpbalance;
-    mapping (address => bool) public isBAYpair;    
+    mapping (address => bool) public isBAYpair;
     address public BAYL;
     address public BAYR;
-    bool public skipcheck;    
+    bool public skipcheck;
 
     constructor() {
         minter = msg.sender;
