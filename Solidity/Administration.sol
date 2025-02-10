@@ -48,7 +48,7 @@ contract Administration is IAdministration {
     uint public startingNonce = 0; //Increment this by a billion for each new bridge to keep hashes unique    
     bool public enableSpecialTX = false;
     bool public automaticUnfreeze = true;
-    uint[2] public proxylock;
+    uint[2][7] public proxylock;
     bytes32[] public Merkles; //This can be validated by looking at the BitBay network.
     mapping (bytes32 => uint) public MerkleConfirm; //Gives time for users to react to a bad Merkle
     uint unlock = 0;
@@ -143,15 +143,15 @@ contract Administration is IAdministration {
         return true;
     }
 
-    function lockProxies(uint locktime) public returns (bool){
+    function lockProxies(uint locktime, uint pos) public returns (bool){
         require(msg.sender == minter);
-        require(proxylock[0] < block.timestamp);
-        if(proxylock[1] < 3) {
+        require(proxylock[pos][0] < block.timestamp);
+        if(proxylock[pos][1] < 3) {
             require(locktime < 7257600);
             require(locktime > 1209600);
         }
-        proxylock[0] = block.timestamp + locktime;
-        proxylock[1] += 1;
+        proxylock[pos][0] = block.timestamp + locktime;
+        proxylock[pos][1] += 1;
         return true;
     }
 
@@ -200,7 +200,7 @@ contract Administration is IAdministration {
 
     //This will specify the BitBay contract
     function setProxy(address myproxy) public returns (bool){
-        require(proxylock[0] < block.timestamp);
+        require(proxylock[0][0] < block.timestamp);
         bytes32 proposal = keccak256(abi.encodePacked("setProxy",myproxy));
         bool res = checkProposal(proposal, 0);
         if (res) {
@@ -216,7 +216,7 @@ contract Administration is IAdministration {
 
     //This will change the admin contract so proceed with caution
     function changeAdminMinter(address targetproxy, address newminter) public returns (bool){
-        require(proxylock[0] < block.timestamp);
+        require(proxylock[1][0] < block.timestamp);
         bytes32 proposal = keccak256(abi.encodePacked("changeAdminMinter",targetproxy,newminter));
         bool res = checkProposal(proposal, 1);
         if (res) {
@@ -251,7 +251,7 @@ contract Administration is IAdministration {
     }
     
     function changeBAYProxy(address newproxy, bool status) public returns (bool){
-        require(proxylock[0] < block.timestamp);
+        require(proxylock[2][0] < block.timestamp);
         bytes32 proposal = keccak256(abi.encodePacked("changeProxy",newproxy,status));
         bool res = checkProposal(proposal, 3);
         if (res) {
@@ -262,8 +262,8 @@ contract Administration is IAdministration {
     }
     
     function setActive(bool status) public returns (bool){
-        if(proxylock[1] > 3) {
-            require(proxylock[0] < block.timestamp);
+        if(proxylock[3][1] > 3) {
+            require(proxylock[3][0] < block.timestamp);
         }
         bytes32 proposal = keccak256(abi.encodePacked("setActive",status));
         bool res = checkProposal(proposal, 4);
@@ -351,7 +351,7 @@ contract Administration is IAdministration {
     //Custom routers are needed to set temporary variables to authorize correct AMM trades
     //Since users choose to use these exchanges they can also audit new routers.
     function changeRouter(address myAMM, bool status) public returns (bool){
-        require(proxylock[0] < block.timestamp);
+        require(proxylock[4][0] < block.timestamp);
         bytes32 proposal = keccak256(abi.encodePacked("changeRouter",myAMM,status));
         bool res = checkProposal(proposal, 10);
         if (res) {
@@ -362,7 +362,7 @@ contract Administration is IAdministration {
     }
 
     function setLiquidityPool(address targetProxy, address LP) public returns (bool){
-        require(proxylock[0] < block.timestamp);
+        require(proxylock[5][0] < block.timestamp);
         bytes32 proposal = keccak256(abi.encodePacked("setLiquidityPool",targetProxy,LP));
         bool res = checkProposal(proposal, 11);
         if (res) {
@@ -384,7 +384,7 @@ contract Administration is IAdministration {
 
     //This will change the proxy contract of a target contract so proceed with caution
     function changeTargetProxy(address targetproxy, address newproxy) public returns (bool){
-        require(proxylock[0] < block.timestamp);
+        require(proxylock[6][0] < block.timestamp);
         bytes32 proposal = keccak256(abi.encodePacked("changeTargetProxy",targetproxy,newproxy));
         bool res = checkProposal(proposal, 13);
         if (res) {
