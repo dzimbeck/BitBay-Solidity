@@ -506,7 +506,7 @@ contract BITBAY {
             if(receiver != minter) {
                 (,, reserve2) = calculateBalance(receiver, 0);
             }
-        } else { //Deposit detected
+        } else { //Deposit or trade detected: Minter can register AMM pair as a router after first deposit so trades can happen directly.
             if(routerVars[b.sender2][0] == 0) {
                 require(isRouter[b.sender2]); //Must be sent from a router that won't exploit deposits. This is to allow direct sales from an AMM
                 routerVars[b.sender2][0] = 3;
@@ -813,7 +813,7 @@ contract BITBAY {
             highkey[sender] = a.section;
         }
         //There is no time delay for deposits and sales to an approved AMM
-        if (b.AMMstatus == 2) { //We have detected the user might be depositing to an AMM
+        if (b.AMMstatus == 2) { //Deposit or trade detected: Minter can register AMM pair as a router after first deposit so trades can happen directly.
             if (routerVars[b.sender2][1] == 0) {
                 require(isRouter[b.sender2]); //Must be sent from a router that won't exploit deposits. This is to allow direct sales from an AMM
                 routerVars[b.sender2][1] = 3;
