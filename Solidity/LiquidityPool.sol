@@ -14,10 +14,10 @@ contract Pool is ILiquidityPool {
     address public proxy; //Where all the peg functions and storage are
     address public minter;
 
-    mapping (address => mapping (address => uint[38])) public reserveatpool;
+    mapping (address => mapping (address => uint64[38])) public reserveatpool;
     mapping (address => mapping (address => uint)) public highkeyatpool;
     mapping (address => mapping (address => uint)) public LPtokens;
-    mapping (address => uint[38]) public poolbalance;
+    mapping (address => uint64[38]) public poolbalance;
     mapping (address => uint) public override poolhighkey;
     bool public magnify = true;
     bool public bothsides = true;
@@ -80,6 +80,17 @@ contract Pool is ILiquidityPool {
         require(prec != 0);
         matchprecision = prec;
         return true;
+    }
+    function store64(uint[38] memory input) private pure returns (uint64[38] memory output) {
+        for (uint i; i < 38; i++) {
+            if (input[i] > type(uint64).max) revert();
+            output[i] = uint64(input[i]);
+        }
+    }
+    function get64(uint64[38] memory input) private pure returns (uint[38] memory output) {
+        for (uint i; i < 38; i++) {
+            output[i] = uint(input[i]);
+        }
     }
 
     //Unfortunately solidity limits the number of variables to a function so a struct is used here
@@ -165,7 +176,7 @@ contract Pool is ILiquidityPool {
         (a.liquid, a.rval, a.reserve) = calculateBalance(msg.sender,AMM,true,0);
         (success, result) = proxy.staticcall(abi.encodeWithSignature("getState()"));
         (a.supply,a.pegsteps,a.mk,a.pegrate,a.i) = abi.decode(result, (uint,uint,uint,uint,uint));
-        poolbalance[AMM] = a.reserve;
+        poolbalance[AMM] = store64(a.reserve);
         poolhighkey[AMM] = (a.supply / a.mk);
         skipcheck = true;
         (success, result) = AMM.call(abi.encodeWithSignature("sync()"));
@@ -209,7 +220,7 @@ contract Pool is ILiquidityPool {
                 reserve2[a.i] += reserve[a.i];
                 a.i += 1;
             }
-            reserveatpool[user][pool] = reserve2;
+            reserveatpool[user][pool] = store64(reserve2);
             highkeyatpool[user][pool] = (a.supply / a.mk);
         }
         if(trade == 3) {
@@ -218,7 +229,7 @@ contract Pool is ILiquidityPool {
             require(success);
             prevtokenbalance[pool] = abi.decode(result, (uint));
         }
-        poolbalance[pool] = a.reserve;
+        poolbalance[pool] = store64(a.reserve);
         poolhighkey[pool] = (a.supply / a.mk);
     }
     function withdrawBuy(address pool, uint[38] memory reserve, uint section) external {
@@ -230,7 +241,7 @@ contract Pool is ILiquidityPool {
         if(LPbal == 0 && prevlpbalance[pool] != 0) {
             require(false, "Action was not performed by the official BitBay router");
         }
-        poolbalance[pool] = reserve;
+        poolbalance[pool] = store64(reserve);
         poolhighkey[pool] = section;
     }
     function withdrawLP(address pool, address user, uint liquidity) external returns (uint[38] memory newreserve) {
@@ -242,7 +253,7 @@ contract Pool is ILiquidityPool {
         bytes memory result;
         (a.liquid, a.rval, a.reserve) = calculateBalance(msg.sender,pool,true,0);
         (a.liquid, a.rval, reserve2) = calculateBalance(user,pool,false,0);
-        (a.liquid, newreserve, difference) = calculatePoolBalanceV1(user,pool,0,liquidity,matchprecision,liquidity);        
+        (a.liquid, newreserve, difference) = calculatePoolBalanceV1(user,pool,0,liquidity,matchprecision,liquidity);
         (success, result) = proxy.staticcall(abi.encodeWithSignature("getState()"));
         (a.supply,a.pegsteps,a.mk,a.pegrate,a.i) = abi.decode(result, (uint,uint,uint,uint,uint));
         a.i = 0;
@@ -252,9 +263,9 @@ contract Pool is ILiquidityPool {
             a.i += 1;
         }
         LPtokens[user][pool] = sub(LPtokens[user][pool],liquidity);
-        reserveatpool[user][pool] = reserve2;
+        reserveatpool[user][pool] = store64(reserve2);
         highkeyatpool[user][pool] = (a.supply / a.mk);
-        poolbalance[pool] = a.reserve;
+        poolbalance[pool] = store64(a.reserve);
         poolhighkey[pool] = (a.supply / a.mk);
         return newreserve;
     }
@@ -332,10 +343,10 @@ contract Pool is ILiquidityPool {
         (success, result) = proxy.staticcall(abi.encodeWithSignature("getState()"));
         (a.supply,a.pegsteps,a.mk,a.pegrate,deflationrate) = abi.decode(result, (uint,uint,uint,uint,uint));
         if (isPool) {
-            a.reserve = poolbalance[pool];
+            a.reserve = get64(poolbalance[pool]);
             a.highkey = poolhighkey[pool];
         } else {
-            a.reserve = reserveatpool[user][pool];
+            a.reserve = get64(reserveatpool[user][pool]);
             a.highkey = highkeyatpool[user][pool];
         }
         if (buffer != 0) {
@@ -462,7 +473,7 @@ contract Pool is ILiquidityPool {
             b.plval = (mul((b.poolliquid),LP)) / LPsupply;
         }
         a.i = 0;
-        if(a.newtot != b.amount && skip == 0) {            
+        if(a.newtot != b.amount && skip == 0) {
             while(a.i < (a.pegsteps + a.mk)) {
                 if(bothsides == false) {
                     val = (a.reserve[a.i] * b.amount) / a.newtot;
