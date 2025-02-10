@@ -18,7 +18,6 @@ interface IMinter {
 
 contract BITBAY {
     string public constant name = "BitBay Data";
-    string public version = "1";
     uint public totalSupply;
     
     address public minter;
@@ -81,7 +80,7 @@ contract BITBAY {
     
     //Users need to separate frozen coins until they unlock
     //Solidity has limited support for nested arrays or structs or multidimensional return values. So we need several variables for frozen funds
-    mapping (address => uint[30][4]) public FrozenTXDB;
+    mapping (address => uint64[30][4]) public FrozenTXDB;
     mapping (address => uint[2][4]) public FrozenTXDBTimeSpent;
     mapping (address => uint) public recenttimestamp;
     mapping (address => uint) public unspentslots;
@@ -317,8 +316,13 @@ contract BITBAY {
         return true;
     }
 
-    function getFrozen(address user) public view returns (uint[30][4] memory) {
-        return FrozenTXDB[user];
+    function getFrozen(address user) public view returns (uint[30][4] memory output) {
+        for (uint i = 0; i < 4; i++) {
+            for (uint j = 0; j < 30; j++) {
+                output[i][j] = uint(FrozenTXDB[user][i][j]);
+            }
+        }
+        return output;
     }
 
     //IMPORTANT: You can find out what your balance will be at any supply by passing an optional variable to this function.
@@ -854,7 +858,8 @@ contract BITBAY {
                         FrozenTXDBTimeSpent[receiver][a.i][1] = recenttimestamp[receiver];
                         a.j = 0;
                         while (a.j < a.pegsteps) {
-                            FrozenTXDB[receiver][a.i][a.j] = reserve2[a.j];
+                            if (reserve2[a.j] > type(uint64).max) revert();
+                            FrozenTXDB[receiver][a.i][a.j] = uint64(reserve2[a.j]);
                             a.j += 1;
                         }
                         unspentslots[receiver] += 1;
@@ -877,7 +882,8 @@ contract BITBAY {
                 require(FrozenTXDBTimeSpent[receiver][a.i][0] == 1); //"Slot not filled"
                 a.j = 0;
                 while (a.j < a.pegsteps) {
-                    FrozenTXDB[receiver][a.i][a.j] += reserve2[a.j];
+                    if (reserve2[a.j] > type(uint64).max) revert();
+                    FrozenTXDB[receiver][a.i][a.j] += uint64(reserve2[a.j]);
                     a.j += 1;
                 }
             }
@@ -909,7 +915,7 @@ contract BITBAY {
                 found = 1;
                 a.j = 0;
                 while (a.j < a.pegsteps) {
-                    val = FrozenTXDB[receiver][a.i][a.j];
+                    val = uint(FrozenTXDB[receiver][a.i][a.j]);
                     if (a.j < a.section) {
                         a.reserve[a.j] += val;
                         res += val;
