@@ -8,8 +8,6 @@ interface IHALO {
     function totalSupply() external view returns (uint256);
     function balanceOf(address account) external view returns (uint256);
     function allowance(address owner, address spender) external view returns (uint256);
-    function increaseAllowance(address spender, uint value) external returns (bool);
-    function decreaseAllowance(address spender, uint value) external returns (bool);
     function transfer(address recipient, uint256 amount) external returns (bool);
     function approve(address spender, uint256 amount) external returns (bool);
     function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
@@ -31,12 +29,27 @@ contract BAYR is IHALO {
     address public proxy; //Where all the peg functions and storage are
     address public LiquidityPool;
     address public lockpair; //An exception to not revert a temporary reentry
-    mapping (address => uint8) public checked; //Users should send to approved contracts or send through base contract
-
     uint public proxylock;
-
+    mapping (address => uint8) public checked; //Users should send to approved contracts or send through base contract
+    mapping (address => uint) public nonces;
+    bytes32 public immutable DOMAIN_SEPARATOR;
+    bytes32 public constant PERMIT_TYPEHASH = keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
+    
     constructor() {
         minter = msg.sender;
+        uint256 chainId;
+        assembly {
+            chainId := chainid()
+        }
+        DOMAIN_SEPARATOR = keccak256(
+            abi.encode(
+                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+                keccak256(bytes(name)),
+                keccak256(bytes(version)),
+                chainId,
+                address(this)
+            )
+        );
     }
     
     function changeMinter(address newminter) public {
@@ -144,26 +157,6 @@ contract BAYR is IHALO {
         return true;
     }
     
-    function increaseAllowance(address spender, uint value) public virtual override returns (bool) {
-        require(spender != address(0));
-        bool success;
-        bytes memory result;
-        (success, result) = proxy.call(abi.encodeWithSignature("increaseAllowance(address,uint256,address,uint256)",spender,value,msg.sender,1));
-        require(success);
-        emit Approval(msg.sender, spender, allowance(msg.sender, spender));
-        return true;
-    }
-    
-    function decreaseAllowance(address spender, uint value) public virtual override returns (bool) {
-        require(spender != address(0));
-        bool success;
-        bytes memory result;
-        (success, result) = proxy.call(abi.encodeWithSignature("decreaseAllowance(address,uint256,address,uint256)",spender,value,msg.sender,1));
-        require(success);
-        emit Approval(msg.sender, spender, allowance(msg.sender, spender));
-        return true;
-    }
-    
     function transfer(address to, uint value) public virtual override returns (bool) {
         if(msg.sender == lockpair) {
             lockpair = address(0);
@@ -192,5 +185,19 @@ contract BAYR is IHALO {
         require(success);
         emit Transfer(from, to, value);
         return true;
+    }
+
+    function permit(address owner, address spender, uint value, uint deadline, uint8 v, bytes32 r, bytes32 s) external {
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01",DOMAIN_SEPARATOR,keccak256(abi.encode(PERMIT_TYPEHASH,owner,spender,value,nonces[owner],deadline))));
+        require(owner != address(0), "Invalid-address");
+        require(owner == ecrecover(digest, v, r, s), "Invalid-permit");
+        require(deadline == 0 || block.timestamp <= deadline, "Permit-expired");
+        require(spender != address(0));
+        nonces[owner]+=1;
+        bool success;
+        bytes memory result;
+        (success, result) = proxy.call(abi.encodeWithSignature("approve(address,uint256,address,uint256)",spender,value,owner,1));
+        require(success);
+        emit Approval(owner, spender, value);
     }
 }
