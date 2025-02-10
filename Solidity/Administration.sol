@@ -31,7 +31,7 @@ contract Administration is IAdministration {
 
     //The safest method is to store the burn data persistently. To mint back to BAY we have to assume that
     //users may occasionally lose information about their burns. So from here they can recover it.
-    mapping (uint => mapping(address => uint[38])) public BAYdata; //Merkle data for burns back to BAY
+    mapping (uint => mapping(address => uint64[38])) public BAYdata; //Merkle data for burns back to BAY
     mapping (uint => mapping(address => uint)) public highkey; //Last section registered
     mapping (uint => mapping(address => string)) public recipient;
     mapping (uint => mapping(address => uint)) public index; //Index in the merkle to update hash
@@ -104,6 +104,19 @@ contract Administration is IAdministration {
         uint newtot;
         uint k;
         uint j;
+    }
+
+    function store64(uint[38] memory input) private pure returns (uint64[38] memory output) {
+        for (uint i; i < 38; i++) {
+            if (input[i] > type(uint64).max) revert();
+            output[i] = uint64(input[i]);
+        }
+    }
+
+    function get64(uint64[38] memory input) private pure returns (uint[38] memory output) {
+        for (uint i; i < 38; i++) {
+            output[i] = uint(input[i]);
+        }
     }
 
     function changeMinter(address newminter) public returns (bool){
@@ -530,7 +543,7 @@ contract Administration is IAdministration {
             processingTime[nonce] = block.timestamp;
         }
         if(filled[nonce][sender] == false) {
-            BAYdata[nonce][sender] = reserve;
+            BAYdata[nonce][sender] = store64(reserve);
             highkey[nonce][sender] = section;
             recipient[nonce][sender] = BAYaddress[sender];
             index[nonce][sender] = addresses[nonce].length;
@@ -541,7 +554,7 @@ contract Administration is IAdministration {
         } else {
             bytes memory result;
             a.section = highkey[nonce][sender];
-            a.reserve = BAYdata[nonce][sender];
+            a.reserve = get64(BAYdata[nonce][sender]);
             (, result) = proxy.staticcall(abi.encodeWithSignature("getState()"));
             (a.supply,a.pegsteps,a.mk,a.pegrate,) = abi.decode(result, (uint,uint,uint,uint,uint));
             if (section != a.section) {
@@ -571,7 +584,7 @@ contract Administration is IAdministration {
                 reserve[a.i] = reserve[a.i] + a.reserve[a.i];
                 a.i += 1;
             }
-            BAYdata[nonce][sender] = reserve;
+            BAYdata[nonce][sender] = store64(reserve);
             highkey[nonce][sender] = section;
             regNonce[sender] = nonce;
             recipient[nonce][sender] = BAYaddress[sender];
@@ -591,7 +604,7 @@ contract Administration is IAdministration {
     }
 
     function showReserve(address user, uint mynonce) public view returns(uint[38] memory) {
-        return BAYdata[mynonce][user];
+        return get64(BAYdata[mynonce][user]);
     }
 
     function listHashes(uint mynonce) public view returns(bytes32[] memory) {
