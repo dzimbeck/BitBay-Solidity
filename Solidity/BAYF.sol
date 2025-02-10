@@ -18,13 +18,11 @@ contract BAYF is IHALO {
     uint public decimals = 8;
     uint public override totalSupply = 1e17;
     
-    // Events allow clients to react to specific
-    // contract changes you declare
+    // Events allow clients to react to specific contract changes you declare
     event Transfer(address indexed from, address indexed to, uint amount);
     
     address public minter;
     address public proxy; //Where all the peg functions and storage are
-
     uint public proxylock;
 
     constructor() {
@@ -74,6 +72,7 @@ contract BAYF is IHALO {
         }
         return val;
     }
+    
     function transfer(address to, uint value) public virtual override returns (bool) {
         bool success;
         bytes memory result;
