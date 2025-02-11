@@ -407,7 +407,7 @@ contract BITBAY {
             } else {
                 return false;
             }
-        }        
+        }
         address[3] memory myaddy;
         //This is like a try/catch to detect an AMM pair.
         (success, result) = LiquidityPool.call(abi.encodeWithSignature("checkAMM(address)",AMM));

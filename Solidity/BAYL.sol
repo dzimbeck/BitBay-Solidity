@@ -31,7 +31,8 @@ contract BAYL is IHALO {
     address public lockpair; //An exception to not revert a temporary reentry
     uint public proxylock;
     mapping (address => uint8) public checked; //Users should send to approved contracts or send through base contract
-    mapping (address => uint) public nonces;
+
+    mapping(address => uint) public nonces;
     bytes32 public immutable DOMAIN_SEPARATOR;
     bytes32 public constant PERMIT_TYPEHASH = keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
     
@@ -84,24 +85,49 @@ contract BAYL is IHALO {
     //This check is to see if a user is sending to an unknown contract without knowing the nature of the peg and its    
     //effect on pools and transactions. They will get denied if they attempt to send this way. This method does not prevent
     //them from sending before the contract exists. If they must interact with contracts they should use the base contract.
-    function checkAddress(address verify) public returns (bool) {
+    function checkAddress(address verify, bool checkSync) public returns (bool) {
+        bool isRouter;
         bool success;
         bytes memory result;
+        if(verify.code.length == 0) {
+            return true;
+        }
         if(checked[verify] == 1) {
             return true;
         }
         if(checked[verify] == 2) {
             return false;
         }
-        if(verify == LiquidityPool) {
+        if(checked[verify] == 3) {
+            (success, result) = proxy.staticcall(abi.encodeWithSignature("isRouter(address)",verify));
+            require(success);
+            isRouter = abi.decode(result, (bool));
+            if(isRouter) {
+                (success, result) = proxy.staticcall(abi.encodeWithSignature("getState()"));
+                require(success);
+                (uint supply,,uint mk,,) = abi.decode(result, (uint,uint,uint,uint,uint));
+                (success, result) = LiquidityPool.staticcall(abi.encodeWithSignature("poolhighkey()"));
+                require(success);
+                uint highkey = abi.decode(result, (uint));
+                if(highkey != (supply / mk)) {
+                    (success, result) = LiquidityPool.call(abi.encodeWithSignature("syncAMM((address)",verify));
+                    require(success);
+                }
+            }
+            return true;
+        }
+        if(checkSync) {
+            return true;
+        }
+        if(verify == LiquidityPool || verify == minter) {
             checked[verify] = 1;
             return true;
         }
-        (success, result) = proxy.staticcall(abi.encodeWithSignature("isRouter(address)",verify));
+        (success, result) = proxy.staticcall(abi.encodeWithSignature("isAMMExchange(address)",verify));
         require(success);
-        bool isRouter = abi.decode(result, (bool));
-        if(isRouter) {
-            checked[verify] = 1;
+        uint isAMM = abi.decode(result, (uint));
+        if(isAMM == 1) {
+            checked[verify] = 3;
             return true;
         } else {
             (success, result) = proxy.staticcall(abi.encodeWithSignature("minter()"));
@@ -111,18 +137,14 @@ contract BAYL is IHALO {
                 checked[verify] = 1;
                 return true;
             } else {
-                (success, result) = proxy.call(abi.encodeWithSignature("isAMMExchange(address)",verify));
+                (success, result) = proxy.staticcall(abi.encodeWithSignature("isRouter(address)",verify));
                 require(success);
-                bool isAMM = abi.decode(result, (bool));
-                if(isAMM) {
+                isRouter = abi.decode(result, (bool));
+                if(isRouter) {
                     checked[verify] = 1;
                     return true;
                 }
             }
-        }
-        if(verify.code.length == 0) {
-            checked[verify] = 1;
-            return true;
         }
         checked[verify] = 2;
         return false;
@@ -162,7 +184,8 @@ contract BAYL is IHALO {
             lockpair = address(0);
             return true;
         }
-        require(checkAddress(to));
+        require(checkAddress(msg.sender, true));
+        require(checkAddress(to, false));
         bool success;
         bytes memory result;
         (success, result) = proxy.call(abi.encodeWithSignature("sendLiquid(address,address,uint256,address)",msg.sender,to,value,msg.sender));
@@ -176,7 +199,8 @@ contract BAYL is IHALO {
             lockpair = address(0);
             return true;
         }
-        require(checkAddress(to));
+        require(checkAddress(from, true));
+        require(checkAddress(to, false));
         bool success;
         bytes memory result;
         (success, result) = proxy.call(abi.encodeWithSignature("sendLiquid(address,address,uint256,address)",from,to,value,msg.sender));
