@@ -19,7 +19,7 @@ contract BAYR is IHALO {
     string public constant symbol   = "BAYR";
     string public version  = "1";
     uint public decimals = 8;
-    uint public override totalSupply = 1e17;
+    bool public showCirculating = false;
     
     // Events allow clients to react to specific contract changes you declare
     event Approval(address indexed from, address indexed to, uint amount);
@@ -31,11 +31,10 @@ contract BAYR is IHALO {
     address public lockpair; //An exception to not revert a temporary reentry
     uint public proxylock;
     mapping (address => uint8) public checked; //Users should send to approved contracts or send through base contract
-    
     mapping(address => uint) public nonces;
     bytes32 public immutable DOMAIN_SEPARATOR;
     bytes32 public constant PERMIT_TYPEHASH = keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
-    
+
     constructor() {
         minter = msg.sender;
         uint256 chainId;
@@ -52,9 +51,17 @@ contract BAYR is IHALO {
             )
         );
     }
-    
+
     function changeMinter(address newminter) public {
         require(msg.sender == minter);
+        if(newminter == address(0)) {
+            if(showCirculating) {
+                showCirculating = false;
+            } else {
+                showCirculating = true;
+            }
+            return;
+        }
         minter = newminter;
     }
 
@@ -149,9 +156,23 @@ contract BAYR is IHALO {
         checked[verify] = 2;
         return false;
     }
-    
+
     //ERC20 Functions
     //Note: Solidity does not allow spaces between parameters in abi function calls
+    function totalSupply() public virtual override view returns (uint supply) {
+        supply = 1e17;
+        uint remaining = supply;
+        if(showCirculating) {
+            (bool success, bytes memory result) = proxy.staticcall(abi.encodeWithSignature("getState()"));
+            require(success);
+            (uint supply2,,,uint pegrate,) = abi.decode(result, (uint,uint,uint,uint,uint));
+            for (uint i = 0; i < supply2; i++) {
+                remaining = (remaining * (99**(100 - pegrate))) / (100**(100 - pegrate));  // Applying the deflation iteratively
+            }
+        }
+        return supply - remaining;
+    }
+
     function balanceOf(address user) public virtual override view returns (uint) {
         bool success;
         bytes memory result;
@@ -160,7 +181,7 @@ contract BAYR is IHALO {
         uint rval = abi.decode(result, (uint));
         return rval;
     }
-    
+
     function allowance(address owner, address spender) public virtual override view returns (uint) {
         bool success;
         bytes memory result;
@@ -168,7 +189,7 @@ contract BAYR is IHALO {
         require(success);
         return abi.decode(result, (uint));
     }
-    
+
     function approve(address spender, uint value) public virtual override returns (bool) {
         require(spender != address(0));
         bool success;
@@ -178,7 +199,7 @@ contract BAYR is IHALO {
         emit Approval(msg.sender, spender, value);
         return true;
     }
-    
+
     function transfer(address to, uint value) public virtual override returns (bool) {
         if(msg.sender == lockpair) {
             lockpair = address(0);
@@ -194,7 +215,7 @@ contract BAYR is IHALO {
         emit Transfer(msg.sender, to, value);
         return true;
     }
-    
+
     function transferFrom(address from, address to, uint value) public virtual override returns (bool) {
         if(msg.sender == lockpair) {
             lockpair = address(0);
