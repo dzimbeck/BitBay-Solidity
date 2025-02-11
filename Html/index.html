@@ -672,40 +672,479 @@
 <script type="text/javascript" src="./assets/js/bridge-tools/sweetalert211.js"></script>
 
 <style>
-    .swal2-popup {
-      background-color: #ededed; /* Background color */
-      color: #000000; /* Text color */
-      border: 2px solid #3d0064; /* Border color */
-      border-radius: 4px; /* Border radius */
-      font-size: 11px;
-      font-family: 'Courier New', monospace; /* Custom font */
-      font-weight: normal;
-      z-index: 1000;
-    }
-    .swal2-title {
-      color: #3d0064; /* Title text color */
-    }
-    .swal2-content {
-      color: #3d0064; /* Content text color */
-    }
-    .swal2-confirm,
-    .swal2-cancel {
-      background-color: #ededed; /* Confirm and cancel button background color */
-      color: #3d0064; /* Button text color */
-    }
-    /* Hover effect for buttons */
-    .swal2-confirm:hover,
-    .swal2-cancel:hover {
-      background-color: #0086e3;
-    }
-    /* Icon color */
-    .swal2-icon {
-      color: #3d0064;
-    }
-    .swal2-range {
-      background-color: #ededed; /* Set your desired background color */
-      border: 2px solid #3d0064;
-    }
+  .swal2-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0 1.8em; }
+
+  .swal2-title {
+    position: relative;
+    max-width: 100%;
+    margin: 0 0 0.4em;
+    padding: 0;
+    color: #595959;
+    font-size: 1.875em;
+    font-weight: 600;
+    text-align: center;
+    text-transform: none;
+    word-wrap: break-word; }
+
+  .swal2-actions {
+    display: flex;
+    z-index: 1;
+    box-sizing: border-box;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    margin: 1.25em auto 0;
+    padding: 0; }
+    .swal2-actions:not(.swal2-loading) .swal2-styled[disabled] {
+      opacity: .4; }
+    .swal2-actions:not(.swal2-loading) .swal2-styled:hover {
+      background-image: linear-gradient(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1)); }
+    .swal2-actions:not(.swal2-loading) .swal2-styled:active {
+      background-image: linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2)); }
+
+  .swal2-loader {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 2.2em;
+    height: 2.2em;
+    margin: 0 1.875em;
+    -webkit-animation: swal2-rotate-loading 1.5s linear 0s infinite normal;
+            animation: swal2-rotate-loading 1.5s linear 0s infinite normal;
+    border-width: 0.25em;
+    border-style: solid;
+    border-radius: 100%;
+    border-color: #2778c4 transparent #2778c4 transparent; }
+
+  .swal2-styled {
+    margin: 0.3125em;
+    padding: 0.625em 1.1em;
+    box-shadow: none;
+    font-weight: 500; }
+    .swal2-styled:not([disabled]) {
+      cursor: pointer; }
+    .swal2-styled.swal2-confirm {
+      border: 0;
+      border-radius: 0;
+      background: initial;
+      background-color: #2778c4;
+      color: #fff;
+      font-size: 1em; }
+    .swal2-styled.swal2-deny {
+      border: 0;
+      border-radius: 0.25em;
+      background: initial;
+      background-color: #d14529;
+      color: #fff;
+      font-size: 1em; }
+    .swal2-styled.swal2-cancel {
+      border: 0;
+      border-radius: 0;
+      background: initial;
+      background-color: #757575;
+      color: #fff;
+      font-size: 1em; }
+    .swal2-styled:focus {
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(100, 150, 200, 0.5); }
+    .swal2-styled::-moz-focus-inner {
+      border: 0; }
+
+  .swal2-footer {
+    justify-content: center;
+    margin: 1.25em 0 0;
+    padding: 1em 0 0;
+    border-top: 1px solid #eee;
+    color: #545454;
+    font-size: 1em; }
+
+  .swal2-timer-progress-bar-container {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    height: 0.25em;
+    overflow: hidden;
+    border-bottom-right-radius: 0;
+    border-bottom-left-radius: 0; }
+
+  .swal2-timer-progress-bar {
+    width: 100%;
+    height: 0.25em;
+    background: rgba(0, 0, 0, 0.2); }
+
+  .swal2-image {
+    max-width: 100%;
+    margin: 1.25em auto; }
+
+  .swal2-close {
+    position: absolute;
+    z-index: 2;
+    top: 0;
+    right: 0;
+    align-items: center;
+    justify-content: center;
+    width: 1.2em;
+    height: 1.2em;
+    padding: 0;
+    overflow: hidden;
+    transition: initial;
+    border: none;
+    border-radius: 5px;
+    background: transparent;
+    color: #cccccc;
+    font-family: serif;
+    font-size: 2.5em;
+    line-height: 1.2;
+    cursor: pointer; }
+    .swal2-close:hover {
+      transform: none;
+      background: transparent;
+      color: #f27474; }
+    .swal2-close:focus {
+      outline: none;
+      box-shadow: inset 0 0 0 3px rgba(100, 150, 200, 0.5); }
+    .swal2-close::-moz-focus-inner {
+      border: 0; }
+
+  .swal2-content {
+    z-index: 1;
+    justify-content: center;
+    margin: 0;
+    padding: 0 1.6em;
+    color: #545454;
+    font-size: 1.125em;
+    font-weight: normal;
+    line-height: normal;
+    text-align: center;
+    word-wrap: break-word; }
+
+  .swal2-input,
+  .swal2-file,
+  .swal2-textarea,
+  .swal2-select,
+  .swal2-radio,
+  .swal2-checkbox {
+    margin: 1em auto; }
+
+  .swal2-input,
+  .swal2-file,
+  .swal2-textarea {
+    box-sizing: border-box;
+    width: 100%;
+    transition: initial;
+    border: 1px solid #d9d9d9;
+    border-radius: 0;
+    background: inherit;
+    box-shadow: none;
+    color: inherit;
+    font-size: 1.125em; }
+    .swal2-input.swal2-inputerror,
+    .swal2-file.swal2-inputerror,
+    .swal2-textarea.swal2-inputerror {
+      border-color: #f27474 !important;
+      box-shadow: 0 0 2px #f27474 !important; }
+    .swal2-input:focus,
+    .swal2-file:focus,
+    .swal2-textarea:focus {
+      border: 1px solid #b4dbed;
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(100, 150, 200, 0.5); }
+    .swal2-input::-moz-placeholder, .swal2-file::-moz-placeholder, .swal2-textarea::-moz-placeholder {
+      color: #7e7e7e; }
+    .swal2-input:-ms-input-placeholder, .swal2-file:-ms-input-placeholder, .swal2-textarea:-ms-input-placeholder {
+      color: #7e7e7e; }
+    .swal2-input::placeholder,
+    .swal2-file::placeholder,
+    .swal2-textarea::placeholder {
+      color: #7e7e7e; }
+
+  .swal2-range {
+    margin: 1em auto;
+    background: #fff; }
+    .swal2-range input {
+      width: 80%; }
+    .swal2-range output {
+      width: 20%;
+      color: inherit;
+      font-weight: 600;
+      text-align: center; }
+    .swal2-range input,
+    .swal2-range output {
+      height: 2.625em;
+      padding: 0;
+      font-size: 1.125em;
+      line-height: 2.625em; }
+
+  .swal2-input {
+    height: 2.625em;
+    padding: 0 0.75em; }
+    .swal2-input[type='number'] {
+      max-width: 10em; }
+
+  .swal2-file {
+    background: inherit;
+    font-size: 1.125em; }
+
+  .swal2-textarea {
+    height: 6.75em;
+    padding: 0.75em; }
+
+  .swal2-select {
+    min-width: 50%;
+    max-width: 100%;
+    padding: .375em .625em;
+    background: inherit;
+    color: inherit;
+    font-size: 1.125em; }
+
+  .swal2-radio,
+  .swal2-checkbox {
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    color: inherit; }
+    .swal2-radio label,
+    .swal2-checkbox label {
+      margin: 0 .6em;
+      font-size: 1.125em; }
+    .swal2-radio input,
+    .swal2-checkbox input {
+      margin: 0 .4em; }
+
+  .swal2-input-label {
+    display: flex;
+    justify-content: center;
+    margin: 1em auto; }
+
+  .swal2-validation-message {
+    max-width: 90%;
+    margin: 0; /* Adjusted to avoid overlap issues */
+    padding: 0.625em;
+    overflow: hidden;
+    background: #f0f0f0;
+    color: #545454;
+    font-size: 1em;
+    font-weight: 300;
+    text-align: center; /* Center content horizontally */
+    box-sizing: border-box; /* Ensure padding doesn’t cause overflow */
+  }
+
+  .swal2-validation-message::before {
+    max-width: 90%;
+    content: '!';
+    display: inline-block;
+    width: 1.5em;
+    height: 1.5em;
+    margin: 0 0.625em;
+    border-radius: 50%;
+    background-color: #f27474;
+    color: #fff;
+    font-weight: 600;
+    line-height: 1.5em;
+    text-align: center;
+  }
+
+  .swal2-icon {
+    position: relative;
+    box-sizing: content-box;
+    justify-content: center;
+    width: 5em;
+    height: 5em;
+    margin: 1.25em auto 1.875em;
+    border: 0.25em solid transparent;
+    border-radius: 50%;
+    border-color: #000;
+    font-family: inherit;
+    line-height: 5em;
+    cursor: default;
+    -webkit-user-select: none;
+       -moz-user-select: none;
+        -ms-user-select: none;
+            user-select: none; }
+    .swal2-icon .swal2-icon-content {
+      display: flex;
+      align-items: center;
+      font-size: 3.75em; }
+    .swal2-icon.swal2-error {
+      border-color: #f27474;
+      color: #f27474; }
+      .swal2-icon.swal2-error .swal2-x-mark {
+        position: relative;
+        flex-grow: 1; }
+      .swal2-icon.swal2-error [class^='swal2-x-mark-line'] {
+        display: block;
+        position: absolute;
+        top: 2.3125em;
+        width: 2.9375em;
+        height: .3125em;
+        border-radius: .125em;
+        background-color: #f27474; }
+        .swal2-icon.swal2-error [class^='swal2-x-mark-line'][class$='left'] {
+          left: 1.0625em;
+          transform: rotate(45deg); }
+        .swal2-icon.swal2-error [class^='swal2-x-mark-line'][class$='right'] {
+          right: 1em;
+          transform: rotate(-45deg); }
+    .swal2-icon.swal2-warning {
+      border-color: #facea8;
+      color: #f8bb86; }
+    .swal2-icon.swal2-info {
+      border-color: #9de0f6;
+      color: #3fc3ee; }
+    .swal2-icon.swal2-question {
+      border-color: #c9dae1;
+      color: #87adbd; }
+    .swal2-icon.swal2-success {
+      border-color: #a5dc86;
+      color: #a5dc86; }
+      .swal2-icon.swal2-success [class^='swal2-success-circular-line'] {
+        position: absolute;
+        width: 3.75em;
+        height: 7.5em;
+        transform: rotate(45deg);
+        border-radius: 50%; }
+        .swal2-icon.swal2-success [class^='swal2-success-circular-line'][class$='left'] {
+          top: -.4375em;
+          left: -2.0635em;
+          transform: rotate(-45deg);
+          transform-origin: 3.75em 3.75em;
+          border-radius: 7.5em 0 0 7.5em; }
+        .swal2-icon.swal2-success [class^='swal2-success-circular-line'][class$='right'] {
+          top: -.6875em;
+          left: 1.875em;
+          transform: rotate(-45deg);
+          transform-origin: 0 3.75em;
+          border-radius: 0 7.5em 7.5em 0; }
+      .swal2-icon.swal2-success .swal2-success-ring {
+        position: absolute;
+        z-index: 2;
+        top: -.25em;
+        left: -.25em;
+        box-sizing: content-box;
+        width: 100%;
+        height: 100%;
+        border: 0.25em solid rgba(165, 220, 134, 0.3);
+        border-radius: 50%; }
+      .swal2-icon.swal2-success .swal2-success-fix {
+        position: absolute;
+        z-index: 1;
+        top: .5em;
+        left: 1.625em;
+        width: .4375em;
+        height: 5.625em;
+        transform: rotate(-45deg); }
+      .swal2-icon.swal2-success [class^='swal2-success-line'] {
+        display: block;
+        position: absolute;
+        z-index: 2;
+        height: .3125em;
+        border-radius: .125em;
+        background-color: #a5dc86; }
+        .swal2-icon.swal2-success [class^='swal2-success-line'][class$='tip'] {
+          top: 2.875em;
+          left: .8125em;
+          width: 1.5625em;
+          transform: rotate(45deg); }
+        .swal2-icon.swal2-success [class^='swal2-success-line'][class$='long'] {
+          top: 2.375em;
+          right: .5em;
+          width: 2.9375em;
+          transform: rotate(-45deg); }
+
+  .swal2-progress-steps {
+    flex-wrap: wrap;
+    align-items: center;
+    max-width: 100%;
+    margin: 0 0 1.25em;
+    padding: 0;
+    background: inherit;
+    font-weight: 600; }
+    .swal2-progress-steps li {
+      display: inline-block;
+      position: relative; }
+    .swal2-progress-steps .swal2-progress-step {
+      z-index: 20;
+      flex-shrink: 0;
+      width: 2em;
+      height: 2em;
+      border-radius: 2em;
+      background: #2778c4;
+      color: #fff;
+      line-height: 2em;
+      text-align: center; }
+      .swal2-progress-steps .swal2-progress-step.swal2-active-progress-step {
+        background: #2778c4; }
+        .swal2-progress-steps .swal2-progress-step.swal2-active-progress-step ~ .swal2-progress-step {
+          background: #add8e6;
+          color: #fff; }
+        .swal2-progress-steps .swal2-progress-step.swal2-active-progress-step ~ .swal2-progress-step-line {
+          background: #add8e6; }
+    .swal2-progress-steps .swal2-progress-step-line {
+      z-index: 10;
+      flex-shrink: 0;
+      width: 2.5em;
+      height: .4em;
+      margin: 0 -1px;
+      background: #2778c4; }
+
+  /* Custom Swal */
+  .swal2-popup {
+    position: fixed;
+    background-color: #ededed; /* Background color */
+    color: #000000; /* Text color */
+    border: 2px solid #3d0064; /* Border color */
+    border-radius: 4px; /* Border radius */
+    font-size: 11px;
+    font-family: 'Courier New', monospace; /* Custom font */
+    font-weight: normal;
+    z-index: 1000;
+    transform: none;
+    transition: none;
+    animation: none;
+    padding: 1.25em;
+    width: 32em;
+    box-sizing: border-box;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .swal2-popup:focus {
+    outline: none; }
+  .swal2-popup.swal2-loading {
+    overflow-y: hidden; }
+  .swal2-title {
+    color: #3d0064; /* Title text color */
+  }
+  .swal2-content {
+    color: #3d0064; /* Content text color */
+  }
+  .swal2-confirm,
+  .swal2-cancel {
+    background-color: #ededed; /* Confirm and cancel button background color */
+    color: #3d0064; /* Button text color */
+  }
+  /* Hover effect for buttons */
+  .swal2-confirm:hover,
+  .swal2-cancel:hover {
+    background-color: #0086e3;
+  }
+  /* Icon color */
+  .swal2-icon {
+    color: #3d0064;
+  }
+  .swal2-range {
+    background-color: #ededed; /* Set your desired background color */
+    border: 2px solid #3d0064;
+  }
+  .scrollable-swal-popup {
+    max-height: 80vh; /* Prevents the modal from overflowing vertically */
+    overflow-y: auto; /* Enables scrolling within the modal */
+  }
 </style>
 
 <script type="text/javascript">
@@ -715,6 +1154,49 @@
 //possibly have a dialog box move into focus when asked for the authorization
 //which lets them specify the amount. Also in the security tab advise users
 //on how to run the page locally.
+
+function centerPopup() {
+    const popup = Swal.getPopup();
+    const rect = popup.getBoundingClientRect();
+    const top = (window.innerHeight - rect.height) / 2 + window.scrollY;
+    const left = (window.innerWidth - rect.width) / 2 + window.scrollX;
+    popup.style.top = `${top}px`;
+    popup.style.left = `${left}px`;
+}
+Swal = Swal.mixin({
+    showClass: {
+        popup: '' // Disable show animation
+    },
+    hideClass: {
+        popup: '' // Disable hide animation
+    },
+    didRender: () => {
+        // Call the center function when the popup opens
+        setTimeout(centerPopup, 5);
+    }
+});
+
+var lastTouchY = 0;
+var preventPullToRefresh = false;
+window.document.body.addEventListener("touchstart", function(e){
+    if (e.touches.length != 1) { return; }
+    lastTouchY = e.touches[0].clientY;
+    preventPullToRefresh = window.pageYOffset == 0;
+}, false);
+
+window.document.body.addEventListener("touchmove", function(e){
+    var touchY = e.touches[0].clientY;
+    var touchYDelta = touchY - lastTouchY;
+    lastTouchY = touchY;
+    if (preventPullToRefresh) {
+        // To suppress pull-to-refresh it is sufficient to preventDefault the first overscrolling touchmove.
+        preventPullToRefresh = false;
+        if (touchYDelta > 0) {
+            e.preventDefault();
+            return;
+        }
+    }
+}, { passive: false });
 
 function getQueryParam(name) {
     const urlParams = new URLSearchParams(window.location.search);
@@ -735,6 +1217,7 @@ if(merkleProof != '') {
 
 var web3 = [];
 var contractInst = [];
+var gasPrice;
 //web3[0] = new Web3("https://cloudflare-eth.com");
 //web3[1] = new Web3("https://bsc-dataseed.binance.org");
 //web3[2] = new Web3("https://api-goerli.etherscan.io/");
@@ -883,6 +1366,25 @@ async function login() {
         document.getElementById("SwapAmount").value = '';
         document.getElementById("SwapAmount2").value = '';
         document.getElementById("SwapSummary").innerHTML = '';
+        gasPrice = "20000000000";        
+        await web3.eth.getGasPrice().then(function (theGasPrice) {
+          gasPrice = window.web3.utils.toWei(parseInt(parseInt(DOMPurify.sanitize(theGasPrice)) * 1.5).toString(), 'wei');
+          if (currentChainId == "1") {
+            if(parseInt(gasPrice) > 500000000000) {
+              gasPrice = "500000000000";
+            }
+            if(parseInt(gasPrice) < 250000000) {
+              gasPrice = "250000000";
+            }
+          } else {
+            if(parseInt(gasPrice) > 2500000000000) {
+              gasPrice = "2500000000000";
+            }
+            if(parseInt(gasPrice) < 250000000) {
+              gasPrice = "250000000";
+            }
+          }
+        });
         lastitem = 10000000;
         isConnected = true;
         await checkbalances();
@@ -1753,19 +2255,14 @@ async function showFrozen() {
 }
 
 async function sendFrozen() {
-    
-
     if (await showFrozen()) {
       if(lastrun > (Math.floor(Date.now() / 1000))) {
             return;
         }
         lastrun = (Math.floor(Date.now() / 1000)) + 7;
-        baydatacontract.methods.ReleaseFrozenFunds(myaccounts).send({"from":myaccounts,"gasLimit": 2500000});
+        baydatacontract.methods.ReleaseFrozenFunds(myaccounts).send({"from":myaccounts,"gasLimit": 2500000,"gasPrice": gasPrice});
     }else {
-      
     }
-
-
 }
 
 async function showPegChart(selectedChart = 0) {
@@ -1953,7 +2450,7 @@ function paintchart(mylabels, mydata, thehighkey, selectedChart) {
 jsondata={}
 async function mintFromBitBay(jsondata) {
     jsondata = JSON.parse(jsondata.toString().replace(/'/g,'"').replace(/\n/g,'').replace(/\r/g,'').trim());
-    bayadmincontract.methods.redeemTX(jsondata['root'],jsondata['proof'],jsondata['reserve'],jsondata['txid']).send({"from":myaccounts,"gasLimit": 2500000});
+    bayadmincontract.methods.redeemTX(jsondata['root'],jsondata['proof'],jsondata['reserve'],jsondata['txid']).send({"from":myaccounts,"gasLimit": 2500000,"gasPrice": gasPrice});
 }
 
 async function registerBitBay(regaddy) {
@@ -1984,7 +2481,7 @@ async function registerBitBay(regaddy) {
     if(found == 0) {
         return;
     }
-    bayadmincontract.methods.register(regaddy).send({"from":selectedaccount,"gasLimit": 500000});
+    bayadmincontract.methods.register(regaddy).send({"from":selectedaccount,"gasLimit": 500000,"gasPrice": gasPrice});
 }
 
 async function burnToBitBay(burnamount) {
@@ -2024,10 +2521,10 @@ async function burnToBitBay(burnamount) {
     burnamount = burnamount.toString()
     console.log(burnamount);
     if(myvar == "Reserve Coins") {
-        bayrcontract.methods.transfer(myadmin, burnamount).send({"from":selectedaccount,"gasLimit": 2500000});
+        bayrcontract.methods.transfer(myadmin, burnamount).send({"from":selectedaccount,"gasLimit": 2500000,"gasPrice": gasPrice});
     }
     if(myvar == "Liquid Coins") {
-        baylcontract.methods.transfer(myadmin, burnamount).send({"from":selectedaccount,"gasLimit": 2500000});
+        baylcontract.methods.transfer(myadmin, burnamount).send({"from":selectedaccount,"gasLimit": 2500000,"gasPrice": gasPrice});
     }
 }
 
@@ -2171,7 +2668,7 @@ async function addLiquidity() {
         if(allowance == 0) {
             //document.getElementById("addliquidtext").innerHTML = 'Waiting for router allowance authorization on the blockchain for the first coin...';
             modalDialog('Connect', "Waiting for router allowance authorization on the blockchain for the first coin...", "warning");
-            await coin1contract.methods.approve(myrouter, "9999999999999999999999999999999999999999999999999999999999999999999999").send({"from":currentaccount,"gasLimit": 2500000});
+            await coin1contract.methods.approve(myrouter, "9999999999999999999999999999999999999999999999999999999999999999999999").send({"from":currentaccount,"gasLimit": 2500000,"gasPrice": gasPrice});
         }
         allowance = 0;
         await baydatacontract.methods.allowance(currentaccount, myrouter).call().then(function (liqresult) {
@@ -2180,7 +2677,7 @@ async function addLiquidity() {
         if(allowance == 0) {
             //document.getElementById("addliquidtext").innerHTML = 'Waiting for router allowance authorization on the blockchain for BAY...';
             modalDialog('Connect', "Waiting for router allowance authorization on the blockchain for BAY...", "warning");
-            await baylcontract.methods.approve(myrouter, "9999999999999999999999999999999999999999999999999999999999999999999999").send({"from":currentaccount,"gasLimit": 2500000});
+            await baylcontract.methods.approve(myrouter, "9999999999999999999999999999999999999999999999999999999999999999999999").send({"from":currentaccount,"gasLimit": 2500000,"gasPrice": gasPrice});
         }
         allowance = 0;
         await baydatacontract.methods.allowanceReserve(currentaccount, myrouter).call().then(function (liqresult) {
@@ -2189,7 +2686,7 @@ async function addLiquidity() {
         if(allowance == 0) {
             //document.getElementById("addliquidtext").innerHTML = 'Waiting for router allowance authorization on the blockchain for BAYR...';
             modalDialog('Connect', "Waiting for router allowance authorization on the blockchain for BAYR...", "warning");
-            await bayrcontract.methods.approve(myrouter, "9999999999999999999999999999999999999999999999999999999999999999999999").send({"from":currentaccount,"gasLimit": 2500000});
+            await bayrcontract.methods.approve(myrouter, "9999999999999999999999999999999999999999999999999999999999999999999999").send({"from":currentaccount,"gasLimit": 2500000,"gasPrice": gasPrice});
         }
     } catch (e) {
         console.log(e);
@@ -2206,7 +2703,7 @@ async function addLiquidity() {
             //document.getElementById("addliquidtext").innerHTML = 'Syncing AMM...';
             modalDialog('Connect', "Syncing AMM...", "warning");
             try {
-                await liquiditypool.methods.syncAMM(mypair).send({"from":currentaccount,"gasLimit": 2500000});
+                await liquiditypool.methods.syncAMM(mypair).send({"from":currentaccount,"gasLimit": 2500000,"gasPrice": gasPrice});
             } catch (e) {
                 console.log(e);
                 //document.getElementById("addliquidtext").innerHTML = 'Syncing failed';
@@ -2305,9 +2802,9 @@ async function addLiquidity() {
     modalDialog('Connect', "Attempting to add liquidity, please approve the transaction...", "warning");
     try {
         if(weth) {
-            await routercontract.methods.addLiquidityETH(bayaddy,totalval,otherval,amount2min,amount1min,currentaccount,deadline,exchange).send({"from":currentaccount,"value":coin1val,"gasLimit": 9000000});
+            await routercontract.methods.addLiquidityETH(bayaddy,totalval,otherval,amount2min,amount1min,currentaccount,deadline,exchange).send({"from":currentaccount,"value":coin1val,"gasLimit": 9000000,"gasPrice": gasPrice});
         } else {
-            await routercontract.methods.addLiquidity([bayaddy,coin1],[totalval,coin1val],otherval,amount2min,amount1min,currentaccount,deadline,exchange).send({"from":currentaccount,"gasLimit": 9000000});
+            await routercontract.methods.addLiquidity([bayaddy,coin1],[totalval,coin1val],otherval,amount2min,amount1min,currentaccount,deadline,exchange).send({"from":currentaccount,"gasLimit": 9000000,"gasPrice": gasPrice});
         }
     } catch (e) {
         console.log(e);
@@ -2385,7 +2882,7 @@ async function Swap() {
         });
         if(allowance == 0) {
             document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-warning" >Waiting for router allowance authorization on the blockchain for the first coin...</div><br>' + prevtext;
-            await coin1contract.methods.approve(myrouter, "9999999999999999999999999999999999999999999999999999999999999999999999").send({"from":chosenaccount,"gasLimit": 2500000});
+            await coin1contract.methods.approve(myrouter, "9999999999999999999999999999999999999999999999999999999999999999999999").send({"from":chosenaccount,"gasLimit": 2500000,"gasPrice": gasPrice});
         }
         allowance = 0;
         await baydatacontract.methods.allowance(chosenaccount, myrouter).call().then(function (swapresult) {
@@ -2393,7 +2890,7 @@ async function Swap() {
         });
         if(allowance == 0) {
             document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-warning" >Waiting for router allowance authorization on the blockchain for BAY...</div><br>' + prevtext;
-            await baylcontract.methods.approve(myrouter, "9999999999999999999999999999999999999999999999999999999999999999999999").send({"from":chosenaccount,"gasLimit": 2500000});
+            await baylcontract.methods.approve(myrouter, "9999999999999999999999999999999999999999999999999999999999999999999999").send({"from":chosenaccount,"gasLimit": 2500000,"gasPrice": gasPrice});
         }
         allowance = 0;
         await baydatacontract.methods.allowanceReserve(chosenaccount, myrouter).call().then(function (swapresult) {
@@ -2401,7 +2898,7 @@ async function Swap() {
         });
         if(allowance == 0) {
             document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-warning" >Waiting for router allowance authorization on the blockchain for BAYR...</div><br>' + prevtext;
-            await bayrcontract.methods.approve(myrouter, "9999999999999999999999999999999999999999999999999999999999999999999999").send({"from":chosenaccount,"gasLimit": 2500000});
+            await bayrcontract.methods.approve(myrouter, "9999999999999999999999999999999999999999999999999999999999999999999999").send({"from":chosenaccount,"gasLimit": 2500000,"gasPrice": gasPrice});
         }
     } catch (e) {
         console.log(e);
@@ -2417,7 +2914,7 @@ async function Swap() {
         if(myhighkey != section) {
             document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-warning" >Syncing AMM...</div><br>' + prevtext;
             try {
-                await liquiditypool.methods.syncAMM(mypair).send({"from":chosenaccount,"gasLimit": 2500000});
+                await liquiditypool.methods.syncAMM(mypair).send({"from":chosenaccount,"gasLimit": 2500000,"gasPrice": gasPrice});
             } catch (e) {
                 console.log(e);
                 //document.getElementById("SwapSummary").innerHTML = 'Syncing failed';
@@ -2499,15 +2996,15 @@ async function Swap() {
             //Buying BitBay coins
             if(lastSelect == "SwapAmount") { //Maximum coins paid
                 if(weth) {
-                    await routercontract.methods.swapETHForExactTokens(swapval,[coin1,bayaddy],chosenaccount,deadline,exchange).send({"from":chosenaccount,"value":lastMinMax2,"gasLimit": 5000000});
+                    await routercontract.methods.swapETHForExactTokens(swapval,[coin1,bayaddy],chosenaccount,deadline,exchange).send({"from":chosenaccount,"value":lastMinMax2,"gasLimit": 5000000,"gasPrice": gasPrice});
                 } else {
-                    await routercontract.methods.swapTokensForExactTokens(swapval,lastMinMax2,[coin1,bayaddy],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000});
+                    await routercontract.methods.swapTokensForExactTokens(swapval,lastMinMax2,[coin1,bayaddy],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
                 }
             } else { //Minimum BAY received
                 if(weth) {
-                    await routercontract.methods.swapExactETHForTokens(lastMinMax2,[coin1,bayaddy],chosenaccount,deadline,exchange).send({"from":chosenaccount,"value":swapval,"gasLimit": 5000000});
+                    await routercontract.methods.swapExactETHForTokens(lastMinMax2,[coin1,bayaddy],chosenaccount,deadline,exchange).send({"from":chosenaccount,"value":swapval,"gasLimit": 5000000,"gasPrice": gasPrice});
                 } else {
-                    await routercontract.methods.swapExactTokensForTokens(swapval,lastMinMax2,[coin1,bayaddy],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000});
+                    await routercontract.methods.swapExactTokensForTokens(swapval,lastMinMax2,[coin1,bayaddy],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
                 }
             }
         }
@@ -2515,15 +3012,15 @@ async function Swap() {
             //Buying BitBay Reserve coins
             if(lastSelect == "SwapAmount") { //Maximum coins paid
                 if(weth) {
-                    await routercontract.methods.swapETHForExactTokens(swapval,[coin1,bayaddy],chosenaccount,deadline,exchange).send({"from":chosenaccount,"value":lastMinMax2,"gasLimit": 5000000});
+                    await routercontract.methods.swapETHForExactTokens(swapval,[coin1,bayaddy],chosenaccount,deadline,exchange).send({"from":chosenaccount,"value":lastMinMax2,"gasLimit": 5000000,"gasPrice": gasPrice});
                 } else {
-                    await routercontract.methods.swapTokensForExactTokens(swapval,lastMinMax2,[coin1,bayaddy],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000});
+                    await routercontract.methods.swapTokensForExactTokens(swapval,lastMinMax2,[coin1,bayaddy],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
                 }
             } else { //Minimum BAY received
                 if(weth) {
-                    await routercontract.methods.swapExactETHForTokens(lastMinMax2,[coin1,bayaddy],chosenaccount,deadline,exchange).send({"from":chosenaccount,"value":swapval,"gasLimit": 5000000});
+                    await routercontract.methods.swapExactETHForTokens(lastMinMax2,[coin1,bayaddy],chosenaccount,deadline,exchange).send({"from":chosenaccount,"value":swapval,"gasLimit": 5000000,"gasPrice": gasPrice});
                 } else {
-                    await routercontract.methods.swapExactTokensForTokens(swapval,lastMinMax2,[coin1,bayaddy],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000});
+                    await routercontract.methods.swapExactTokensForTokens(swapval,lastMinMax2,[coin1,bayaddy],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
                 }
             }
         }
@@ -2531,15 +3028,15 @@ async function Swap() {
             //Selling BitBay coins
             if(lastSelect == "SwapAmount") { //Minimum coins received
                 if(weth) {
-                    await routercontract.methods.swapExactTokensForETH(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000});
+                    await routercontract.methods.swapExactTokensForETH(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
                 } else {
-                    await routercontract.methods.swapExactTokensForTokens(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000});
+                    await routercontract.methods.swapExactTokensForTokens(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
                 }
             } else { //Maximum BAY paid
                 if(weth) {
-                    await routercontract.methods.swapTokensForExactETH(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000});
+                    await routercontract.methods.swapTokensForExactETH(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
                 } else {
-                    await routercontract.methods.swapTokensForExactTokens(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000});
+                    await routercontract.methods.swapTokensForExactTokens(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
                 }
             }
         }
@@ -2547,15 +3044,15 @@ async function Swap() {
             //Selling BitBay Reserve coins
             if(lastSelect == "SwapAmount") { //Minimum coins received
                 if(weth) {
-                    await routercontract.methods.swapExactTokensForETH(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000});
+                    await routercontract.methods.swapExactTokensForETH(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
                 } else {
-                    await routercontract.methods.swapExactTokensForTokens(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000});
+                    await routercontract.methods.swapExactTokensForTokens(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
                 }
             } else { //Maximum BAY paid
                 if(weth) {
-                    await routercontract.methods.swapTokensForExactETH(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000});
+                    await routercontract.methods.swapTokensForExactETH(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
                 } else {
-                    await routercontract.methods.swapTokensForExactTokens(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000});
+                    await routercontract.methods.swapTokensForExactTokens(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
                 }
             }
         }
@@ -2612,7 +3109,7 @@ async function withdrawLP() {
         });
         if(allowance == 0) {
             document.getElementById("LPdetails1").innerHTML = 'Waiting for router allowance authorization on the blockchain for the LP Tokens...<br><br>' + prevtext;
-            await paircontract.methods.approve(myrouter, "9999999999999999999999999999999999999999999999999999999999999999999999").send({"from":waccount,"gasLimit": 2500000});
+            await paircontract.methods.approve(myrouter, "9999999999999999999999999999999999999999999999999999999999999999999999").send({"from":waccount,"gasLimit": 2500000,"gasPrice": gasPrice});
         }
     } catch (e) {
         console.log(e);
@@ -2626,7 +3123,7 @@ async function withdrawLP() {
         if(myhighkey != section) {
             document.getElementById("LPdetails1").innerHTML = 'Syncing AMM...<br><br>' + prevtext;
             try {
-                await liquiditypool.methods.syncAMM(mypair).send({"from":waccount,"gasLimit": 2500000});
+                await liquiditypool.methods.syncAMM(mypair).send({"from":waccount,"gasLimit": 2500000,"gasPrice": gasPrice});
             } catch (e) {
                 console.log(e);
                 document.getElementById("LPdetails1").innerHTML = 'Syncing failed';
@@ -2663,9 +3160,9 @@ async function withdrawLP() {
     document.getElementById("LPdetails1").innerHTML = 'Attempting to perform the withdrawal, please approve the transaction...<br><br>' + prevtext;
     try {
         if(weth) {
-            await routercontract.methods.removeLiquidityETH(bayaddy,wval,withdrawMin1,withdrawMin2,waccount,deadline,exchange).send({"from":waccount,"gasLimit": 9000000});
+            await routercontract.methods.removeLiquidityETH(bayaddy,wval,withdrawMin1,withdrawMin2,waccount,deadline,exchange).send({"from":waccount,"gasLimit": 9000000,"gasPrice": gasPrice});
         } else {
-            await routercontract.methods.removeLiquidity(coin1,bayaddy,wval,withdrawMin1,withdrawMin2,waccount,deadline,exchange).send({"from":waccount,"gasLimit": 9000000});
+            await routercontract.methods.removeLiquidity(coin1,bayaddy,wval,withdrawMin1,withdrawMin2,waccount,deadline,exchange).send({"from":waccount,"gasLimit": 9000000,"gasPrice": gasPrice});
         }
     } catch (e) {
         console.log(e);
@@ -2684,7 +3181,7 @@ async function depositToWETH(wethval, wethcont) {
     lastrun = (Math.floor(Date.now() / 1000)) + 7;
     var wethcontract = new web3.eth.Contract(WETHabi, wethcont);
     console.log("Adding funds to WETH contract...");
-    await wethcontract.methods.deposit().send({"from":myaccounts,"value":wethval,"gasLimit": 1000000});
+    await wethcontract.methods.deposit().send({"from":myaccounts,"value":wethval,"gasLimit": 1000000,"gasPrice": gasPrice});
     console.log("Success!");
 }
 
@@ -2692,8 +3189,6 @@ setInterval(checkbalances, 90000);
 
 
 function modalDialog(title, msg, content_type="") {
-
-
   if (content_type == "info") 
     msg = '<div class="callout callout-info">'+msg+'</div>';
   if (content_type == "success") 
@@ -2704,23 +3199,12 @@ function modalDialog(title, msg, content_type="") {
     msg = '<div class="callout callout-warning">'+msg+'</div>';
   if (content_type == "no-border")  
     msg = '<div class="callout callout-no-border">'+msg+'</div>';
-
-
   // Create the Dynamic modal
   new Modal({
     title: title,
     content: msg
-  }).show();
-  
+  }).show();  
 }
-  
-  
-
 </script>
-
-
-
-
 </body>
-
 </html>
