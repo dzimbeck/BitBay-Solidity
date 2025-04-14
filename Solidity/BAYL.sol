@@ -117,7 +117,7 @@ contract BAYL is IHALO {
                 require(success);
                 uint highkey = abi.decode(result, (uint));
                 if(highkey != (supply / mk)) {
-                    (success, result) = LiquidityPool.call(abi.encodeWithSignature("syncAMM((address)",verify));
+                    (success, result) = LiquidityPool.call(abi.encodeWithSignature("syncAMM(address)",verify));
                     require(success);
                 }
             }

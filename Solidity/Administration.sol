@@ -452,7 +452,7 @@ contract Administration is IAdministration {
                 reserve[a.pegsteps + a.i] += a.newtot; //Last section gets whatever is left over
             }
         }
-        (success, result) = proxy.call(abi.encodeWithSignature("mint(address,uint[38])",msg.sender,reserve));
+        (success, result) = proxy.call(abi.encodeWithSignature("mint(address,uint256[38])",msg.sender,reserve));
         require(success);
         return leaf;
     }
@@ -513,7 +513,7 @@ contract Administration is IAdministration {
             
         }
         require(tot == amount, "Calculation error");
-        (success, result) = proxy.call(abi.encodeWithSignature("mint(address,uint[38])",receiver,reserve));
+        (success, result) = proxy.call(abi.encodeWithSignature("mint(address,uint256[38])",receiver,reserve));
         require(success);
         return reserve;
     }
