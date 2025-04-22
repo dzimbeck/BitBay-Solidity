@@ -1356,8 +1356,6 @@ async function login() {
         //remove elements like overlay on box when logged in
         var authElementsRemove = document.querySelectorAll('.logged-in-remove');
         authElementsRemove.forEach(el => {el.parentNode.removeChild(el);});
-
-
         
         document.getElementById("merkletext").innerHTML = '';
         document.getElementById("addliquidtext").innerHTML = '';
@@ -1366,7 +1364,8 @@ async function login() {
         document.getElementById("SwapAmount").value = '';
         document.getElementById("SwapAmount2").value = '';
         document.getElementById("SwapSummary").innerHTML = '';
-        gasPrice = "20000000000";        
+
+        gasPrice = "20000000000";
         await web3.eth.getGasPrice().then(function (theGasPrice) {
           gasPrice = window.web3.utils.toWei(parseInt(parseInt(DOMPurify.sanitize(theGasPrice)) * 1.5).toString(), 'wei');
           if (currentChainId == "1") {
@@ -1551,6 +1550,25 @@ async function checkbalances() {
         modalDialog('Connect', "Unsupported network.", "danger");
         return;
     }
+    gasPrice = "20000000000";
+    await web3.eth.getGasPrice().then(function (theGasPrice) {
+      gasPrice = window.web3.utils.toWei(parseInt(parseInt(DOMPurify.sanitize(theGasPrice)) * 1.5).toString(), 'wei');
+      if (currentChainId == "1") {
+        if(parseInt(gasPrice) > 500000000000) {
+          gasPrice = "500000000000";
+        }
+        if(parseInt(gasPrice) < 250000000) {
+          gasPrice = "250000000";
+        }
+      } else {
+        if(parseInt(gasPrice) > 2500000000000) {
+          gasPrice = "2500000000000";
+        }
+        if(parseInt(gasPrice) < 250000000) {
+          gasPrice = "250000000";
+        }
+      }
+    });
     myaccounts = myaccounts2[0];
     baydatacontract = new web3.eth.Contract(BAYDataAbi, BAYDataAddy)
     baylcontract = new web3.eth.Contract(BAYLabi, BAYLaddy);
@@ -1593,7 +1611,7 @@ async function checkbalances() {
 
 async function getNetworkInfo() {
     await baydatacontract.methods.getState().call().then(function (netvars) {
-        networkvars = DOMPurify.sanitize(netvars);
+        networkvars = JSON.parse(DOMPurify.sanitize(JSON.stringify(netvars)));
     })
     document.getElementById("networkinfo").innerHTML = DOMPurify.sanitize("Current Total Network Supply: " + calculateSupply(networkvars[0],networkvars[4],networkvars[3]) + "% (" + networkvars[0] + " / " + (networkvars[1] * networkvars[2]) + ")<br>Peg compression(steps, microsteps): " + networkvars[1] + ", "+ networkvars[2] + "<br>Deflation rate and compound rate: (" + networkvars[4] + "% ^ " + (100 - networkvars[3]) + ")<br>Three way factor to BitBay's 1200 possible supplies: (" + networkvars[1] + " * " + networkvars[2] + " * " + (100 - networkvars[3]) + ")<br>Time delay for reserve payments(in seconds): " + reservetimelock);
 }
@@ -1688,7 +1706,7 @@ async function getMarketData(calcbal = 0) {
         var LPtokensPair;
         var paircontract = new web3.eth.Contract(PairABI, mycurrentpair);
         await paircontract.methods.getReserves().call().then(function (result3) {
-            reserves = DOMPurify.sanitize(result3);
+            reserves = JSON.parse(DOMPurify.sanitize(JSON.stringify(result3)));
         });
         await paircontract.methods.token0().call().then(function (result3) {
             token0 = DOMPurify.sanitize(result3);
@@ -1743,7 +1761,7 @@ async function getMarketData(calcbal = 0) {
                     }
                 } else {
                     await liquiditypool.methods.calculatePoolBalanceV1(myaccounts, mycurrentpair, 0, LPtokens2, precision, 0).call().then(function (result3) {
-                      result3 = DOMPurify.sanitize(result3);
+                      result3 = JSON.parse(DOMPurify.sanitize(JSON.stringify(result3)));
                       reserveatpool = result3[1];
                     });
                     var section = parseInt(Math.floor(networkvars[0] / networkvars[2]));
@@ -1855,7 +1873,7 @@ async function calculateDeposit() {
                 if(/^0x0+$/.test(mypair) == false) {
                     console.log("Checking pool balance...");
                     await liquiditypool.methods.calculateBalance(myaccounts,mypair,true,0).call().then(function (thisresult) {
-                        thisresult = DOMPurify.sanitize(thisresult);
+                        thisresult = JSON.parse(DOMPurify.sanitize(JSON.stringify(thisresult)));
                         poolreserve[0] = thisresult[0];
                         poolreserve[1] = thisresult[1];
                     })
@@ -1863,7 +1881,7 @@ async function calculateDeposit() {
                     reserves = [];
                     paircontract = new web3.eth.Contract(PairABI, mypair);
                     await paircontract.methods.getReserves().call().then(function (thisresult) {
-                        reserves = DOMPurify.sanitize(thisresult);
+                        reserves = JSON.parse(DOMPurify.sanitize(JSON.stringify(thisresult)));
                     });
                     await paircontract.methods.token0().call().then(function (thisresult) {
                         token0 = DOMPurify.sanitize(thisresult);
@@ -2209,7 +2227,7 @@ async function showFrozen() {
     var result = [];
     var result2 = [];
     await baydatacontract.methods.getFrozen(myaccounts).call().then(function (myresult) {
-        result = DOMPurify.sanitize(myresult);
+        result = JSON.parse(DOMPurify.sanitize(JSON.strinify(myresult)));
     })
     var result2 = networkvars;
     var x = 0;
@@ -2261,7 +2279,7 @@ async function sendFrozen() {
         }
         lastrun = (Math.floor(Date.now() / 1000)) + 7;
         baydatacontract.methods.ReleaseFrozenFunds(myaccounts).send({"from":myaccounts,"gasLimit": 2500000,"gasPrice": gasPrice});
-    }else {
+    }else {      
     }
 }
 
@@ -2536,7 +2554,7 @@ async function showNonces() {
     var returnthis = 0;
     var currentaccount = myaccounts;
     await bayadmincontract.methods.listNonces(currentaccount).call().then(function (myresults) {
-        myresults = DOMPurify.sanitize(myresults);
+        myresults = JSON.parse(DOMPurify.sanitize(JSON.stringify(myresults)));
         if(myresults.length == 0) {
             document.getElementById("merkletext").innerHTML = 'No history of burned funds to BitBay network from this account.';
             returnthis = 1;
@@ -2564,7 +2582,7 @@ async function showNonces() {
         jsonreceipt['address'] = DOMPurify.sanitize(myresults);
     });
     await bayadmincontract.methods.showReserve(currentaccount, item).call().then(function (myresults) {
-        jsonreceipt['reserve'] = DOMPurify.sanitize(myresults);
+        jsonreceipt['reserve'] = JSON.parse(DOMPurify.sanitize(JSON.stringify(myresults)));
     });
     await bayadmincontract.methods.highkey(item, currentaccount).call().then(function (myresults) {
         jsonreceipt['section'] = DOMPurify.sanitize(myresults);
@@ -2590,7 +2608,7 @@ async function showNonces() {
         document.getElementById("merkletext").innerHTML += "<br>Merkle Proof: Merkle tree ready, you may copy the receipt to the clipboard.";
         var leaves = [];
         await bayadmincontract.methods.listHashes(item).call().then(function (myresults) {
-            leaves = DOMPurify.sanitize(myresults);
+            leaves = JSON.parse(DOMPurify.sanitize(JSON.stringify(myresults)));
         });
         var tree = new MerkleTree(leaves, web3.utils.keccak256, { sort: true });
         var root = tree.getRoot().toString('hex');
@@ -3187,7 +3205,6 @@ async function depositToWETH(wethval, wethcont) {
 
 setInterval(checkbalances, 90000);
 
-
 function modalDialog(title, msg, content_type="") {
   if (content_type == "info") 
     msg = '<div class="callout callout-info">'+msg+'</div>';
@@ -3205,6 +3222,7 @@ function modalDialog(title, msg, content_type="") {
     content: msg
   }).show();  
 }
+
 </script>
 </body>
 </html>
