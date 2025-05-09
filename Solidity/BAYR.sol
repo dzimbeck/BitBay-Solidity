@@ -130,10 +130,10 @@ contract BAYR is IHALO {
             checked[verify] = 1;
             return true;
         }
-        (success, result) = proxy.staticcall(abi.encodeWithSignature("isAMMExchange(address)",verify));
+        (success, result) = proxy.call(abi.encodeWithSignature("isAMMExchange(address)",verify));
         require(success);
-        uint isAMM = abi.decode(result, (uint));
-        if(isAMM == 1) {
+        bool isAMM = abi.decode(result, (bool));
+        if(isAMM == true) {
             checked[verify] = 3;
             return true;
         } else {

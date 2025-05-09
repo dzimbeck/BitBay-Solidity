@@ -461,7 +461,7 @@ contract UniswapV2Router02 is IUniswapV2Router01 {
     function addLiquidity(
         address[2] calldata tokenAB,
         uint[2] calldata amountABDesired,
-        uint Liquid,
+        uint Liquid, //This represents how many coins from ABDesired[0] are BAYL
         uint amountAMinMax, //This represents a percentage of 10000 for slippage
         uint amountBMin,
         address to,
@@ -512,7 +512,7 @@ contract UniswapV2Router02 is IUniswapV2Router01 {
     function addLiquidityETH(
         address token,
         uint amountTokenDesired,
-        uint Liquid,
+        uint Liquid, //This represents how many coins from amountTokenDesired are BAYL
         uint amountTokenMinMax, //This represents a percentage of 10000 for slippage
         uint amountETHMin,
         address to,

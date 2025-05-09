@@ -278,7 +278,7 @@
         <div class="swapField">
           <div class="swapSecondCoin swapSelector btn">
             <img class="swapSelectorLogo" src="./assets/images/0xmnr.png">
-            <div class="swapSelectorText" id="swapCoin2Text">WALLY</div>
+            <div class="swapSelectorText" id="swapCoin2Text">Wrapped ETH</div>
             <div class="swapSelectorArrow">
               <svg width="12" height="7" viewBox="0 0 12 7" fill="none" xmlns="http://www.w3.org/2000/svg" class="sc-33m4yg-8 khlnVY"><path d="M0.97168 1L6.20532 6L11.439 1" stroke="#AEAEAE"></path></svg>
             </div>
@@ -650,6 +650,7 @@
 
 <script type="text/javascript" src="./assets/js/script.js"></script>
 <script type="text/javascript" src="./assets/js/bridge-tools/web3.min.js"></script>
+<script type="text/javascript" src="./assets/js/bridge-tools/bignumber.min.js"></script>
 <script type="text/javascript" src="./assets/js/bridge-tools/merkletree.js"></script>
 <script type="text/javascript" src="./assets/js/bridge-tools/BAYL.js"></script>
 <script type="text/javascript" src="./assets/js/bridge-tools/BAYR.js"></script>
@@ -1176,6 +1177,70 @@ Swal = Swal.mixin({
     }
 });
 
+let spinnerElement;
+
+function showSpinner() {
+    hideSpinner(); // Ensure no duplicate spinners
+
+    // Create the spinner container
+    spinnerElement = document.createElement('div');
+    spinnerElement.style.position = 'fixed';
+    spinnerElement.style.top = '50%';
+    spinnerElement.style.left = '50%';
+    spinnerElement.style.transform = 'translate(-50%, -50%)';
+    spinnerElement.style.width = '50px';
+    spinnerElement.style.height = '50px';
+    spinnerElement.style.border = '5px solid transparent';
+    spinnerElement.style.borderTopColor = '#5D2F8E';
+    spinnerElement.style.borderRadius = '50%';
+    spinnerElement.style.animation = 'spin 1s linear infinite';
+    spinnerElement.style.zIndex = '9999';
+    spinnerElement.style.cursor = 'pointer';
+
+    // Inner hourglass look
+    const innerElement = document.createElement('div');
+    innerElement.style.position = 'absolute';
+    innerElement.style.top = '5px';
+    innerElement.style.left = '5px';
+    innerElement.style.right = '5px';
+    innerElement.style.bottom = '5px';
+    innerElement.style.border = '5px solid transparent';
+    innerElement.style.borderBottomColor = '#5D2F8E';
+    innerElement.style.borderRadius = '50%';
+    spinnerElement.appendChild(innerElement);
+
+    document.body.appendChild(spinnerElement);
+
+    // Only create keyframes once
+    if (!document.getElementById('spinner-style')) {
+        const style = document.createElement('style');
+        style.id = 'spinner-style';
+        style.innerHTML = `
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    // Delay event listeners to avoid instant hide on initial click
+    setTimeout(() => {
+        spinnerElement.addEventListener("click", hideSpinner);
+        spinnerElement.addEventListener("touchstart", hideSpinner);
+    }, 100);
+}
+
+function hideSpinner() {
+    try {
+      if (spinnerElement) {
+          spinnerElement.remove();
+          spinnerElement = null;
+      }
+    } catch {      
+    }
+}
+
 var lastTouchY = 0;
 var preventPullToRefresh = false;
 window.document.body.addEventListener("touchstart", function(e){
@@ -1342,52 +1407,85 @@ document.getElementById('ChartSelect').addEventListener('change', async function
 
 async function login() {
     if (window.ethereum) { //Note: for mobile this only works if the webpage has <head> tag
-        console.log("connecting");
-        await window.ethereum.request({method: 'eth_requestAccounts'});
-        web3 = new Web3(window.ethereum);
-        console.log("success");
+      try {
+          console.log("connecting");
+          showSpinner();
+          await window.ethereum.request({method: 'eth_requestAccounts'});
+          web3 = new Web3(window.ethereum);
+          console.log("success");
 
-        var notLoggedinElements  = document.querySelectorAll('.not-logged-in');
-        notLoggedinElements.forEach(el => {el.classList.add('hidden')});
+          var notLoggedinElements  = document.querySelectorAll('.not-logged-in');
+          notLoggedinElements.forEach(el => {el.classList.add('hidden')});
 
-        var authElements = document.querySelectorAll('.logged-in');
-        authElements.forEach(el => {el.classList.remove('hidden');});
+          var authElements = document.querySelectorAll('.logged-in');
+          authElements.forEach(el => {el.classList.remove('hidden');});
 
-        //remove elements like overlay on box when logged in
-        var authElementsRemove = document.querySelectorAll('.logged-in-remove');
-        authElementsRemove.forEach(el => {el.parentNode.removeChild(el);});
-        
-        document.getElementById("merkletext").innerHTML = '';
-        document.getElementById("addliquidtext").innerHTML = '';
-        document.getElementById("Coin1amount").value = '';
-        document.getElementById("Coin2amount").value = '';
-        document.getElementById("SwapAmount").value = '';
-        document.getElementById("SwapAmount2").value = '';
-        document.getElementById("SwapSummary").innerHTML = '';
+          //remove elements like overlay on box when logged in
+          var authElementsRemove = document.querySelectorAll('.logged-in-remove');
+          authElementsRemove.forEach(el => {el.parentNode.removeChild(el);});
+          
+          document.getElementById("merkletext").innerHTML = '';
+          document.getElementById("addliquidtext").innerHTML = '';
+          document.getElementById("Coin1amount").value = '';
+          document.getElementById("Coin2amount").value = '';
+          document.getElementById("SwapAmount").value = '';
+          document.getElementById("SwapAmount2").value = '';
+          document.getElementById("SwapSummary").innerHTML = '';
 
-        gasPrice = "20000000000";
-        await web3.eth.getGasPrice().then(function (theGasPrice) {
-          gasPrice = window.web3.utils.toWei(parseInt(parseInt(DOMPurify.sanitize(theGasPrice)) * 1.5).toString(), 'wei');
-          if (currentChainId == "1") {
-            if(parseInt(gasPrice) > 500000000000) {
-              gasPrice = "500000000000";
+          gasPrice = "20000000000";
+          await web3.eth.getGasPrice().then(function (theGasPrice) {
+            gasPrice = window.web3.utils.toWei(parseInt(parseInt(DOMPurify.sanitize(theGasPrice)) * 1.5).toString(), 'wei');
+            if (currentChainId == "1") {
+              if(parseInt(gasPrice) > 500000000000) {
+                gasPrice = "500000000000";
+              }
+              if(parseInt(gasPrice) < 250000000) {
+                gasPrice = "250000000";
+              }
+            } else {
+              if(parseInt(gasPrice) > 2500000000000) {
+                gasPrice = "2500000000000";
+              }
+              if(parseInt(gasPrice) < 250000000) {
+                gasPrice = "250000000";
+              }
             }
-            if(parseInt(gasPrice) < 250000000) {
-              gasPrice = "250000000";
-            }
-          } else {
-            if(parseInt(gasPrice) > 2500000000000) {
-              gasPrice = "2500000000000";
-            }
-            if(parseInt(gasPrice) < 250000000) {
-              gasPrice = "250000000";
-            }
+          });
+          lastitem = 10000000;
+          isConnected = true;
+          await checkbalances();
+          makeFairRatio();
+          hideSpinner();
+        } catch (e) {
+          hideSpinner()
+          console.error("Await failed:", e.message);
+          // Check if the error message contains '502 Bad Gateway'
+          if (e.message.includes("502 Bad Gateway")) {              
+              Swal.fire({
+                  icon: 'error',
+                  title: 'Issue connecting to MetaMask',
+                  text: 'Please check the API/RPC or internet connection.',
+                  confirmButtonText: 'Close'
+              });
           }
-        });
-        lastitem = 10000000;
-        isConnected = true;
-        await checkbalances();
-        makeFairRatio();        
+          else if (e.message.includes("Rate limit exceeded") || e.message.includes("All retries exhausted")) {
+              Swal.fire({
+                  icon: 'warning',
+                  title: 'Issue connecting to MetaMask',
+                  text: 'Rate Limit Exceeded. You are making too many requests, please wait a while before trying again.',
+                  confirmButtonText: 'Close'
+              });
+          }
+          else {
+              Swal.fire({
+                  icon: 'error',
+                  title: 'An error occurred',
+                  text: 'Something went wrong. Please try again later.',
+                  confirmButtonText: 'Close'
+              });
+          }
+          console.error("Error stack:", e.stack);
+        }
     } else {
         isConnected = false;
         modalDialog('Error', "Please log in with Metamask. If you don't have the extension you can download it for your browser from the <a href='https://metamask.io/download/' target='_blank'>official source</a>.", "warning");
@@ -1444,6 +1542,7 @@ lastMinMax = 0;
 withdrawMin1 = 0;
 withdrawMin2 = 0;
 lastrun = 0;
+const BN = BigNumber;
 document.getElementById("CoinPercent").value = '10';
 
 function defaultvars() {
@@ -1509,6 +1608,12 @@ function defaultvars() {
     document.getElementById("LPdetails1").innerHTML = '';
     document.getElementById("LPdetails2").innerHTML = '';
     document.getElementById("WithdrawAmount").value = '';
+}
+
+function stripZeros(valStr) {
+  return valStr.includes('.')
+    ? valStr.replace(/(\.\d*?[1-9])0+$/, '$1').replace(/\.0+$/, '')
+    : valStr;
 }
 
 async function checkbalances() {
@@ -1579,15 +1684,9 @@ async function checkbalances() {
     var BAYLBal;
     var BAYRBal;
     var BAYFBal;
-    await baylcontract.methods.balanceOf(myaccounts).call().then(function (liquid1) {
-        BAYLBal = parseFloat((web3.utils.fromWei(DOMPurify.sanitize(liquid1), 'gwei')*10).toFixed(8));         
-    })
-    await bayrcontract.methods.balanceOf(myaccounts).call().then(function (rval1) {
-        BAYRBal = parseFloat((web3.utils.fromWei(DOMPurify.sanitize(rval1), 'gwei')*10).toFixed(8));  
-    })
-    await bayfcontract.methods.balanceOf(myaccounts).call().then(function (val1) {
-        BAYFBal = parseFloat((web3.utils.fromWei(DOMPurify.sanitize(val1), 'gwei')*10).toFixed(8));
-    })
+    BAYLBal = stripZeros((new BigNumber(DOMPurify.sanitize(await baylcontract.methods.balanceOf(myaccounts).call())).dividedBy('1e8')).toFixed());
+    BAYRBal = stripZeros((new BigNumber(DOMPurify.sanitize(await bayrcontract.methods.balanceOf(myaccounts).call())).dividedBy('1e8')).toFixed());
+    BAYFBal = stripZeros((new BigNumber(DOMPurify.sanitize(await bayfcontract.methods.balanceOf(myaccounts).call())).dividedBy('1e8')).toFixed());
     await window.web3.eth.getBalance(myaccounts, function(err, result1) {
         if (err) {
             console.log(err);
@@ -1598,12 +1697,11 @@ async function checkbalances() {
         //document.getElementById("text1").innerHTML = DOMPurify.sanitize("Current Network: "+ netname + "<br>" + myaccounts + "<br>" + netname2 + " balance:" + ETHBalance + "<br>BAY Liquid:" + BAYLBal + "<br>BAY Reserve:" + BAYRBal + "<br>BAY Frozen:" + BAYFBal);
         }
     })
-    await bayadmincontract.methods.isActive().call().then(function (isActive) { //May also check if automatic unfreeze and special transactions are enabled
-        if(DOMPurify.sanitize(isActive) > 1) {
-            //document.getElementById("text1").innerHTML += "<br>NOTICE: Spending is currently disabled as this contract may be under maintenance."
-            modalDialog('Connect', "NOTICE: Spending is currently disabled as this contract may be under maintenance.", "warning");
-        }
-    })
+    //await bayadmincontract.methods.isActive().call().then(function (isActive) { //May also check if automatic unfreeze and special transactions are enabled
+    //    if(parseInt(DOMPurify.sanitize(isActive)) > 1) {            
+    //        modalDialog('Connect', "NOTICE: Spending is currently disabled as this contract may be under maintenance.", "warning");
+    //    }
+    //})
     document.getElementById("contractinfo").innerHTML = "Contracts to import into Metamask so that you may interact with BitBay: <br>BitBay - " +  BAYLaddy + "<br>BitBay Reserve - " + BAYRaddy + "<br>BitBay Frozen - " + BAYFaddy + "<br><br>";
     await getNetworkInfo();
     await getMarketData();    
@@ -1639,10 +1737,10 @@ async function getMarketData(calcbal = 0) {
         exchangeImages = [];
         prevChainId = currentChainId;
         if (currentChainId == "11155111") {
-            pairs.push({'HappyWalrusCoin': '0xf7F8aB76E62983ec12D97fD026Ab11296EdB2e23'});
             pairs.push({'Wrapped ETH': '0x15F6dD401774441D161D1722aF9e975F60A3cb7b'});
-            knowndecimals.push(8);
+            pairs.push({'HappyWalrusCoin': '0xf7F8aB76E62983ec12D97fD026Ab11296EdB2e23'});
             knowndecimals.push(18);
+            knowndecimals.push(8);
             exchanges.push({'WalrusSwap': '0xf99eaeEF749F99F826bF3c1150fCD64a0d0CE6EA'});
             exchangenum.push(997)
             exchangeImages.push('<img src="./walrus.png" style="height: 75px; width: 75px;"/>');
@@ -1715,90 +1813,99 @@ async function getMarketData(calcbal = 0) {
             totSupply = DOMPurify.sanitize(result3);
         });
         await liquiditypool.methods.LPtokens(myaccounts, mycurrentpair).call().then(function (result3) {
-            LPtokens = parseInt(DOMPurify.sanitize(result3));
+            LPtokens = DOMPurify.sanitize(result3);
         });
         await paircontract.methods.balanceOf(myaccounts).call().then(function (result3) {
-            LPtokensPair = parseInt(DOMPurify.sanitize(result3));
+            LPtokensPair = DOMPurify.sanitize(result3);
         });
-        if(LPtokensPair < LPtokens) {
-            LPtokens = LPtokensPair;
+        if (new BigNumber(LPtokensPair).lt(new BigNumber(LPtokens))) {
+          LPtokens = LPtokensPair;
         }
         if(token0 == BAYLaddy || token0 == BAYRaddy) {
-            reservebayval3 = parseInt(reserves[0]);
-            reservecoinval3 = parseInt(reserves[1]);
+            reservebayval3 = new BigNumber(reserves[0]);
+            reservecoinval3 = new BigNumber(reserves[1]);
         } else {
-            reservebayval3 = parseInt(reserves[1]);
-            reservecoinval3 = parseInt(reserves[0]);
+            reservebayval3 = new BigNumber(reserves[1]);
+            reservecoinval3 = new BigNumber(reserves[0]);
         }
+
         coin1 = document.getElementById("Coin1").value;
-        var myval1 = parseFloat(parseFloat(parseInt(reservecoinval3) / ("1e" + currentdecimals3)).toFixed(currentdecimals3));
-        var myval2 = parseFloat(parseFloat(parseInt(reservebayval3) / ("1e8")).toFixed(8));
+        let myval1 = stripZeros(reservecoinval3.dividedBy(new BigNumber(10).pow(currentdecimals3)).toFixed(currentdecimals3));
+        let myval2 = stripZeros(reservebayval3.dividedBy('1e8').toFixed(8));
+
         text = "Exchange details for the pair " + Object.keys(pairs[coin1]) + "/" + bayname + ":<br>";
         text += "Total coins available for " + Object.keys(pairs[coin1]) + ": " + myval1 + "<br>";
         text += "Total coins available for " + bayname + ": " + myval2 + "<br>";
-        var otherbal;
+
+        let otherbal;
         if(bayselect == 0) {
-            await bayrcontract.methods.balanceOf(mycurrentpair).call().then(function (result3) {
-                otherbal = parseFloat((web3.utils.fromWei(DOMPurify.sanitize(result3), 'gwei')*10).toFixed(8));
-            });
+            otherbal = stripZeros(new BigNumber(web3.utils.fromWei(
+                DOMPurify.sanitize(await bayrcontract.methods.balanceOf(mycurrentpair).call()),
+                'gwei')).times(10).toFixed(8));
         } else {
-           await baylcontract.methods.balanceOf(mycurrentpair).call().then(function (result3) {
-                otherbal = parseFloat((web3.utils.fromWei(DOMPurify.sanitize(result3), 'gwei')*10).toFixed(8));
-            });
+            otherbal = stripZeros(new BigNumber(web3.utils.fromWei(
+                DOMPurify.sanitize(await baylcontract.methods.balanceOf(mycurrentpair).call()),
+                'gwei')).times(10).toFixed(8));
         }
+
         text += bayname2 + " coins overage at this pair: " + otherbal + "<br>";
         text += "Total LP token supply for this pair: " + totSupply + "<br>";
-        text += "Your LP token balance for this pair: " + LPtokens + "(" + parseFloat(((LPtokens / totSupply) * 100).toFixed(5)) + "% of the pool)<br><br>";
-        var text2 = "";
+        text += "Your LP token balance for this pair: " + LPtokens + " (" + stripZeros(new BigNumber(LPtokens).dividedBy(totSupply).times(100).toFixed(5)) + "% of the pool)<br><br>";
+
+        let text2 = "";
         if(calcbal == 1) {
-            if(LPtokens > 0) {
+            if(new BigNumber(LPtokens).gt(0)) {
                 LPtokens2 = document.getElementById("WithdrawAmount").value;
-                if(LPtokens2 == '' || parseInt(LPtokens2) > parseInt(LPtokens)) {
-                    if(LPtokens2 == '') {
-                        text2 = "Please enter the number of LP tokens you wish to calculate for<br><br>";
-                    } else {
-                        text2 = "Amount requested exceeds balance<br><br>"
-                    }
+                if(LPtokens2 === '' || new BigNumber(LPtokens2).gt(new BigNumber(LPtokens))) {
+                    text2 = LPtokens2 === ''
+                        ? "Please enter the number of LP tokens you wish to calculate for<br><br>"
+                        : "Amount requested exceeds balance<br><br>";
                 } else {
                     await liquiditypool.methods.calculatePoolBalanceV1(myaccounts, mycurrentpair, 0, LPtokens2, precision, 0).call().then(function (result3) {
-                      result3 = JSON.parse(DOMPurify.sanitize(JSON.stringify(result3)));
-                      reserveatpool = result3[1];
+                        result3 = JSON.parse(DOMPurify.sanitize(JSON.stringify(result3)));
+                        reserveatpool = result3[1];
                     });
-                    var section = parseInt(Math.floor(networkvars[0] / networkvars[2]));
-                    var ak = parseInt(Math.floor(networkvars[0] % networkvars[2]));
-                    var resbal = 0;
-                    var liqbal = 0;
-                    x = 0;
-                    while(x < networkvars[1]) {
+
+                    let section = Math.floor(networkvars[0] / networkvars[2]);
+                    let ak = Math.floor(networkvars[0] % networkvars[2]);
+
+                    let resbal = new BigNumber(0);
+                    let liqbal = new BigNumber(0);
+
+                    for(let x = 0; x < networkvars[1]; x++) {
                         if(x < section) {
-                            resbal += parseInt(reserveatpool[x])
+                            resbal = resbal.plus(new BigNumber(reserveatpool[x]));
                         } else {
-                            liqbal += parseInt(reserveatpool[x])
+                            liqbal = liqbal.plus(new BigNumber(reserveatpool[x]));
                         }
-                        x += 1;
                     }
-                    var j = 0;
-                    while(j < networkvars[2]) {
+
+                    for(let j = 0; j < networkvars[2]; j++) {
+                        let val = new BigNumber(reserveatpool[parseInt(networkvars[1]) + j]);
                         if(j < ak) {
-                            resbal += parseInt(reserveatpool[parseInt(networkvars[1]) + j])
+                            resbal = resbal.plus(val);
                         } else {
-                            liqbal += parseInt(reserveatpool[parseInt(networkvars[1]) + j])
+                            liqbal = liqbal.plus(val);
                         }
-                        j += 1;
                     }
-                    myval1 = parseFloat(parseFloat(parseInt(liqbal) / ("1e8")).toFixed(8));
-                    myval2 = parseFloat(parseFloat(parseInt(resbal) / ("1e8")).toFixed(8));
-                    var myval3 = parseFloat(parseFloat(parseInt((LPtokens2 / totSupply) * reservecoinval3) / ("1e" + currentdecimals3)).toFixed(currentdecimals3));
+
+                    myval1 = stripZeros(liqbal.dividedBy('1e8').toFixed(8));
+                    myval2 = stripZeros(resbal.dividedBy('1e8').toFixed(8));
+                    let myval3 = stripZeros(new BigNumber(LPtokens2).dividedBy(totSupply).times(reservecoinval3).dividedBy(new BigNumber(10).pow(currentdecimals3)).toFixed(currentdecimals3));
+
                     text2 += "Estimated BAY balance at pool: " + myval1 + "<br>";
                     text2 += "Estimated BAYR balance at pool: " + myval2 + "<br>";
                     text2 += "Estimated " + Object.keys(pairs[coin1]) + " balance at pool: " + myval3 + "<br><br>";
                 }
             } else {
-                text2 = "You have no balance at this pool<br><br>"
+                text2 = "You have no balance at this pool<br><br>";
             }
-            document.getElementById("LPdetails1").innerHTML=DOMPurify.sanitize(text2);
+
+            document.getElementById("LPdetails1").innerHTML = DOMPurify.sanitize(text2);
         }
-        document.getElementById("LPdetails2").innerHTML=DOMPurify.sanitize(text);
+
+        document.getElementById("LPdetails2").innerHTML = DOMPurify.sanitize(text);
+
     }
 }
 
@@ -1811,7 +1918,7 @@ async function getDecimals(myobj) {
     var thiscontract = new web3.eth.Contract(ERC20ABI, Object.values(pairs[myobj])[0]);
     var thedecimals = 0;
     await thiscontract.methods.decimals().call().then(function (dresult) {
-        thedecimals = DOMPurify.sanitize(dresult);
+        thedecimals = parseInt(DOMPurify.sanitize(dresult));
     });
     return thedecimals;
 }
@@ -1848,6 +1955,7 @@ async function calculateDeposit() {
         }
         if(el == "Coin1amount" || el == "Coin2amount") {
             if(((lastchecked + 120) < (Math.floor(Date.now() / 1000))) && isConnected) {
+                showSpinner();
                 await getNetworkInfo();
                 section = parseInt(Math.floor(networkvars[0] / networkvars[2]));
                 ak = parseInt(Math.floor(networkvars[0] % networkvars[2]));
@@ -1886,22 +1994,24 @@ async function calculateDeposit() {
                     await paircontract.methods.token0().call().then(function (thisresult) {
                         token0 = DOMPurify.sanitize(thisresult);
                     });
-                    if(token0 == BAYLaddy || token0 == BAYRaddy) {
-                        reservebayval = parseInt(reserves[0]);
-                        reservecoinval = parseInt(reserves[1]);
+                    if (token0 === BAYLaddy || token0 === BAYRaddy) {
+                        reservebayval = new BN(reserves[0]);
+                        reservecoinval = new BN(reserves[1]);
                     } else {
-                        reservebayval = parseInt(reserves[1]);
-                        reservecoinval = parseInt(reserves[0]);
+                        reservebayval = new BN(reserves[1]);
+                        reservecoinval = new BN(reserves[0]);
                     }
-                    if(reservecoinval != 0 && reservebayval != 0) {
+
+                    if (!reservecoinval.isZero() && !reservebayval.isZero()) {
                         autocompute = 1;
-                    }                    
+                    }
                 }
                 lastchecked = (Math.floor(Date.now() / 1000));
             }
         }
         if(el == "SwapAmount" || el == "SwapAmount2") {
             if(((lastchecked2 + 120) < (Math.floor(Date.now() / 1000))) && isConnected) {
+                showSpinner();
                 console.log("Checking pool reserves...");
                 await getNetworkInfo();
                 bayaddy = '';
@@ -1927,23 +2037,25 @@ async function calculateDeposit() {
                     reserves = [];
                     paircontract = new web3.eth.Contract(PairABI, mypair);
                     await paircontract.methods.getReserves().call().then(function (thisresult) {
-                        reserves = DOMPurify.sanitize(thisresult);
+                        reserves = JSON.parse(DOMPurify.sanitize(JSON.stringify(thisresult)));
                     });
                     await paircontract.methods.token0().call().then(function (thisresult) {
                         token0 = DOMPurify.sanitize(thisresult);
                     });
-                    if(token0 == BAYLaddy || token0 == BAYRaddy) {
-                        reservebayval2 = parseInt(reserves[0]);
-                        reservecoinval2 = parseInt(reserves[1]);
+                    if (token0 === BAYLaddy || token0 === BAYRaddy) {
+                        reservebayval2 = new BN(reserves[0]);
+                        reservecoinval2 = new BN(reserves[1]);
                     } else {
-                        reservebayval2 = parseInt(reserves[1]);
-                        reservecoinval2 = parseInt(reserves[0]);
+                        reservebayval2 = new BN(reserves[1]);
+                        reservecoinval2 = new BN(reserves[0]);
                     }
-                    if(reservecoinval2 == 0 && reservebayval2 == 0) {
-                        document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-danger" >This pair has not been created yet. To create it please add liquidity or choose the default pair to trade with.</div>';
+
+                    if (reservecoinval2.isZero() && reservebayval2.isZero()) {
+                        document.getElementById("SwapSummary").innerHTML =
+                            '<div class="callout callout-danger">This pair has not been created yet. To create it please add liquidity or choose the default pair to trade with.</div>';
                         lockthis = 0;
                         return;
-                    }                    
+                    }
                 } else {
                     document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-danger" >This pair has not been created yet. To create it please add liquidity or choose the default pair to trade with.</div>';
                     reservebayval2 = 0;
@@ -1954,6 +2066,7 @@ async function calculateDeposit() {
                 lastchecked2 = (Math.floor(Date.now() / 1000));
             }
         }
+        hideSpinner();
         var myval;
         var mynumerator;
         var text;
@@ -1966,121 +2079,148 @@ async function calculateDeposit() {
         var recommended;
         var recommended2;
         if(el == "SwapAmount" || el == "SwapAmount2") {            
-            if(reservecoinval2 != 0 && reservebayval2 != 0) {
+            if(reservecoinval2.toFixed() !== "0" && reservebayval2.toFixed() !== "0") {
                 try {
-                    var perc = parseFloat(document.getElementById('CoinPercent').value);
-                    if(el == "SwapAmount") {
-                        myval = parseInt(parseFloat(document.getElementById("SwapAmount").value) * 1e8).toFixed(0);
-                    } else {
-                        myval = parseInt(parseFloat(document.getElementById("SwapAmount2").value) * parseFloat("1e" + currentdecimals2)).toFixed(0);
-                    }
-                    exchange = document.getElementById("exchangeSelect").value;
-                    mynumerator = exchangenum[exchange];
-                    text = "";
-                    bayselect = document.getElementById("SwapCoin").value;
-                    coin1 = document.getElementById("SwapCoin2").value;
-                    name = Object.keys(pairs[coin1]);                    
-                    if(bayselect == 0) {
-                        text += "Buying BitBay coins: ";
-                        if(el == "SwapAmount") {
-                            mtext = "Maximum " + name + " coins: ";
-                            lastMinMax = parseInt(((myval * reservecoinval2) / reservebayval2) * (1 + (parseFloat(perc) / 100))).toFixed(0);
-                            textval = parseFloat((lastMinMax / parseFloat(("1e" + currentdecimals2))).toFixed(currentdecimals2));
-                            mtext += textval;
-                        } else {
-                            mtext = "Minimum BitBay coins: ";
-                            lastMinMax = parseInt(((myval * reservebayval2) / reservecoinval2) / (1 + (parseFloat(perc) / 100))).toFixed(0);
-                            textval = parseFloat((lastMinMax / parseFloat("1e8")).toFixed(8));
-                            mtext += textval;
-                        }
-                    }
-                    if(bayselect == 1) {
-                        text += "Buying BitBay Reserve coins: ";
-                        if(el == "SwapAmount") {
-                            mtext = "Maximum " + name + " coins: ";
-                            lastMinMax = parseInt(((myval * reservecoinval2) / reservebayval2) * (1 + (parseFloat(perc) / 100))).toFixed(0);
-                            textval = parseFloat((lastMinMax / parseFloat(("1e" + currentdecimals2))).toFixed(currentdecimals2));
-                            mtext += textval;
-                        } else {
-                            mtext = "Minimum BitBay Reserve coins: ";
-                            lastMinMax = parseInt(((myval * reservebayval2) / reservecoinval2) / (1 + (parseFloat(perc) / 100))).toFixed(0);
-                            textval = parseFloat((lastMinMax / parseFloat("1e8")).toFixed(8));
-                            mtext += textval;
-                        }
-                    }
-                    if(bayselect == 2) {
-                        text += "Selling BitBay coins: ";
-                        if(el == "SwapAmount") {
-                            mtext = "Minimum " + name + " coins: ";
-                            lastMinMax = parseInt(((myval * reservecoinval2) / reservebayval2) / (1 + (parseFloat(perc) / 100))).toFixed(0);
-                            textval = parseFloat((lastMinMax / parseFloat(("1e" + currentdecimals2))).toFixed(currentdecimals2));
-                            mtext += textval;
-                        } else {
-                            mtext = "Maximum BitBay coins: ";
-                            lastMinMax = parseInt(((myval * reservebayval2) / reservecoinval2) * (1 + (parseFloat(perc) / 100))).toFixed(0);
-                            textval = parseFloat((lastMinMax / parseFloat("1e8")).toFixed(8));
-                            mtext += textval;
-                        }
-                    }
-                    if(bayselect == 3) {
-                        text += "Selling BitBay Reserve coins: ";
-                        if(el == "SwapAmount") {
-                            mtext = "Minimum " + name + " coins: ";
-                            lastMinMax = parseInt(((myval * reservecoinval2) / reservebayval2) / (1 + (parseFloat(perc) / 100))).toFixed(0);
-                            textval = parseFloat((lastMinMax / parseFloat(("1e" + currentdecimals2))).toFixed(currentdecimals2));
-                            mtext += textval;
-                        } else {
-                            mtext = "Maximum BitBay Reserve coins: ";
-                            lastMinMax = parseInt(((myval * reservebayval2) / reservecoinval2) * (1 + (parseFloat(perc) / 100))).toFixed(0);
-                            textval = parseFloat((lastMinMax / parseFloat("1e8")).toFixed(8));
-                            mtext += textval;
-                        }
-                    }                    
-                    if(bayselect == 0 || bayselect == 1) {
-                        if(el == "SwapAmount2") {                            
-                            mytrade = parseFloat(getAmountOut(myval,reservecoinval2,reservebayval2,mynumerator));
-                            BAYval =  parseFloat((mytrade / parseFloat(("1e8"))).toFixed(8));
-                            CoinVal = document.getElementById("SwapAmount2").value;
-                            //slippage = ((mytrade / ((reservebayval2 * myval) / reservecoinval2)) * 100) - 100;
-                            slippage = ((myval / ((reservecoinval2 * mytrade) / reservebayval2)) * 100) - 100;
-                            document.getElementById("SwapAmount").value = BAYval;
-                        } else {
-                            mytrade = parseFloat(getAmountIn(myval,reservecoinval2,reservebayval2,mynumerator));
-                            BAYval =  document.getElementById("SwapAmount").value;
-                            CoinVal = parseFloat((mytrade / parseFloat(("1e" + currentdecimals2))).toFixed(currentdecimals2));
-                            slippage = ((mytrade / ((reservecoinval2 * myval) / reservebayval2)) * 100) - 100;
-                            document.getElementById("SwapAmount2").value = CoinVal;
-                        }
-                        text += BAYval + "<br>";
-                        text += "In exchange for " + name + " coins: " + CoinVal;
-                        text += "<hr>";
-                    }
-                    if(bayselect == 2 || bayselect == 3) {
-                        if(el == "SwapAmount2") {
-                            mytrade = parseFloat(getAmountIn(myval,reservebayval2,reservecoinval2,mynumerator));
-                            BAYval =  parseFloat((mytrade / parseFloat(("1e8"))).toFixed(8));
-                            CoinVal = document.getElementById("SwapAmount2").value;
-                            slippage = ((mytrade / (myval / (reservecoinval2 / reservebayval2))) * 100) - 100;
-                            document.getElementById("SwapAmount").value = BAYval;
-                        } else {
-                            mytrade = parseFloat(getAmountOut(myval,reservebayval2,reservecoinval2,mynumerator));
-                            BAYval =  document.getElementById("SwapAmount").value;
-                            CoinVal = parseFloat((mytrade / parseFloat(("1e" + currentdecimals2))).toFixed(currentdecimals2));
-                            slippage = ((myval / (mytrade / (reservecoinval2 / reservebayval2))) * 100) - 100;
-                            document.getElementById("SwapAmount2").value = CoinVal;
-                        }
-                        text += BAYval + "<br>";
-                        text += "In exchange for " + name + " coins: " + CoinVal;
-                    }               
-                    text += "<br>Slippage: " + parseFloat(slippage.toFixed(4)) + "%<br>This trade is approximate and may vary slightly based on competing trades.";                    
-                    text += "<br>" + mtext;
-                    if(slippage > perc) {
-                        text += '<hr><div class="callout callout-danger">WARNING: This trade fluctuates more than you have requested</div>';
-                        lastSelect = slippage;
-                    } else {
-                        lastSelect = el;                        
-                    }                    
-                    document.getElementById("SwapSummary").innerHTML = text;
+                  var perc = new BN(document.getElementById('CoinPercent').value);
+                  var maxBuy = new BN("0");
+                  if(el == "SwapAmount") {
+                      myval = new BN(document.getElementById("SwapAmount").value).times(1e8).toFixed(0);
+                      maxBuy = new BN(reservebayval2);
+                  } else {
+                      myval = new BN(document.getElementById("SwapAmount2").value).times(new BN("1e" + currentdecimals2)).toFixed(0);
+                      maxBuy = new BN(reservecoinval2);
+                  }
+
+                  exchange = document.getElementById("exchangeSelect").value;
+                  mynumerator = exchangenum[exchange];
+                  text = "";
+                  bayselect = document.getElementById("SwapCoin").value;
+                  coin1 = document.getElementById("SwapCoin2").value;
+                  name = Object.keys(pairs[coin1]);
+                  
+                  //if (new BN(myval).gt(maxBuy.times(0.99))) {
+                  //    document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-danger">Trade exceeds available pool reserves.</div>';
+                      //document.getElementById("SwapAmount").value = "";
+                      //document.getElementById("SwapAmount2").value = "";
+                      //slippage = 0;
+                      //lastSelect = '';
+                      //lockthis = 0;
+                      //return;
+                  //}
+
+                  // Logic for buying/selling coins
+                  if(bayselect == 0) {
+                      text += "Buying BitBay coins: ";
+                      if(el == "SwapAmount") {
+                          mtext = "Maximum " + name + " coins: ";
+                          lastMinMax = new BN(myval).times(reservecoinval2).div(reservebayval2).times(new BN(1).plus(perc.div(100))).toFixed(0);
+                          textval = stripZeros(new BN(lastMinMax).div(new BN("1e" + currentdecimals2)).toFixed(currentdecimals2));
+                          mtext += textval;
+                      } else {
+                          mtext = "Minimum BitBay coins: ";
+                          lastMinMax = new BN(myval).times(reservebayval2).div(reservecoinval2).div(new BN(1).plus(perc.div(100))).toFixed(0);
+                          textval = stripZeros(new BN(lastMinMax).div(1e8).toFixed(8));
+                          mtext += textval;
+                      }
+                  }
+
+                  if(bayselect == 1) {
+                      text += "Buying BitBay Reserve coins: ";
+                      if(el == "SwapAmount") {
+                          mtext = "Maximum " + name + " coins: ";
+                          lastMinMax = new BN(myval).times(reservecoinval2).div(reservebayval2).times(new BN(1).plus(perc.div(100))).toFixed(0);
+                          textval = stripZeros(new BN(lastMinMax).div(new BN("1e" + currentdecimals2)).toFixed(currentdecimals2));
+                          mtext += textval;
+                      } else {
+                          mtext = "Minimum BitBay Reserve coins: ";
+                          lastMinMax = new BN(myval).times(reservebayval2).div(reservecoinval2).div(new BN(1).plus(perc.div(100))).toFixed(0);
+                          textval = stripZeros(new BN(lastMinMax).div(1e8).toFixed(8));
+                          mtext += textval;
+                      }
+                  }
+
+                  if(bayselect == 2) {
+                      text += "Selling BitBay coins: ";
+                      if(el == "SwapAmount") {
+                          mtext = "Minimum " + name + " coins: ";
+                          lastMinMax = new BN(myval).times(reservecoinval2).div(reservebayval2).div(new BN(1).plus(perc.div(100))).toFixed(0);
+                          textval = stripZeros(new BN(lastMinMax).div(new BN("1e" + currentdecimals2)).toFixed(currentdecimals2));
+                          mtext += textval;
+                      } else {
+                          mtext = "Maximum BitBay coins: ";
+                          lastMinMax = new BN(myval).times(reservebayval2).div(reservecoinval2).times(new BN(1).plus(perc.div(100))).toFixed(0);
+                          textval = stripZeros(new BN(lastMinMax).div(1e8).toFixed(8));
+                          mtext += textval;
+                      }
+                  }
+
+                  if(bayselect == 3) {
+                      text += "Selling BitBay Reserve coins: ";
+                      if(el == "SwapAmount") {
+                          mtext = "Minimum " + name + " coins: ";
+                          lastMinMax = new BN(myval).times(reservecoinval2).div(reservebayval2).div(new BN(1).plus(perc.div(100))).toFixed(0);
+                          textval = stripZeros(new BN(lastMinMax).div(new BN("1e" + currentdecimals2)).toFixed(currentdecimals2));
+                          mtext += textval;
+                      } else {
+                          mtext = "Maximum BitBay Reserve coins: ";
+                          lastMinMax = new BN(myval).times(reservebayval2).div(reservecoinval2).times(new BN(1).plus(perc.div(100))).toFixed(0);
+                          textval = stripZeros(new BN(lastMinMax).div(1e8).toFixed(8));
+                          mtext += textval;
+                      }
+                  }
+
+                  // Swap amount logic (BN version)
+                  if(bayselect == 0 || bayselect == 1) {
+                      if(el == "SwapAmount2") {
+                          mytrade = new BN(getAmountOut(new BN(myval), reservecoinval2, reservebayval2, mynumerator));
+                          BAYval = stripZeros(mytrade.div(1e8).toFixed(8));
+                          CoinVal = stripZeros(document.getElementById("SwapAmount2").value);
+                          slippage = new BN(myval).div((reservecoinval2.times(mytrade)).div(reservebayval2)).times(100).minus(100);
+                          document.getElementById("SwapAmount").value = BAYval;
+                      } else {
+                          mytrade = new BN(getAmountIn(new BN(myval), reservecoinval2, reservebayval2, mynumerator));
+                          BAYval = stripZeros(document.getElementById("SwapAmount").value);
+                          CoinVal = stripZeros(mytrade.div(new BN("1e" + currentdecimals2)).toFixed(currentdecimals2));
+                          slippage = mytrade.div((reservecoinval2.times(new BN(myval))).div(reservebayval2)).times(100).minus(100);
+                          document.getElementById("SwapAmount2").value = CoinVal;
+                      }
+                      text += `${BAYval}<br>`;
+                      text += `In exchange for ${name} coins: ${CoinVal}`;
+                      text += "<hr>";
+                  }
+
+                  if(bayselect == 2 || bayselect == 3) {
+                      if(el == "SwapAmount2") {
+                          mytrade = new BN(getAmountIn(new BN(myval), reservebayval2, reservecoinval2, mynumerator));
+                          BAYval = stripZeros(mytrade.div(1e8).toFixed(8));
+                          CoinVal = stripZeros(document.getElementById("SwapAmount2").value);
+                          slippage = mytrade.div((new BN(myval).div(reservecoinval2.div(reservebayval2)))).times(100).minus(100);
+                          document.getElementById("SwapAmount").value = BAYval;
+                      } else {
+                          mytrade = new BN(getAmountOut(new BN(myval), reservebayval2, reservecoinval2, mynumerator));
+                          BAYval = stripZeros(document.getElementById("SwapAmount").value);
+                          CoinVal = stripZeros(mytrade.div(new BN("1e" + currentdecimals2)).toFixed(currentdecimals2));
+                          slippage = new BN(myval).div((mytrade.div(reservecoinval2.div(reservebayval2)))).times(100).minus(100);
+                          document.getElementById("SwapAmount2").value = CoinVal;
+                      }
+                      text += `${BAYval}<br>`;
+                      text += `In exchange for ${name} coins: ${CoinVal}`;
+                  }
+
+                  // Slippage and trade details
+                  text += `<br>Slippage: ${stripZeros(slippage.toFixed(4))}%<br>This trade is approximate and may vary slightly based on competing trades.`;
+                  text += `<br>${mtext}`;
+
+                  if(slippage.gt(perc)) {
+                      text += '<hr><div class="callout callout-danger">WARNING: This trade fluctuates more than you have requested</div>';
+                      lastSelect = slippage;
+                  } else {
+                      lastSelect = el;
+                  }
+                  if (new BN(myval).gt(maxBuy.times(0.99))) {
+                       text += '<hr><div class="callout callout-danger">Trade exceeds available pool reserves.</div>';
+                  }
+                  document.getElementById("SwapSummary").innerHTML = text;
                 } catch (e) {
                     slippage = 0;
                     lastSelect = '';
@@ -2090,81 +2230,120 @@ async function calculateDeposit() {
             lockthis = 0;
             return;
         } else {
-            document.getElementById("additionalCoins").innerHTML = "";
-            if(el == "Coin1amount" && autocompute == 1) {
-                try {
-                    myval = parseInt(parseFloat(document.getElementById("Coin1amount").value) * ("1e" + currentdecimals)).toFixed(0);
-                    recommended = parseFloat((parseFloat((myval * reservebayval) / reservecoinval) / parseFloat(1e8)).toFixed(8));
-                    document.getElementById("Coin2amount").value = recommended;
-                }  catch (e) {
-                    console.log(e);
-                    recommendedBAY = 0;
-                    lockthis = 0;
-                    return;
-                }
-            } 
-            if(el == "Coin2amount" && autocompute == 1) {
-                try {
-                    myval = parseInt(parseFloat(document.getElementById("Coin2amount").value) * 1e8).toFixed(0);
-                    recommended = parseFloat((parseFloat((myval * reservecoinval) / reservebayval) / parseFloat(("1e" + currentdecimals))).toFixed(currentdecimals));
-                    document.getElementById("Coin1amount").value = recommended;
-                }  catch (e) {
-                    console.log(e);
-                    recommendedBAY = 0;
-                    lockthis = 0;
-                    return;
-                }
-            }
-            var myBAYval = parseInt(parseInt(parseFloat(document.getElementById("Coin2amount").value) * 1e8).toFixed(0));
-            var ratioBAY = 0;
-            var ratioBAYR = 0;
-            var ratioBAY2 = 0;
-            var ratioBAYR2 = 0;
-            var thedif;
-            x = 0;
-            if(autocompute == 0) {
-                while(x < networkvars[1]) {
-                    if(x == section) {
-                        thedif = 0;
-                        if(ak != 0) {
-                            thedif = parseInt(parseInt((fairRatio[x] * ak) / parseInt(networkvars[2])).toFixed(0))
-                            ratioBAYR += thedif
-                        }
-                        ratioBAY += fairRatio[x] - thedif;
-                    } else {
-                        if(x > section) {
-                            ratioBAY += fairRatio[x];
-                        }
-                        if(x < section) {
-                            ratioBAYR += fairRatio[x];
-                        }
-                    }
-                    x += 1;
-                }
-            } else {
-                ratioBAY2 = poolreserve[0];
-                ratioBAYR2 = poolreserve[1];
-            }
-            bayselect = document.getElementById("Coin2").value;
-            if(bayselect == 0) {
-                document.getElementById("additionalCoins").innerHTML = "Reserve required for deposit(in addition to desired liquid coins):<br>";
-                recommended = parseFloat((parseFloat((myBAYval * ratioBAYR) / ratioBAY) / parseFloat(1e8)).toFixed(8));
-                if(autocompute == 1) {
-                    recommended = parseFloat((parseFloat((myBAYval * ratioBAYR2) / ratioBAY2) / parseFloat(1e8)).toFixed(8));
-                }
-                document.getElementById("additionalCoins").innerHTML += recommended;
-                recommendedBAY = recommended;
-            } else {
-                document.getElementById("additionalCoins").innerHTML = "Liquid required for deposit(in addition to desired reserve coins):<br>";
-                recommended = parseFloat((parseFloat((myBAYval * ratioBAY) / ratioBAYR) / parseFloat(1e8)).toFixed(8));
-                if(autocompute == 1) {
-                    recommended = parseFloat((parseFloat((myBAYval * ratioBAY2) / ratioBAYR2) / parseFloat(1e8)).toFixed(8));
-                }
-                document.getElementById("additionalCoins").innerHTML += recommended;
-                recommendedBAY = recommended;
-            }
+          document.getElementById("additionalCoins").innerHTML = "";
+
+          if (el === "Coin1amount" && autocompute === 1) {
+              try {
+                  const coin1Input = new BN(document.getElementById("Coin1amount").value.trim());
+                  const myval = coin1Input.times(new BN(10).pow(new BN(currentdecimals))); // scale by 1e<currentdecimals>
+                  
+                  // Calculate recommended Coin2 amount using BigNumber arithmetic
+                  const recommended = myval
+                      .times(new BN(reservebayval.toString()))
+                      .div(new BN(reservecoinval.toString()))
+                      .div(new BN("100000000")); // Convert back to human-readable format (div by 1e8)
+                  document.getElementById("Coin2amount").value = stripZeros(recommended.toFixed(8));
+              } catch (e) {
+                  console.log(e);
+                  recommendedBAY = 0;
+                  lockthis = 0;
+                  return;
+              }
+          }
+
+          if (el === "Coin2amount" && autocompute === 1) {
+              try {
+                  const coin2Input = new BN(document.getElementById("Coin2amount").value.trim());
+                  const myval = coin2Input.times(new BN("100000000")); // scale by 1e8
+
+                  // Calculate recommended Coin1 amount using BigNumber arithmetic
+                  const recommended = myval
+                      .times(new BN(reservecoinval.toString()))
+                      .div(new BN(reservebayval.toString()))
+                      .div(new BN(10).pow(new BN(currentdecimals))); // Scale back to Coin1 decimals
+                  document.getElementById("Coin1amount").value = stripZeros(recommended.toFixed(currentdecimals));
+              } catch (e) {
+                  console.log(e);
+                  recommendedBAY = 0;
+                  lockthis = 0;
+                  return;
+              }
+          }
+
+          // Parse Coin2 amount into BN, scaled by 1e8
+          const myBAYval = new BN(document.getElementById("Coin2amount").value.trim()).times(new BN("100000000"));
+
+          let ratioBAY = new BN(0);
+          let ratioBAYR = new BN(0);
+          let ratioBAY2 = new BN(0);
+          let ratioBAYR2 = new BN(0);
+          let thedif;
+          let x = 0;
+
+          if (autocompute === 0) {
+              while (x < networkvars[1]) {
+                  if (x === section) {
+                      thedif = new BN(0);
+                      if (ak !== 0) {
+                          thedif = new BN(fairRatio[x].toString())
+                              .times(new BN(ak.toString()))
+                              .div(new BN(networkvars[2].toString()));
+                          ratioBAYR = ratioBAYR.plus(thedif);
+                      }
+                      ratioBAY = ratioBAY.plus(new BN(fairRatio[x].toString()).minus(thedif));
+                  } else {
+                      if (x > section) {
+                          ratioBAY = ratioBAY.plus(new BN(fairRatio[x].toString()));
+                      }
+                      if (x < section) {
+                          ratioBAYR = ratioBAYR.plus(new BN(fairRatio[x].toString()));
+                      }
+                  }
+                  x += 1;
+              }
+          } else {
+              ratioBAY2 = new BN(poolreserve[0].toString());
+              ratioBAYR2 = new BN(poolreserve[1].toString());
+          }
+
+          // Handle the selection of the bayselect value
+          const bayselect = document.getElementById("Coin2").value;
+          let recommended;
+
+          if (bayselect === "0") {
+              document.getElementById("additionalCoins").innerHTML = "Reserve required for deposit (in addition to desired liquid coins):<br>";
+              recommended = myBAYval
+                  .times(ratioBAYR)
+                  .div(ratioBAY)
+                  .div(new BN("100000000")); // Convert back to human-readable format (div by 1e8)
+
+              if (autocompute === 1) {
+                  recommended = myBAYval
+                      .times(ratioBAYR2)
+                      .div(ratioBAY2)
+                      .div(new BN("100000000")); // Convert back to human-readable format (div by 1e8)
+              }
+              document.getElementById("additionalCoins").innerHTML += stripZeros(recommended.toFixed(8));
+              recommendedBAY = stripZeros(recommended.toFixed(8));
+          } else {
+              document.getElementById("additionalCoins").innerHTML = "Liquid required for deposit (in addition to desired reserve coins):<br>";
+              recommended = myBAYval
+                  .times(ratioBAY)
+                  .div(ratioBAYR)
+                  .div(new BN("100000000")); // Convert back to human-readable format (div by 1e8)
+
+              if (autocompute === 1) {
+                  recommended = myBAYval
+                      .times(ratioBAY2)
+                      .div(ratioBAYR2)
+                      .div(new BN("100000000")); // Convert back to human-readable format (div by 1e8)
+              }
+              document.getElementById("additionalCoins").innerHTML += stripZeros(recommended.toFixed(8));
+              recommendedBAY = stripZeros(recommended.toFixed(8));
+          }
         }
     } catch (e) {
+        hideSpinner();
         recommendedBAY = 0;
         console.log(e);
     }
@@ -2172,24 +2351,28 @@ async function calculateDeposit() {
 }
 
 function getAmountOut(amountIn, reserveIn, reserveOut, mynumerator) {
-        var amountInWithFee = amountIn * mynumerator; //Uniswap is 997, Pancakeswap is 998
-        var numerator = amountInWithFee * reserveOut;
-        var denominator = (reserveIn * 1000) + amountInWithFee;
-        var amountOut = numerator / denominator;
-        if(amountOut / reserveOut > .995) {
-            return 0; //Slippage is way too high
-        }
-        return amountOut;
+    const amountInWithFee = amountIn.times(mynumerator); //Uniswap is 997, Pancakeswap is 998
+    const numerator = amountInWithFee.times(reserveOut);
+    const denominator = reserveIn.times(new BN(1000)).plus(amountInWithFee);
+    const amountOut = numerator.div(denominator);
+    // Check slippage: amountOut / reserveOut > 0.995
+    const slippageRatio = amountOut.div(reserveOut);
+    if (slippageRatio.gt(new BN("0.995"))) {
+        return new BN(0); // Slippage is too high
+    }
+    return amountOut;
 }
 
-function getAmountIn(amountOut2, reserveIn2, reserveOut2, mynumerator2) {
-    if(amountOut2 > reserveOut2) {
-        amountOut2 = reserveOut2;
+function getAmountIn(amountOut, reserveIn, reserveOut, mynumerator) {
+    if (amountOut.gt(reserveOut)) {
+        amountOut = reserveOut;
     }
-    var numerator = reserveIn2 * amountOut2 * 1000;
-    var denominator = (reserveOut2 - amountOut2) * (mynumerator2);
-    var myamountIn = (numerator / denominator) + 1;
-    return myamountIn;
+
+    const numerator = reserveIn.times(amountOut).times(new BN(1000));
+    const denominator = reserveOut.minus(amountOut).times(mynumerator);
+    const amountIn = numerator.div(denominator).plus(new BN(1)); // Round up
+
+    return amountIn;
 }
 
 function makeFairRatio() {
@@ -2246,10 +2429,10 @@ async function showFrozen() {
             await baydatacontract.methods.FrozenTXDBTimeSpent(myaccounts,x,1).call().then(function (newval) {
                 newval = DOMPurify.sanitize(newval);
                 y = 0;
-                amt = 0;
+                amt = new BN(0);
                 //If you want you can calculate both liquid and reserve for each payment if you follow the release frozen calculation protocol
                 while(y < result2[1]) {
-                    amt += parseInt(result[x][y]);
+                    amt = amt.plus(new BN(result[x][y]));
                     y += 1;
                 }
                 if(myblock.timestamp > parseInt(newval) + reservetimelock) {
@@ -2257,7 +2440,7 @@ async function showFrozen() {
                 } else {
                     release = "(available in " + parseFloat(((((parseInt(newval) + reservetimelock) - parseInt(myblock.timestamp)) / 60) / 60).toFixed(2)) + " hours)";
                 }
-                ftext += "Amount: " + parseFloat((amt / 1e8).toFixed(8)) + "<br>" + "Timestamp to release funds: " + newval + release + "<br>";
+                ftext += "Amount: " + stripZeros(amt.dividedBy(1e8).toFixed(8)) + "<br>" + "Timestamp to release funds: " + newval + release + "<br>";
             });
         }
         x += 1;
@@ -2300,17 +2483,17 @@ async function showPegChart(selectedChart = 0) {
     if(prevtime + 120 < (Math.floor(Date.now() / 1000))) {        
         if(selectedChart == 0) {
             await baydatacontract.methods.calculateBalance(myaccounts,0).call().then(function (myresult4) {
-                result = DOMPurify.sanitize(myresult4[2]);
+                result = JSON.parse(DOMPurify.sanitize(JSON.stringify(myresult4[2])));
             })
         }
         if(selectedChart == 1) {
             await liquiditypool.methods.calculateBalance(myaccounts, mycurrentpair, true, 0).call().then(function (myresult4) {
-                result = DOMPurify.sanitize(myresult4[2]);
+                result = JSON.parse(DOMPurify.sanitize(JSON.stringify(myresult4[2])));
             })
         }
         if(selectedChart == 2) {
             await liquiditypool.methods.calculatePoolBalanceV1(myaccounts, mycurrentpair, 0, LPtokens, precision, 0).call().then(function (myresult4) {
-                result = DOMPurify.sanitize(myresult4[1]);
+                result = JSON.parse(DOMPurify.sanitize(JSON.stringify(myresult4[1])));
             })
         }
         prevresult = result;
@@ -2369,34 +2552,36 @@ async function showPegChart(selectedChart = 0) {
     var tot;
     var tot2;
     while(x < result2[1]) {        
-        y = 0;
-        tot=Math.floor(parseInt(result[x])/parseInt(result2[2]));
-        tot2=parseInt(result[x]);
-        while(y < result2[2]) {
-            if(x == section) {
-                if(y == ak) {
+        let y = 0;
+        let tot = new BigNumber(result[x]).dividedToIntegerBy(new BigNumber(result2[2]));
+        let tot2 = new BigNumber(result[x]);
+
+        while (y < result2[2]) {
+            if (x == section) {
+                if (y == ak) {
                     highkey = iters2;
                 }
-                if(iters >= min && iters <= max) {
-                    data.push(parseInt(result[parseInt(result2[1])+y]));
+                if (iters >= min && iters <= max) {
+                    const val = new BigNumber(result[parseInt(result2[1]) + y]);
+                    data.push(val.toString());
                     iters2 += 1;
                 }
             } else {
-                if(y==result2[2]-1) {
-                    if(tot2 < 0) {
-                        tot2 = 0;                        
+                if (y == result2[2] - 1) {
+                    if (tot2.isNegative()) {
+                        tot2 = new BigNumber(0);
                     }
-                    if(iters >= min && iters <= max) {
-                        data.push(tot2);
+                    if (iters >= min && iters <= max) {
+                        data.push(tot2.toString());
                         iters2 += 1;
                     }
                 } else {
-                    tot2-=tot;
-                    if(tot < 0) {
-                        tot = 0;                        
+                    tot2 = tot2.minus(tot);
+                    if (tot.isNegative()) {
+                        tot = new BigNumber(0);
                     }
-                    if(iters >= min && iters <= max) {
-                        data.push(tot);
+                    if (iters >= min && iters <= max) {
+                        data.push(tot.toString());
                         iters2 += 1;
                     }
                 }
@@ -2409,6 +2594,7 @@ async function showPegChart(selectedChart = 0) {
         }
         x += 1;
     }
+    //console.log(JSON.stringify(data))
     paintchart(labels,data,highkey,selectedChart);
 
     if(selectedChart == 0) {
@@ -2422,6 +2608,7 @@ async function showPegChart(selectedChart = 0) {
 }
 
 function paintchart(mylabels, mydata, thehighkey, selectedChart) {
+    //console.log(mydata.length)
     var chartstring;
     if(selectedChart == 0) {
         chartstring = '#chartContainer'
@@ -2431,7 +2618,7 @@ function paintchart(mylabels, mydata, thehighkey, selectedChart) {
     chart = new Chartist.Bar(chartstring, {
       labels: mylabels,
       series: [
-        mydata
+        mydata.map(s => ({ value: parseInt(s, 10), meta: s }))
       ]
     }, {
       low: 0,
@@ -2452,14 +2639,14 @@ function paintchart(mylabels, mydata, thehighkey, selectedChart) {
     chart.on('draw', function(context) {
         if(context.type === 'bar' && context.index >= thehighkey) {
             context.element.attr({
-              style: 'stroke: hsla(200, 100%, 50%, 0.5);'
+              style: 'stroke: hsla(200, 100%, 50%, 0.5); stroke-width: 4px;'
             });
             return;
 
         }
         if(context.type === 'bar' && context.index < thehighkey) {
             context.element.attr({
-              style: 'stroke: hsla(255, 100%, 50%, 0.5);'
+              style: 'stroke: hsla(255, 100%, 50%, 0.5); stroke-width: 4px;'
             });
 
         }
@@ -2512,7 +2699,7 @@ async function burnToBitBay(burnamount) {
         modalDialog('Connect', "The selected chain was recently changed or you are not logged in, please log in again.", "danger");
         return;
     }
-    burnamount = web3.utils.toWei(burnamount,'gwei')/10;
+    burnamount = new BN(web3.utils.toWei(burnamount, 'gwei')).div(10).toString();
     var myvar = document.getElementById("coinToBurn").value;
     var selectedaccount = myaccounts;
     var myadmin = "";
@@ -2536,7 +2723,6 @@ async function burnToBitBay(burnamount) {
         modalDialog('Connect', "Burn address does not match known admin contract.", "danger");
         return;
     }
-    burnamount = burnamount.toString()
     console.log(burnamount);
     if(myvar == "Reserve Coins") {
         bayrcontract.methods.transfer(myadmin, burnamount).send({"from":selectedaccount,"gasLimit": 2500000,"gasPrice": gasPrice});
@@ -2596,12 +2782,12 @@ async function showNonces() {
     var steps = parseInt(networkvars[1]) + parseInt(networkvars[2]);
     var myhash = web3.utils.keccak256(web3.eth.abi.encodeParameters(['string','uint256[' + steps.toString() + ']','uint256','uint256','address'],[jsonreceipt['address'],jsonreceipt['reserve'],jsonreceipt['section'],jsonreceipt['nonce'],currentaccount]));
     var x = 0;
-    var amt = 0;
+    var amt = new BN(0);
     while(x < steps) {
-        amt += parseInt(jsonreceipt['reserve'][x]);
+        amt=amt.plus(new BN(jsonreceipt['reserve'][x]));
         x += 1;
     }
-    amt = parseFloat((web3.utils.fromWei(amt.toString(), 'gwei')*10).toFixed(8));
+    amt = stripZeros(amt.dividedBy(1e8).toFixed(8));
     document.getElementById("merkletext").innerHTML = DOMPurify.sanitize("Nonce: " + item + "<br>Hash: " + myhash + "<br>Total coins: " + amt);
     var block = await web3.eth.getBlock(await web3.eth.getBlockNumber());
     if ((parseInt(processingTime) + parseInt(intervaltime) + parseInt(intervaltime)) < parseInt(block.timestamp)) {
@@ -2683,7 +2869,7 @@ async function addLiquidity() {
         await coin1contract.methods.allowance(currentaccount, myrouter).call().then(function (liqresult) {
             allowance = DOMPurify.sanitize(liqresult);
         });
-        if(allowance == 0) {
+        if(parseInt(allowance) == 0) {
             //document.getElementById("addliquidtext").innerHTML = 'Waiting for router allowance authorization on the blockchain for the first coin...';
             modalDialog('Connect', "Waiting for router allowance authorization on the blockchain for the first coin...", "warning");
             await coin1contract.methods.approve(myrouter, "9999999999999999999999999999999999999999999999999999999999999999999999").send({"from":currentaccount,"gasLimit": 2500000,"gasPrice": gasPrice});
@@ -2692,7 +2878,7 @@ async function addLiquidity() {
         await baydatacontract.methods.allowance(currentaccount, myrouter).call().then(function (liqresult) {
             allowance = DOMPurify.sanitize(liqresult);
         });
-        if(allowance == 0) {
+        if(parseInt(allowance) == 0) {
             //document.getElementById("addliquidtext").innerHTML = 'Waiting for router allowance authorization on the blockchain for BAY...';
             modalDialog('Connect', "Waiting for router allowance authorization on the blockchain for BAY...", "warning");
             await baylcontract.methods.approve(myrouter, "9999999999999999999999999999999999999999999999999999999999999999999999").send({"from":currentaccount,"gasLimit": 2500000,"gasPrice": gasPrice});
@@ -2701,7 +2887,7 @@ async function addLiquidity() {
         await baydatacontract.methods.allowanceReserve(currentaccount, myrouter).call().then(function (liqresult) {
             allowance = DOMPurify.sanitize(liqresult);
         });
-        if(allowance == 0) {
+        if(parseInt(allowance) == 0) {
             //document.getElementById("addliquidtext").innerHTML = 'Waiting for router allowance authorization on the blockchain for BAYR...';
             modalDialog('Connect', "Waiting for router allowance authorization on the blockchain for BAYR...", "warning");
             await bayrcontract.methods.approve(myrouter, "9999999999999999999999999999999999999999999999999999999999999999999999").send({"from":currentaccount,"gasLimit": 2500000,"gasPrice": gasPrice});
@@ -2754,31 +2940,36 @@ async function addLiquidity() {
         return;
     }
     mydecimals = await getDecimals(mycoin1);
-    mydecimals = "1e" + mydecimals;
-    coin1val = parseInt((coin1val * mydecimals).toFixed(0));
-    coin2val = parseInt((web3.utils.toWei(coin2val,'gwei')/10).toFixed(0));
-    otherval = 0;
-    amount1min = ((coin1val * (100-perc)) / 100).toFixed(0);
-    if(bayselect == 0) {
-        otherval = coin2val;
-        recommended = parseInt((recommended * 1e8).toFixed(0));
-        totalval = parseInt(recommended) + parseInt(otherval);
-        amount2min = parseInt(10000 * (perc / 100)).toFixed(0);
+    mydecimals = new BN("1e" + mydecimals);
+
+    // Using BigNumber for calculations
+    coin1val = new BN(coin1val).times(mydecimals).toFixed(0);
+    coin2val = new BN(web3.utils.toWei(coin2val, 'gwei')).div(10).toFixed(0);
+    otherval = new BN(0);
+    amount1min = new BN(coin1val).times(100 - perc).div(100).toFixed(0);
+
+    if (bayselect == 0) {
+        otherval = new BN(coin2val);
+        recommended = new BN(recommended).times(1e8).toFixed(0);
+        totalval = new BN(recommended).plus(otherval).toFixed(0);
+        amount2min = new BN(10000).times(perc).div(100).toFixed(0);
     } else {
-        otherval = parseInt((recommended * 1e8).toFixed(0));
-        totalval = parseInt(coin2val) + parseInt(otherval);
-        amount2min = parseInt(10000 * (perc / 100)).toFixed(0);
+        otherval = new BN(recommended).times(1e8).toFixed(0);
+        totalval = new BN(coin2val).plus(otherval).toFixed(0);
+        amount2min = new BN(10000).times(perc).div(100).toFixed(0);
     }
-    var returnthis = 0
+
+    let returnthis = 0;
+
     await baylcontract.methods.balanceOf(currentaccount).call().then(function (myliquid) {
-        if(otherval > DOMPurify.sanitize(myliquid)) {
+        if (otherval.isGreaterThan(new BN(DOMPurify.sanitize(myliquid)))) {
             //document.getElementById("addliquidtext").innerHTML = 'Not enough liquid funds for deposit';
             modalDialog('Connect', "Not enough liquid funds for deposit", "danger");
             returnthis = 1;
         }
     });
     await bayrcontract.methods.balanceOf(currentaccount).call().then(function (myrval) {
-        if((totalval - parseInt(otherval)) > parseInt(DOMPurify.sanitize(myrval))) {
+        if (new BN(totalval).minus(otherval).isGreaterThan(new BN(DOMPurify.sanitize(myrval)))) {
             //document.getElementById("addliquidtext").innerHTML = 'Not enough reserve funds for deposit';
             modalDialog('Connect', "Not enough reserve funds for deposit", "danger");
             returnthis = 1;
@@ -2786,7 +2977,7 @@ async function addLiquidity() {
     });
     if(weth) {
         await window.web3.eth.getBalance(myaccounts, function(myliquid) {
-            if(coin1val > parseInt(myliquid)) {
+            if (new BigNumber(coin1val).isGreaterThan(new BigNumber(myliquid))) {
                 //document.getElementById("addliquidtext").innerHTML = 'Not enough coins for deposit';
                 modalDialog('Connect', "Not enough coins for deposit", "danger");
                 returnthis = 1;
@@ -2794,7 +2985,7 @@ async function addLiquidity() {
         });
     } else {
         await coin1contract.methods.balanceOf(currentaccount).call().then(function (myliquid) {
-            if(coin1val > parseInt(DOMPurify.sanitize(myliquid))) {
+            if (new BigNumber(coin1val).isGreaterThan(new BigNumber(DOMPurify.sanitize(myliquid)))) {
                 //document.getElementById("addliquidtext").innerHTML = 'Not enough coins for deposit';
                 modalDialog('Connect', "Not enough coins for deposit", "danger");
                 returnthis = 1;
@@ -2847,7 +3038,7 @@ async function Swap() {
         return;       
     }
     if(lastSelect != 'SwapAmount' && lastSelect != 'SwapAmount2') {
-        document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-danger" >You will have to increase the min/max price fluctuation to higher than ' + parseFloat(slippage.toFixed(4)) + ' to complete this trade.</div>';
+        document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-danger" >You will have to increase the min/max price fluctuation to higher than ' + stripZeros(slippage.toFixed(4)) + ' to complete this trade.</div>';
         document.getElementById("SwapAmount").value = '';
         document.getElementById("SwapAmount2").value = '';
         return;
@@ -2898,7 +3089,7 @@ async function Swap() {
         await coin1contract.methods.allowance(chosenaccount, myrouter).call().then(function (swapresult) {
             allowance = DOMPurify.sanitize(swapresult);
         });
-        if(allowance == 0) {
+        if(parseInt(allowance) == 0) {
             document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-warning" >Waiting for router allowance authorization on the blockchain for the first coin...</div><br>' + prevtext;
             await coin1contract.methods.approve(myrouter, "9999999999999999999999999999999999999999999999999999999999999999999999").send({"from":chosenaccount,"gasLimit": 2500000,"gasPrice": gasPrice});
         }
@@ -2906,7 +3097,7 @@ async function Swap() {
         await baydatacontract.methods.allowance(chosenaccount, myrouter).call().then(function (swapresult) {
             allowance = DOMPurify.sanitize(swapresult);
         });
-        if(allowance == 0) {
+        if(parseInt(allowance) == 0) {
             document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-warning" >Waiting for router allowance authorization on the blockchain for BAY...</div><br>' + prevtext;
             await baylcontract.methods.approve(myrouter, "9999999999999999999999999999999999999999999999999999999999999999999999").send({"from":chosenaccount,"gasLimit": 2500000,"gasPrice": gasPrice});
         }
@@ -2914,7 +3105,7 @@ async function Swap() {
         await baydatacontract.methods.allowanceReserve(chosenaccount, myrouter).call().then(function (swapresult) {
             allowance = DOMPurify.sanitize(swapresult);
         });
-        if(allowance == 0) {
+        if(parseInt(allowance) == 0) {
             document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-warning" >Waiting for router allowance authorization on the blockchain for BAYR...</div><br>' + prevtext;
             await bayrcontract.methods.approve(myrouter, "9999999999999999999999999999999999999999999999999999999999999999999999").send({"from":chosenaccount,"gasLimit": 2500000,"gasPrice": gasPrice});
         }
@@ -2957,20 +3148,20 @@ async function Swap() {
     if(perc == 0 || perc > 1000) {
         document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-warning" >Percentage incorrect, usually 1-10% is recommended</div>';
         return;
-    }    
-    org1 = parseInt((org1 * 1e8).toFixed(0));
-    org2 = parseInt((org2 * decimals).toFixed(0));
+    }
+    org1 = new BN(org1).mul(new BN('100000000'));
+    org2 = new BN(org2).mul(new BN(decimals.toString()));
     if(bayselect == 0 || bayselect == 1) {
         if(weth) {
             await window.web3.eth.getBalance(myaccounts, function(myliquid2) {
-                if(org2 > parseInt(myliquid2)) {
+                if (org2.gt(new BN(DOMPurify.sanitize(myliquid2)))) {
                     document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-warning" >Not enough coins for deposit</div>';
                     returnthis = 1;
                 }
             });
         } else {
             await coin1contract.methods.balanceOf(chosenaccount).call().then(function (myliquid2) {
-                if(org2 > parseInt(DOMPurify.sanitize(myliquid2))) {
+                if (org2.gt(new BN(DOMPurify.sanitize(myliquid2)))) {
                     document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-warning" >Not enough coins for deposit</div>';
                     returnthis = 1;
                 }
@@ -2979,14 +3170,14 @@ async function Swap() {
     } else {
         if(bayselect == 2) {
             await baylcontract.methods.balanceOf(chosenaccount).call().then(function (myliquid2) {
-                if(org1 > parseInt(DOMPurify.sanitize(myliquid2))) {
+                if (org1.gt(new BN(DOMPurify.sanitize(myliquid2)))) {
                     document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-warning" >Not enough liquid funds for deposit</div>';
                     returnthis = 1;
                 }
             });
         } else {
             await bayrcontract.methods.balanceOf(chosenaccount).call().then(function (myrval2) {
-                if(org1 > parseInt(DOMPurify.sanitize(myrval2))) {
+                if (org1.gt(new BN(DOMPurify.sanitize(myrval2)))) {
                     document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-warning" >Not enough reserve funds for deposit</div>';
                     returnthis = 1;
                 }
@@ -2999,9 +3190,9 @@ async function Swap() {
     var block = await web3.eth.getBlock(await web3.eth.getBlockNumber());
     var deadline = (block.timestamp + 1200).toString();
     if(lastSelect == "SwapAmount2") {
-        swapval = parseInt((swapval * decimals).toFixed(0));
+        swapval = new BN(swapval.toString()).mul(new BN(decimals.toString()));
     } else {
-        swapval = parseInt((swapval * 1e8).toFixed(0));
+        swapval = new BN(swapval.toString()).mul(new BN('100000000'));
     }
     swapval = swapval.toString();
     lastMinMax2 = lastMinMax.toString();
@@ -3125,7 +3316,7 @@ async function withdrawLP() {
         await paircontract.methods.allowance(waccount, myrouter).call().then(function (wresult) {
             allowance = DOMPurify.sanitize(wresult);
         });
-        if(allowance == 0) {
+        if(parseInt(allowance) == 0) {
             document.getElementById("LPdetails1").innerHTML = 'Waiting for router allowance authorization on the blockchain for the LP Tokens...<br><br>' + prevtext;
             await paircontract.methods.approve(myrouter, "9999999999999999999999999999999999999999999999999999999999999999999999").send({"from":waccount,"gasLimit": 2500000,"gasPrice": gasPrice});
         }
@@ -3162,8 +3353,8 @@ async function withdrawLP() {
         return;
     }
     await paircontract.methods.balanceOf(waccount).call().then(function (wval2) {
-        wval2 = DOMPurify.sanitize(wval2)
-        if(parseInt(wval) > parseInt(wval2)) {
+        wval2 = new BN(DOMPurify.sanitize(wval2))
+        if(new BN(wval).gt(wval2)) {
             document.getElementById("LPdetails1").innerHTML = 'Not enough LP tokens for withdrawal';
             returnthis = 1;
         }
