@@ -1158,9 +1158,16 @@
 
 function centerPopup() {
     const popup = Swal.getPopup();
+    if (!popup) return;
+
+    // Ensure it's fixed to the viewport
+    popup.style.position = 'fixed';
+
     const rect = popup.getBoundingClientRect();
-    const top = (window.innerHeight - rect.height) / 2 + window.scrollY;
-    const left = (window.innerWidth - rect.width) / 2 + window.scrollX;
+
+    const top = (window.innerHeight - rect.height) / 2;
+    const left = (window.innerWidth - rect.width) / 2;
+
     popup.style.top = `${top}px`;
     popup.style.left = `${left}px`;
 }
@@ -1194,7 +1201,7 @@ function showSpinner() {
     spinnerElement.style.borderTopColor = '#5D2F8E';
     spinnerElement.style.borderRadius = '50%';
     spinnerElement.style.animation = 'spin 1s linear infinite';
-    spinnerElement.style.zIndex = '9999';
+    spinnerElement.style.zIndex = '99';
     spinnerElement.style.cursor = 'pointer';
 
     // Inner hourglass look
@@ -1226,8 +1233,11 @@ function showSpinner() {
 
     // Delay event listeners to avoid instant hide on initial click
     setTimeout(() => {
-        spinnerElement.addEventListener("click", hideSpinner);
-        spinnerElement.addEventListener("touchstart", hideSpinner);
+        try {
+          spinnerElement.addEventListener("click", hideSpinner);
+          spinnerElement.addEventListener("touchstart", hideSpinner);
+        } catch {         
+        }
     }, 100);
 }
 
@@ -2461,6 +2471,12 @@ async function sendFrozen() {
             return;
         }
         lastrun = (Math.floor(Date.now() / 1000)) + 7;
+        Swal.fire({
+            icon: 'info',
+            title: 'Frozen coins',
+            text: 'Attempting to Release frozen coins. Please approve the transaction...',
+            confirmButtonText: 'Close'
+        });
         baydatacontract.methods.ReleaseFrozenFunds(myaccounts).send({"from":myaccounts,"gasLimit": 2500000,"gasPrice": gasPrice});
     }else {      
     }
@@ -2670,6 +2686,11 @@ async function registerBitBay(regaddy) {
     //}
     if(coinjs.addressDecode(regaddy) == false) {
         //document.getElementById("text1").innerHTML += "<br><br>Invalid BitBay address.";
+        Swal.fire({
+            icon: 'warning',
+            title: 'Invalid BitBay address',
+            confirmButtonText: 'Close'
+        });
         modalDialog('Connect', "Invalid BitBay address.", "danger");
         return;
     }
@@ -2679,6 +2700,11 @@ async function registerBitBay(regaddy) {
         if(DOMPurify.sanitize(myresult5) == regaddy){
             found = 0;
             //document.getElementById("text1").innerHTML += "<br><br>A BitBay address is already registered to your address.";
+            Swal.fire({
+                icon: 'warning',
+                title: 'A BitBay address is already registered to your address.',
+                confirmButtonText: 'Close'
+            });
             modalDialog('Connect', "A BitBay address is already registered to your address.", "danger");
             return;
         }    
@@ -2696,6 +2722,11 @@ async function burnToBitBay(burnamount) {
     lastrun = (Math.floor(Date.now() / 1000)) + 7;
     if(await web3.eth.net.getId() != currentChainId) {
         //document.getElementById("text1").innerHTML += "<br><br>The selected chain was recently changed or you are not logged in, please log in again.";
+        Swal.fire({
+            icon: 'warning',
+            title: 'The selected chain was recently changed or you are not logged in, please log in again.',
+            confirmButtonText: 'Close'
+        });
         modalDialog('Connect', "The selected chain was recently changed or you are not logged in, please log in again.", "danger");
         return;
     }
@@ -2711,6 +2742,11 @@ async function burnToBitBay(burnamount) {
         results = DOMPurify.sanitize(results);
         if(!results && results.length == 0){
             //document.getElementById("text1").innerHTML += "<br><br>You need to register your BitBay address before burning.";
+            Swal.fire({
+                icon: 'warning',
+                title: 'You need to register your BitBay address before burning.',
+                confirmButtonText: 'Close'
+            });
             modalDialog('Connect', "You need to register your BitBay address before burning.", "danger");
             found = 0;
         }
@@ -2720,6 +2756,11 @@ async function burnToBitBay(burnamount) {
     }
     if(BAYAdmin != myadmin) {
         //document.getElementById("text1").innerHTML += "<br><br>Burn address does not match known admin contract.";
+        Swal.fire({
+            icon: 'warning',
+            title: 'Burn address does not match known admin contract.',
+            confirmButtonText: 'Close'
+        });
         modalDialog('Connect', "Burn address does not match known admin contract.", "danger");
         return;
     }
@@ -2839,7 +2880,7 @@ async function addLiquidity() {
     var currentaccount = myaccounts;
     var coin1 = document.getElementById("Coin1").value;
     var weth = false;
-    if(coin1 == 1) {
+    if(coin1 == 0) {
         weth = true;
     }
     var exchange = document.getElementById("exchangeSelect").value;
@@ -2852,7 +2893,7 @@ async function addLiquidity() {
     var exchangecontract = new web3.eth.Contract(FactoryABI, exchange);
     var bayselect = document.getElementById("Coin2").value;
     var bayaddy = '';
-    var allowance = 0;    
+    var allowance = 0;
     var mypair = '';
     var myhighkey = 0;
     var section = 0;
@@ -2866,166 +2907,272 @@ async function addLiquidity() {
         mypair = DOMPurify.sanitize(liqresult);
     });
     try {
-        await coin1contract.methods.allowance(currentaccount, myrouter).call().then(function (liqresult) {
-            allowance = DOMPurify.sanitize(liqresult);
-        });
-        if(parseInt(allowance) == 0) {
-            //document.getElementById("addliquidtext").innerHTML = 'Waiting for router allowance authorization on the blockchain for the first coin...';
-            modalDialog('Connect', "Waiting for router allowance authorization on the blockchain for the first coin...", "warning");
-            await coin1contract.methods.approve(myrouter, "9999999999999999999999999999999999999999999999999999999999999999999999").send({"from":currentaccount,"gasLimit": 2500000,"gasPrice": gasPrice});
-        }
-        allowance = 0;
-        await baydatacontract.methods.allowance(currentaccount, myrouter).call().then(function (liqresult) {
-            allowance = DOMPurify.sanitize(liqresult);
-        });
-        if(parseInt(allowance) == 0) {
-            //document.getElementById("addliquidtext").innerHTML = 'Waiting for router allowance authorization on the blockchain for BAY...';
-            modalDialog('Connect', "Waiting for router allowance authorization on the blockchain for BAY...", "warning");
-            await baylcontract.methods.approve(myrouter, "9999999999999999999999999999999999999999999999999999999999999999999999").send({"from":currentaccount,"gasLimit": 2500000,"gasPrice": gasPrice});
-        }
-        allowance = 0;
-        await baydatacontract.methods.allowanceReserve(currentaccount, myrouter).call().then(function (liqresult) {
-            allowance = DOMPurify.sanitize(liqresult);
-        });
-        if(parseInt(allowance) == 0) {
-            //document.getElementById("addliquidtext").innerHTML = 'Waiting for router allowance authorization on the blockchain for BAYR...';
-            modalDialog('Connect', "Waiting for router allowance authorization on the blockchain for BAYR...", "warning");
-            await bayrcontract.methods.approve(myrouter, "9999999999999999999999999999999999999999999999999999999999999999999999").send({"from":currentaccount,"gasLimit": 2500000,"gasPrice": gasPrice});
-        }
+      try {
+          showSpinner();
+          await coin1contract.methods.allowance(currentaccount, myrouter).call().then(function (liqresult) {
+              allowance = DOMPurify.sanitize(liqresult);
+          });
+          if(parseInt(allowance) == 0) {
+              //document.getElementById("addliquidtext").innerHTML = 'Waiting for router allowance authorization on the blockchain for the first coin...';
+              Swal.fire({
+                  icon: 'info',
+                  title: 'Allowance',
+                  text: 'Authorizing Metamask allowance for the first coin...',
+                  confirmButtonText: 'Close'
+              });
+              modalDialog('Connect', "Waiting for router allowance authorization on the blockchain for the first coin...", "warning");
+              await coin1contract.methods.approve(myrouter, "9999999999999999999999999999999999999999999999999999999999999999999999").send({"from":currentaccount,"gasLimit": 2500000,"gasPrice": gasPrice});
+          }
+          allowance = 0;
+          await baydatacontract.methods.allowance(currentaccount, myrouter).call().then(function (liqresult) {
+              allowance = DOMPurify.sanitize(liqresult);
+          });
+          if(parseInt(allowance) == 0) {
+              //document.getElementById("addliquidtext").innerHTML = 'Waiting for router allowance authorization on the blockchain for BAY...';
+              Swal.fire({
+                  icon: 'info',
+                  title: 'Allowance',
+                  text: 'Authorizing Metamask allowance for BAY...',
+                  confirmButtonText: 'Close'
+              });
+              modalDialog('Connect', "Waiting for router allowance authorization on the blockchain for BAY...", "warning");
+              await baylcontract.methods.approve(myrouter, "9999999999999999999999999999999999999999999999999999999999999999999999").send({"from":currentaccount,"gasLimit": 2500000,"gasPrice": gasPrice});
+          }
+          allowance = 0;
+          await baydatacontract.methods.allowanceReserve(currentaccount, myrouter).call().then(function (liqresult) {
+              allowance = DOMPurify.sanitize(liqresult);
+          });
+          if(parseInt(allowance) == 0) {
+              //document.getElementById("addliquidtext").innerHTML = 'Waiting for router allowance authorization on the blockchain for BAYR...';
+              Swal.fire({
+                  icon: 'info',
+                  title: 'Allowance',
+                  text: 'Authorizing Metamask allowance for BAYR...',
+                  confirmButtonText: 'Close'
+              });
+              modalDialog('Connect', "Waiting for router allowance authorization on the blockchain for BAYR...", "warning");
+              await bayrcontract.methods.approve(myrouter, "9999999999999999999999999999999999999999999999999999999999999999999999").send({"from":currentaccount,"gasLimit": 2500000,"gasPrice": gasPrice});
+          }
+      } catch (e) {
+          console.log(e);
+          //document.getElementById("addliquidtext").innerHTML = 'Approval failed';
+          Swal.fire({
+              icon: 'error',
+              text: 'Approval failed',
+              confirmButtonText: 'Close'
+          });
+          modalDialog('Connect', "Approval failed", "danger");
+          hideSpinner();
+          return;
+      }
+      if(/^0x0+$/.test(mypair) == false) {
+          await liquiditypool.methods.poolhighkey(mypair).call().then(function (liqresult) {
+              myhighkey = parseInt(DOMPurify.sanitize(liqresult));
+          });
+          section = Math.floor(networkvars[0] / networkvars[2]);
+          if(myhighkey != section) {
+              //document.getElementById("addliquidtext").innerHTML = 'Syncing AMM...';
+              Swal.fire({
+                  icon: 'info',
+                  title: 'Syncing pair',
+                  text: 'Authorizing Metamask to Sync AMM for this pair...',
+                  confirmButtonText: 'Close'
+              });
+              modalDialog('Connect', "Syncing AMM...", "warning");
+              try {
+                  await liquiditypool.methods.syncAMM(mypair).send({"from":currentaccount,"gasLimit": 2500000,"gasPrice": gasPrice});
+              } catch (e) {
+                  console.log(e);
+                  //document.getElementById("addliquidtext").innerHTML = 'Syncing failed';
+                  Swal.fire({
+                      icon: 'error',
+                      text: 'Syncing failed',
+                      confirmButtonText: 'Close'
+                  });
+                  modalDialog('Connect', "Syncing failed", "danger");
+                  hideSpinner();
+                  return;
+              }
+              document.getElementById("Coin1amount").value = '';
+              document.getElementById("Coin2amount").value = '';
+          }
+      }
+      if(myhighkey != section) {
+          //document.getElementById("addliquidtext").innerHTML = 'This pair is now in sync. Please recalculate your deposit.';
+          Swal.fire({
+              icon: 'info',
+              title: 'Pair in sync',
+              text: 'This pair is now in sync. Please recalculate your deposit.',
+              confirmButtonText: 'Close'
+          });
+          modalDialog('Connect', "This pair is now in sync. Please recalculate your deposit.", "success");
+          hideSpinner();
+          return;
+      }
+      //document.getElementById("addliquidtext").innerHTML = '';
+      if(parseFloat(coin1val) == 0) {
+          //document.getElementById("addliquidtext").innerHTML = 'Amount can not be zero';
+          Swal.fire({
+              icon: 'warning',
+              text: 'Amount can not be zero',
+              confirmButtonText: 'Close'
+          });
+          modalDialog('Connect', "Amount can not be zero", "warning");
+          hideSpinner();
+          return;
+      }
+      if(parseFloat(coin2val) == 0) {
+          //document.getElementById("addliquidtext").innerHTML = 'Amount can not be zero';
+          Swal.fire({
+              icon: 'warning',
+              text: 'Amount can not be zero',
+              confirmButtonText: 'Close'
+          });
+          modalDialog('Connect', "Amount can not be zero", "warning");
+          hideSpinner();
+          return;
+      }
+      if(perc == 0 || perc > 1000) {
+          //document.getElementById("addliquidtext").innerHTML = 'Percentage incorrect, usually 1-5% is recommended';
+          Swal.fire({
+              icon: 'warning',
+              text: 'Percentage incorrect, usually 1-5% is recommended',
+              confirmButtonText: 'Close'
+          });
+          modalDialog('Connect', "Percentage incorrect, usually 1-5% is recommended", "danger");
+          hideSpinner();
+          return;
+      }
+      mydecimals = await getDecimals(mycoin1);
+      mydecimals = new BN("1e" + mydecimals);
+
+      // Using BigNumber for calculations
+      coin1val = new BN(coin1val).times(mydecimals).toFixed(0);
+      coin2val = new BN(web3.utils.toWei(coin2val, 'gwei')).div(10).toFixed(0);
+      otherval = new BN(0);
+      amount1min = new BN(coin1val).times(100 - perc).div(100).toFixed(0);
+
+      if (bayselect == 0) {
+          otherval = new BN(coin2val);
+          recommended = new BN(recommended).times(1e8).toFixed(0);
+          totalval = new BN(recommended).plus(otherval).toFixed(0);
+          amount2min = new BN(10000).times(perc).div(100).toFixed(0);
+      } else {
+          otherval = new BN(recommended).times(1e8).toFixed(0);
+          totalval = new BN(coin2val).plus(otherval).toFixed(0);
+          amount2min = new BN(10000).times(perc).div(100).toFixed(0);
+      }
+
+      let returnthis = 0;
+
+      await baylcontract.methods.balanceOf(currentaccount).call().then(function (myliquid) {
+          if (otherval.isGreaterThan(new BN(DOMPurify.sanitize(myliquid)))) {
+              //document.getElementById("addliquidtext").innerHTML = 'Not enough liquid funds for deposit';
+              Swal.fire({
+                  icon: 'warning',
+                  text: 'Not enough liquid funds for deposit',
+                  confirmButtonText: 'Close'
+              });
+              modalDialog('Connect', "Not enough liquid funds for deposit", "danger");
+              returnthis = 1;
+          }
+      });
+      await bayrcontract.methods.balanceOf(currentaccount).call().then(function (myrval) {
+          if (new BN(totalval).minus(otherval).isGreaterThan(new BN(DOMPurify.sanitize(myrval)))) {
+              //document.getElementById("addliquidtext").innerHTML = 'Not enough reserve funds for deposit';
+              Swal.fire({
+                  icon: 'warning',
+                  text: 'Not enough reserve funds for deposit',
+                  confirmButtonText: 'Close'
+              });
+              modalDialog('Connect', "Not enough reserve funds for deposit", "danger");
+              returnthis = 1;
+          }
+      });
+      if(weth) {
+          await window.web3.eth.getBalance(myaccounts, function(myliquid) {
+              if (new BigNumber(coin1val).isGreaterThan(new BigNumber(myliquid))) {
+                  //document.getElementById("addliquidtext").innerHTML = 'Not enough coins for deposit';
+                  Swal.fire({
+                      icon: 'warning',
+                      text: 'Not enough coins for deposit',
+                      confirmButtonText: 'Close'
+                  });
+                  modalDialog('Connect', "Not enough coins for deposit", "danger");
+                  returnthis = 1;
+              }
+          });
+      } else {
+          await coin1contract.methods.balanceOf(currentaccount).call().then(function (myliquid) {
+              if (new BigNumber(coin1val).isGreaterThan(new BigNumber(DOMPurify.sanitize(myliquid)))) {
+                  //document.getElementById("addliquidtext").innerHTML = 'Not enough coins for deposit';
+                  Swal.fire({
+                      icon: 'warning',
+                      text: 'Not enough coins for deposit',
+                      confirmButtonText: 'Close'
+                  });
+                  modalDialog('Connect', "Not enough coins for deposit", "danger");
+                  returnthis = 1;
+              }
+          });
+      }
+      if(returnthis == 1) {
+          hideSpinner();
+          return;
+      }
+      var block = await web3.eth.getBlock(await web3.eth.getBlockNumber());
+      var deadline = (block.timestamp + 1200).toString();
+      coin1val = coin1val.toString();
+      totalval = totalval.toString();
+      otherval = otherval.toString();
+      amount2min = amount2min.toString();
+      amount1min = amount1min.toString();
+      console.log(coin1val)
+      console.log(totalval)
+      console.log(otherval)
+      console.log(amount2min)
+      console.log(amount1min)
+      //document.getElementById("addliquidtext").innerHTML = 'Attempting to add liquidity, please approve the transaction...';
+      Swal.fire({
+          icon: 'info',
+          title: 'Adding liquidity',
+          text: 'Attempting to add liquidity, please approve the transaction...',
+          confirmButtonText: 'Close'
+      });
+      modalDialog('Connect', "Attempting to add liquidity, please approve the transaction...", "warning");
+      try {
+          if(weth) {
+              await routercontract.methods.addLiquidityETH(bayaddy,totalval,otherval,amount2min,amount1min,currentaccount,deadline,exchange).send({"from":currentaccount,"value":coin1val,"gasLimit": 9000000,"gasPrice": gasPrice});
+          } else {
+              await routercontract.methods.addLiquidity([bayaddy,coin1],[totalval,coin1val],otherval,amount2min,amount1min,currentaccount,deadline,exchange).send({"from":currentaccount,"gasLimit": 9000000,"gasPrice": gasPrice});
+          }
+      } catch (e) {
+          console.log(e);
+          //document.getElementById("addliquidtext").innerHTML = 'Transaction failed';
+          modalDialog('Connect', "Transaction failed", "danger");        
+          Swal.fire({
+              icon: 'error',
+              text: 'Transaction failed: ' + e.message,
+              confirmButtonText: 'Close'
+          });
+          hideSpinner();
+          return;
+      }
+      //document.getElementById("addliquidtext").innerHTML = 'Success!';
+      modalDialog('Connect', "Success", "success");
+      document.getElementById("Coin1amount").value = '';
+      document.getElementById("Coin2amount").value = '';
+      checkbalances();
+      Swal.fire({
+          icon: 'success',
+          title: 'Deposit Successful',
+          confirmButtonText: 'Close'
+      });
+      hideSpinner();
     } catch (e) {
-        console.log(e);
-        //document.getElementById("addliquidtext").innerHTML = 'Approval failed';
-        modalDialog('Connect', "Approval failed", "danger");
-        return;
+      console.log(e);
+      hideSpinner();
     }
-    if(/^0x0+$/.test(mypair) == false) {
-        await liquiditypool.methods.poolhighkey(mypair).call().then(function (liqresult) {
-            myhighkey = parseInt(DOMPurify.sanitize(liqresult));
-        });
-        section = Math.floor(networkvars[0] / networkvars[2]);
-        if(myhighkey != section) {
-            //document.getElementById("addliquidtext").innerHTML = 'Syncing AMM...';
-            modalDialog('Connect', "Syncing AMM...", "warning");
-            try {
-                await liquiditypool.methods.syncAMM(mypair).send({"from":currentaccount,"gasLimit": 2500000,"gasPrice": gasPrice});
-            } catch (e) {
-                console.log(e);
-                //document.getElementById("addliquidtext").innerHTML = 'Syncing failed';
-                modalDialog('Connect', "Syncing failed", "danger");
-                return;
-            }
-            document.getElementById("Coin1amount").value = '';
-            document.getElementById("Coin2amount").value = '';
-        }
-    }
-    if(myhighkey != section) {
-        //document.getElementById("addliquidtext").innerHTML = 'This pair is now in sync. Please recalculate your deposit.';
-        modalDialog('Connect', "This pair is now in sync. Please recalculate your deposit.", "success");
-        return;
-    }
-    //document.getElementById("addliquidtext").innerHTML = '';
-    if(parseFloat(coin1val) == 0) {
-        //document.getElementById("addliquidtext").innerHTML = 'Amount can not be zero';
-        modalDialog('Connect', "Amount can not be zero", "warning");
-        return;
-    }
-    if(parseFloat(coin2val) == 0) {
-        //document.getElementById("addliquidtext").innerHTML = 'Amount can not be zero';
-        modalDialog('Connect', "Amount can not be zero", "warning");
-        return;
-    }
-    if(perc == 0 || perc > 1000) {
-        //document.getElementById("addliquidtext").innerHTML = 'Percentage incorrect, usually 1-5% is recommended';
-        modalDialog('Connect', "Percentage incorrect, usually 1-5% is recommended", "danger");
-        return;
-    }
-    mydecimals = await getDecimals(mycoin1);
-    mydecimals = new BN("1e" + mydecimals);
-
-    // Using BigNumber for calculations
-    coin1val = new BN(coin1val).times(mydecimals).toFixed(0);
-    coin2val = new BN(web3.utils.toWei(coin2val, 'gwei')).div(10).toFixed(0);
-    otherval = new BN(0);
-    amount1min = new BN(coin1val).times(100 - perc).div(100).toFixed(0);
-
-    if (bayselect == 0) {
-        otherval = new BN(coin2val);
-        recommended = new BN(recommended).times(1e8).toFixed(0);
-        totalval = new BN(recommended).plus(otherval).toFixed(0);
-        amount2min = new BN(10000).times(perc).div(100).toFixed(0);
-    } else {
-        otherval = new BN(recommended).times(1e8).toFixed(0);
-        totalval = new BN(coin2val).plus(otherval).toFixed(0);
-        amount2min = new BN(10000).times(perc).div(100).toFixed(0);
-    }
-
-    let returnthis = 0;
-
-    await baylcontract.methods.balanceOf(currentaccount).call().then(function (myliquid) {
-        if (otherval.isGreaterThan(new BN(DOMPurify.sanitize(myliquid)))) {
-            //document.getElementById("addliquidtext").innerHTML = 'Not enough liquid funds for deposit';
-            modalDialog('Connect', "Not enough liquid funds for deposit", "danger");
-            returnthis = 1;
-        }
-    });
-    await bayrcontract.methods.balanceOf(currentaccount).call().then(function (myrval) {
-        if (new BN(totalval).minus(otherval).isGreaterThan(new BN(DOMPurify.sanitize(myrval)))) {
-            //document.getElementById("addliquidtext").innerHTML = 'Not enough reserve funds for deposit';
-            modalDialog('Connect', "Not enough reserve funds for deposit", "danger");
-            returnthis = 1;
-        }
-    });
-    if(weth) {
-        await window.web3.eth.getBalance(myaccounts, function(myliquid) {
-            if (new BigNumber(coin1val).isGreaterThan(new BigNumber(myliquid))) {
-                //document.getElementById("addliquidtext").innerHTML = 'Not enough coins for deposit';
-                modalDialog('Connect', "Not enough coins for deposit", "danger");
-                returnthis = 1;
-            }
-        });
-    } else {
-        await coin1contract.methods.balanceOf(currentaccount).call().then(function (myliquid) {
-            if (new BigNumber(coin1val).isGreaterThan(new BigNumber(DOMPurify.sanitize(myliquid)))) {
-                //document.getElementById("addliquidtext").innerHTML = 'Not enough coins for deposit';
-                modalDialog('Connect', "Not enough coins for deposit", "danger");
-                returnthis = 1;
-            }
-        });
-    }
-    if(returnthis == 1) {
-        return;
-    }
-    var block = await web3.eth.getBlock(await web3.eth.getBlockNumber());
-    var deadline = (block.timestamp + 1200).toString();
-    coin1val = coin1val.toString();
-    totalval = totalval.toString();
-    otherval = otherval.toString();
-    amount2min = amount2min.toString();
-    amount1min = amount1min.toString();
-    console.log(coin1val)
-    console.log(totalval)
-    console.log(otherval)
-    console.log(amount2min)
-    console.log(amount1min)
-    //document.getElementById("addliquidtext").innerHTML = 'Attempting to add liquidity, please approve the transaction...';
-    modalDialog('Connect', "Attempting to add liquidity, please approve the transaction...", "warning");
-    try {
-        if(weth) {
-            await routercontract.methods.addLiquidityETH(bayaddy,totalval,otherval,amount2min,amount1min,currentaccount,deadline,exchange).send({"from":currentaccount,"value":coin1val,"gasLimit": 9000000,"gasPrice": gasPrice});
-        } else {
-            await routercontract.methods.addLiquidity([bayaddy,coin1],[totalval,coin1val],otherval,amount2min,amount1min,currentaccount,deadline,exchange).send({"from":currentaccount,"gasLimit": 9000000,"gasPrice": gasPrice});
-        }
-    } catch (e) {
-        console.log(e);
-        //document.getElementById("addliquidtext").innerHTML = 'Transaction failed';
-        modalDialog('Connect', "Transaction failed", "danger");
-        return;
-    }
-    //document.getElementById("addliquidtext").innerHTML = 'Success!';
-    modalDialog('Connect', "Success", "success");
-    document.getElementById("Coin1amount").value = '';
-    document.getElementById("Coin2amount").value = '';
-    checkbalances();
 }
 
 async function Swap() {
@@ -3038,6 +3185,12 @@ async function Swap() {
         return;       
     }
     if(lastSelect != 'SwapAmount' && lastSelect != 'SwapAmount2') {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Price Slippage Warning',
+            text: 'You will have to increase the min/max price fluctuation to higher than ' + stripZeros(slippage.toFixed(4)) + ' to complete this trade.',
+            confirmButtonText: 'Close'
+        });
         document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-danger" >You will have to increase the min/max price fluctuation to higher than ' + stripZeros(slippage.toFixed(4)) + ' to complete this trade.</div>';
         document.getElementById("SwapAmount").value = '';
         document.getElementById("SwapAmount2").value = '';
@@ -3055,7 +3208,7 @@ async function Swap() {
     var prevtext = document.getElementById("SwapSummary").innerHTML;
     var coin1 = document.getElementById("SwapCoin2").value;
     var weth = false;
-    if(coin1 == 1) {
+    if(coin1 == 0) {
         weth = true;
     }
     var mycoin1 = coin1;
@@ -3086,194 +3239,301 @@ async function Swap() {
     decimals = await getDecimals(mycoin1);
     decimals = "1e" + decimals;
     try {
-        await coin1contract.methods.allowance(chosenaccount, myrouter).call().then(function (swapresult) {
-            allowance = DOMPurify.sanitize(swapresult);
-        });
-        if(parseInt(allowance) == 0) {
-            document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-warning" >Waiting for router allowance authorization on the blockchain for the first coin...</div><br>' + prevtext;
-            await coin1contract.methods.approve(myrouter, "9999999999999999999999999999999999999999999999999999999999999999999999").send({"from":chosenaccount,"gasLimit": 2500000,"gasPrice": gasPrice});
-        }
-        allowance = 0;
-        await baydatacontract.methods.allowance(chosenaccount, myrouter).call().then(function (swapresult) {
-            allowance = DOMPurify.sanitize(swapresult);
-        });
-        if(parseInt(allowance) == 0) {
-            document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-warning" >Waiting for router allowance authorization on the blockchain for BAY...</div><br>' + prevtext;
-            await baylcontract.methods.approve(myrouter, "9999999999999999999999999999999999999999999999999999999999999999999999").send({"from":chosenaccount,"gasLimit": 2500000,"gasPrice": gasPrice});
-        }
-        allowance = 0;
-        await baydatacontract.methods.allowanceReserve(chosenaccount, myrouter).call().then(function (swapresult) {
-            allowance = DOMPurify.sanitize(swapresult);
-        });
-        if(parseInt(allowance) == 0) {
-            document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-warning" >Waiting for router allowance authorization on the blockchain for BAYR...</div><br>' + prevtext;
-            await bayrcontract.methods.approve(myrouter, "9999999999999999999999999999999999999999999999999999999999999999999999").send({"from":chosenaccount,"gasLimit": 2500000,"gasPrice": gasPrice});
-        }
+      try {
+          showSpinner();
+          await coin1contract.methods.allowance(chosenaccount, myrouter).call().then(function (swapresult) {
+              allowance = DOMPurify.sanitize(swapresult);
+          });
+          if(parseInt(allowance) == 0) {
+              Swal.fire({
+                  icon: 'info',
+                  title: 'Allowance',
+                  text: 'Authorizing Metamask allowance for first coin...',
+                  confirmButtonText: 'Close'
+              });
+              document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-warning" >Waiting for router allowance authorization on the blockchain for the first coin...</div><br>' + prevtext;
+              await coin1contract.methods.approve(myrouter, "9999999999999999999999999999999999999999999999999999999999999999999999").send({"from":chosenaccount,"gasLimit": 2500000,"gasPrice": gasPrice});
+          }
+          allowance = 0;
+          await baydatacontract.methods.allowance(chosenaccount, myrouter).call().then(function (swapresult) {
+              allowance = DOMPurify.sanitize(swapresult);
+          });
+          if(parseInt(allowance) == 0) {
+              Swal.fire({
+                  icon: 'info',
+                  title: 'Allowance',
+                  text: 'Authorizing Metamask allowance for BAY...',
+                  confirmButtonText: 'Close'
+              });
+              document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-warning" >Waiting for router allowance authorization on the blockchain for BAY...</div><br>' + prevtext;
+              await baylcontract.methods.approve(myrouter, "9999999999999999999999999999999999999999999999999999999999999999999999").send({"from":chosenaccount,"gasLimit": 2500000,"gasPrice": gasPrice});
+          }
+          allowance = 0;
+          await baydatacontract.methods.allowanceReserve(chosenaccount, myrouter).call().then(function (swapresult) {
+              allowance = DOMPurify.sanitize(swapresult);
+          });
+          if(parseInt(allowance) == 0) {
+              Swal.fire({
+                  icon: 'info',
+                  title: 'Allowance',
+                  text: 'Authorizing Metamask allowance for BAYR...',
+                  confirmButtonText: 'Close'
+              });
+              document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-warning" >Waiting for router allowance authorization on the blockchain for BAYR...</div><br>' + prevtext;
+              await bayrcontract.methods.approve(myrouter, "9999999999999999999999999999999999999999999999999999999999999999999999").send({"from":chosenaccount,"gasLimit": 2500000,"gasPrice": gasPrice});
+          }
+      } catch (e) {
+          console.log(e);
+          //document.getElementById("addliquidtext").innerHTML = 'Approval failed';
+          modalDialog('Connect', "Approval failed", "danger");
+          Swal.fire({
+              icon: 'error',
+              text: 'Approval failed',
+              confirmButtonText: 'Close'
+          });
+          hideSpinner();
+          return;
+      }
+      if(/^0x0+$/.test(mypair) == false) {
+          await liquiditypool.methods.poolhighkey(mypair).call().then(function (swapresult) {
+              myhighkey = parseInt(DOMPurify.sanitize(swapresult));
+          });
+          section = Math.floor(networkvars[0] / networkvars[2]);
+          if(myhighkey != section) {
+              Swal.fire({
+                  icon: 'info',
+                  title: 'Syncing AMM',
+                  text: 'Authorizing Metamask to sync AMM pair...',
+                  confirmButtonText: 'Close'
+              });
+              document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-warning" >Syncing AMM...</div><br>' + prevtext;
+              try {
+                  await liquiditypool.methods.syncAMM(mypair).send({"from":chosenaccount,"gasLimit": 2500000,"gasPrice": gasPrice});
+              } catch (e) {
+                  console.log(e);
+                  //document.getElementById("SwapSummary").innerHTML = 'Syncing failed';
+                  document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-danger" >Error: Syncing failed!</div>';
+                  Swal.fire({
+                      icon: 'error',
+                      title: 'Syncing failed',
+                      confirmButtonText: 'Close'
+                  });
+                  hideSpinner();
+                  return;
+              }
+              document.getElementById("SwapAmount").value = '';
+              document.getElementById("SwapAmount2").value = '';
+          }
+      } else {
+          document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-danger" >Pair does not exist yet. Please deposit liquidity to the pair.</div>';
+          Swal.fire({
+              icon: 'warning',
+              title: 'AMM pair',
+              text: 'Pair does not exist yet. Please deposit liquidity to the pair.',
+              confirmButtonText: 'Close'
+          });
+          hideSpinner();
+          return;
+      }
+      if(myhighkey != section) {        
+          document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-warning" >This pair is now in sync. Please recalculate your swap.</div>';
+          Swal.fire({
+              icon: 'info',
+              text: 'This pair is now in sync. Please recalculate your swap.',
+              confirmButtonText: 'Close'
+          });
+          hideSpinner();
+          return;
+      }
+      if(parseFloat(swapval) == 0) {
+          document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-warning" >Amount can not be zero</div>';
+          Swal.fire({
+              icon: 'warning',
+              text: 'Amount can not be zero',
+              confirmButtonText: 'Close'
+          });
+          hideSpinner();
+          return;
+      }
+      if(perc == 0 || perc > 1000) {        
+          document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-warning" >Percentage incorrect, usually 1-10% is recommended</div>';
+          Swal.fire({
+              icon: 'warning',
+              text: 'Percentage incorrect, usually 1-10% is recommended',
+              confirmButtonText: 'Close'
+          });
+          hideSpinner();
+          return;
+      }
+      org1 = new BN(org1).times(new BN('100000000'));
+      org2 = new BN(org2).times(new BN(decimals.toString()));
+      if(bayselect == 0 || bayselect == 1) {
+          if(weth) {
+              await window.web3.eth.getBalance(myaccounts, function(myliquid2) {
+                  if (org2.gt(new BN(DOMPurify.sanitize(myliquid2)))) {
+                      console.log(org2.toFixed())
+                      console.log(myliquid2.toFixed())
+                      Swal.fire({
+                          icon: 'warning',
+                          text: 'Not enough coins for deposit',
+                          confirmButtonText: 'Close'
+                      });
+                      document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-warning" >Not enough coins for deposit</div>';
+                      returnthis = 1;
+                  }
+              });
+          } else {
+              await coin1contract.methods.balanceOf(chosenaccount).call().then(function (myliquid2) {
+                  if (org2.gt(new BN(DOMPurify.sanitize(myliquid2)))) {
+                      Swal.fire({
+                          icon: 'warning',
+                          text: 'Not enough coins for deposit',
+                          confirmButtonText: 'Close'
+                      });
+                      document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-warning" >Not enough coins for deposit</div>';
+                      returnthis = 1;
+                  }
+              });
+          }
+      } else {
+          if(bayselect == 2) {
+              await baylcontract.methods.balanceOf(chosenaccount).call().then(function (myliquid2) {
+                  if (org1.gt(new BN(DOMPurify.sanitize(myliquid2)))) {
+                      Swal.fire({
+                          icon: 'warning',
+                          text: 'Not enough liquid BAYL coins for deposit',
+                          confirmButtonText: 'Close'
+                      });
+                      document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-warning" >Not enough liquid funds for deposit</div>';
+                      returnthis = 1;
+                  }
+              });
+          } else {
+              await bayrcontract.methods.balanceOf(chosenaccount).call().then(function (myrval2) {
+                  if (org1.gt(new BN(DOMPurify.sanitize(myrval2)))) {
+                      Swal.fire({
+                          icon: 'warning',
+                          text: 'Not enough reserve BAYR coins for deposit',
+                          confirmButtonText: 'Close'
+                      });
+                      document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-warning" >Not enough reserve funds for deposit</div>';
+                      returnthis = 1;
+                  }
+              });
+          }
+      }
+      if(returnthis == 1) {
+          hideSpinner();
+          return;
+      }
+      var block = await web3.eth.getBlock(await web3.eth.getBlockNumber());
+      var deadline = (block.timestamp + 1200).toString();
+      if(lastSelect == "SwapAmount2") {
+          swapval = new BN(swapval.toString()).times(new BN(decimals.toString()));
+      } else {
+          swapval = new BN(swapval.toString()).times(new BN('100000000'));
+      }
+      swapval = swapval.toString();
+      lastMinMax2 = lastMinMax.toString();
+      console.log(swapval);
+      console.log(lastMinMax2);
+      Swal.fire({
+          icon: 'info',
+          title: 'Swap',
+          text: 'Attempting to perform the swap, please approve the transaction...',
+          confirmButtonText: 'Close'
+      });
+      document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-warning" >Attempting to perform the swap, please approve the transaction...</div><br>' + prevtext;
+      try {
+          if(bayselect == 0) {
+              //Buying BitBay coins
+              if(lastSelect == "SwapAmount") { //Maximum coins paid
+                  if(weth) {
+                      await routercontract.methods.swapETHForExactTokens(swapval,[coin1,bayaddy],chosenaccount,deadline,exchange).send({"from":chosenaccount,"value":lastMinMax2,"gasLimit": 5000000,"gasPrice": gasPrice});
+                  } else {
+                      await routercontract.methods.swapTokensForExactTokens(swapval,lastMinMax2,[coin1,bayaddy],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
+                  }
+              } else { //Minimum BAY received
+                  if(weth) {
+                      await routercontract.methods.swapExactETHForTokens(lastMinMax2,[coin1,bayaddy],chosenaccount,deadline,exchange).send({"from":chosenaccount,"value":swapval,"gasLimit": 5000000,"gasPrice": gasPrice});
+                  } else {
+                      await routercontract.methods.swapExactTokensForTokens(swapval,lastMinMax2,[coin1,bayaddy],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
+                  }
+              }
+          }
+          if(bayselect == 1) {
+              //Buying BitBay Reserve coins
+              if(lastSelect == "SwapAmount") { //Maximum coins paid
+                  if(weth) {
+                      await routercontract.methods.swapETHForExactTokens(swapval,[coin1,bayaddy],chosenaccount,deadline,exchange).send({"from":chosenaccount,"value":lastMinMax2,"gasLimit": 5000000,"gasPrice": gasPrice});
+                  } else {
+                      await routercontract.methods.swapTokensForExactTokens(swapval,lastMinMax2,[coin1,bayaddy],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
+                  }
+              } else { //Minimum BAY received
+                  if(weth) {
+                      await routercontract.methods.swapExactETHForTokens(lastMinMax2,[coin1,bayaddy],chosenaccount,deadline,exchange).send({"from":chosenaccount,"value":swapval,"gasLimit": 5000000,"gasPrice": gasPrice});
+                  } else {
+                      await routercontract.methods.swapExactTokensForTokens(swapval,lastMinMax2,[coin1,bayaddy],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
+                  }
+              }
+          }
+          if(bayselect == 2) {
+              //Selling BitBay coins
+              if(lastSelect == "SwapAmount") { //Minimum coins received
+                  if(weth) {
+                      await routercontract.methods.swapExactTokensForETH(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
+                  } else {
+                      await routercontract.methods.swapExactTokensForTokens(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
+                  }
+              } else { //Maximum BAY paid
+                  if(weth) {
+                      await routercontract.methods.swapTokensForExactETH(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
+                  } else {
+                      await routercontract.methods.swapTokensForExactTokens(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
+                  }
+              }
+          }
+          if(bayselect == 3) {
+              //Selling BitBay Reserve coins
+              if(lastSelect == "SwapAmount") { //Minimum coins received
+                  if(weth) {
+                      await routercontract.methods.swapExactTokensForETH(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
+                  } else {
+                      await routercontract.methods.swapExactTokensForTokens(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
+                  }
+              } else { //Maximum BAY paid
+                  if(weth) {
+                      await routercontract.methods.swapTokensForExactETH(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
+                  } else {
+                      await routercontract.methods.swapTokensForExactTokens(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
+                  }
+              }
+          }
+      } catch (e) {
+          console.log(e);
+          document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-danger" >Error: Swap failed!</div>';
+          Swal.fire({
+              icon: 'error',
+              title: 'Swap failed',
+              text: e.message,
+              confirmButtonText: 'Close'
+          });
+          hideSpinner();
+          return;
+      }
+      document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-success" >Success!</div><br>' + prevtext;
+      document.getElementById("SwapAmount").value = '';
+      document.getElementById("SwapAmount2").value = '';
+      Swal.fire({
+          icon: 'success',
+          title: 'Swap Successful!',
+          confirmButtonText: 'Close'
+      });
+      hideSpinner();
     } catch (e) {
-        console.log(e);
-        //document.getElementById("addliquidtext").innerHTML = 'Approval failed';
-        modalDialog('Connect', "Approval failed", "danger");
-        return;
+      console.log(e);
+      hideSpinner();
     }
-    if(/^0x0+$/.test(mypair) == false) {
-        await liquiditypool.methods.poolhighkey(mypair).call().then(function (swapresult) {
-            myhighkey = parseInt(DOMPurify.sanitize(swapresult));
-        });
-        section = Math.floor(networkvars[0] / networkvars[2]);
-        if(myhighkey != section) {
-            document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-warning" >Syncing AMM...</div><br>' + prevtext;
-            try {
-                await liquiditypool.methods.syncAMM(mypair).send({"from":chosenaccount,"gasLimit": 2500000,"gasPrice": gasPrice});
-            } catch (e) {
-                console.log(e);
-                //document.getElementById("SwapSummary").innerHTML = 'Syncing failed';
-                document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-danger" >Error: Syncing failed!</div>';
-                return;
-            }
-            document.getElementById("SwapAmount").value = '';
-            document.getElementById("SwapAmount2").value = '';
-        }
-    } else {
-        document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-danger" >Pair does not exist yet. Please deposit liquidity to the pair.</div>';
-        return;
-    }
-    if(myhighkey != section) {
-        document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-warning" >This pair is now in sync. Please recalculate your swap.</div>';
-        return;
-    }
-    if(parseFloat(swapval) == 0) {
-        document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-warning" >Amount can not be zero</div>';
-        return;
-    }
-    if(perc == 0 || perc > 1000) {
-        document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-warning" >Percentage incorrect, usually 1-10% is recommended</div>';
-        return;
-    }
-    org1 = new BN(org1).mul(new BN('100000000'));
-    org2 = new BN(org2).mul(new BN(decimals.toString()));
-    if(bayselect == 0 || bayselect == 1) {
-        if(weth) {
-            await window.web3.eth.getBalance(myaccounts, function(myliquid2) {
-                if (org2.gt(new BN(DOMPurify.sanitize(myliquid2)))) {
-                    document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-warning" >Not enough coins for deposit</div>';
-                    returnthis = 1;
-                }
-            });
-        } else {
-            await coin1contract.methods.balanceOf(chosenaccount).call().then(function (myliquid2) {
-                if (org2.gt(new BN(DOMPurify.sanitize(myliquid2)))) {
-                    document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-warning" >Not enough coins for deposit</div>';
-                    returnthis = 1;
-                }
-            });
-        }
-    } else {
-        if(bayselect == 2) {
-            await baylcontract.methods.balanceOf(chosenaccount).call().then(function (myliquid2) {
-                if (org1.gt(new BN(DOMPurify.sanitize(myliquid2)))) {
-                    document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-warning" >Not enough liquid funds for deposit</div>';
-                    returnthis = 1;
-                }
-            });
-        } else {
-            await bayrcontract.methods.balanceOf(chosenaccount).call().then(function (myrval2) {
-                if (org1.gt(new BN(DOMPurify.sanitize(myrval2)))) {
-                    document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-warning" >Not enough reserve funds for deposit</div>';
-                    returnthis = 1;
-                }
-            });
-        }
-    }
-    if(returnthis == 1) {
-        return;
-    }
-    var block = await web3.eth.getBlock(await web3.eth.getBlockNumber());
-    var deadline = (block.timestamp + 1200).toString();
-    if(lastSelect == "SwapAmount2") {
-        swapval = new BN(swapval.toString()).mul(new BN(decimals.toString()));
-    } else {
-        swapval = new BN(swapval.toString()).mul(new BN('100000000'));
-    }
-    swapval = swapval.toString();
-    lastMinMax2 = lastMinMax.toString();
-    console.log(swapval);
-    console.log(lastMinMax2);
-
-    document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-warning" >Attempting to perform the swap, please approve the transaction...</div><br>' + prevtext;
-    try {
-        if(bayselect == 0) {
-            //Buying BitBay coins
-            if(lastSelect == "SwapAmount") { //Maximum coins paid
-                if(weth) {
-                    await routercontract.methods.swapETHForExactTokens(swapval,[coin1,bayaddy],chosenaccount,deadline,exchange).send({"from":chosenaccount,"value":lastMinMax2,"gasLimit": 5000000,"gasPrice": gasPrice});
-                } else {
-                    await routercontract.methods.swapTokensForExactTokens(swapval,lastMinMax2,[coin1,bayaddy],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
-                }
-            } else { //Minimum BAY received
-                if(weth) {
-                    await routercontract.methods.swapExactETHForTokens(lastMinMax2,[coin1,bayaddy],chosenaccount,deadline,exchange).send({"from":chosenaccount,"value":swapval,"gasLimit": 5000000,"gasPrice": gasPrice});
-                } else {
-                    await routercontract.methods.swapExactTokensForTokens(swapval,lastMinMax2,[coin1,bayaddy],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
-                }
-            }
-        }
-        if(bayselect == 1) {
-            //Buying BitBay Reserve coins
-            if(lastSelect == "SwapAmount") { //Maximum coins paid
-                if(weth) {
-                    await routercontract.methods.swapETHForExactTokens(swapval,[coin1,bayaddy],chosenaccount,deadline,exchange).send({"from":chosenaccount,"value":lastMinMax2,"gasLimit": 5000000,"gasPrice": gasPrice});
-                } else {
-                    await routercontract.methods.swapTokensForExactTokens(swapval,lastMinMax2,[coin1,bayaddy],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
-                }
-            } else { //Minimum BAY received
-                if(weth) {
-                    await routercontract.methods.swapExactETHForTokens(lastMinMax2,[coin1,bayaddy],chosenaccount,deadline,exchange).send({"from":chosenaccount,"value":swapval,"gasLimit": 5000000,"gasPrice": gasPrice});
-                } else {
-                    await routercontract.methods.swapExactTokensForTokens(swapval,lastMinMax2,[coin1,bayaddy],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
-                }
-            }
-        }
-        if(bayselect == 2) {
-            //Selling BitBay coins
-            if(lastSelect == "SwapAmount") { //Minimum coins received
-                if(weth) {
-                    await routercontract.methods.swapExactTokensForETH(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
-                } else {
-                    await routercontract.methods.swapExactTokensForTokens(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
-                }
-            } else { //Maximum BAY paid
-                if(weth) {
-                    await routercontract.methods.swapTokensForExactETH(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
-                } else {
-                    await routercontract.methods.swapTokensForExactTokens(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
-                }
-            }
-        }
-        if(bayselect == 3) {
-            //Selling BitBay Reserve coins
-            if(lastSelect == "SwapAmount") { //Minimum coins received
-                if(weth) {
-                    await routercontract.methods.swapExactTokensForETH(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
-                } else {
-                    await routercontract.methods.swapExactTokensForTokens(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
-                }
-            } else { //Maximum BAY paid
-                if(weth) {
-                    await routercontract.methods.swapTokensForExactETH(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
-                } else {
-                    await routercontract.methods.swapTokensForExactTokens(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
-                }
-            }
-        }
-    } catch (e) {
-        console.log(e);
-        document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-danger" >Error: Swap failed!</div>';
-
-        return;
-    }
-    document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-success" >Success!</div><br>' + prevtext;
-    document.getElementById("SwapAmount").value = '';
-    document.getElementById("SwapAmount2").value = '';
 }
 
 async function withdrawLP() {
@@ -3286,7 +3546,7 @@ async function withdrawLP() {
     var prevtext = document.getElementById("LPdetails1").innerHTML;
     var coin1 = document.getElementById("Coin1").value;
     var weth = false;
-    if(coin1 == 1) {
+    if(coin1 == 0) {
         weth = true;
     }
     coin1 = Object.values(pairs[coin1])[0];
@@ -3313,73 +3573,146 @@ async function withdrawLP() {
     });
     var paircontract = new web3.eth.Contract(PairABI, mypair);
     try {
-        await paircontract.methods.allowance(waccount, myrouter).call().then(function (wresult) {
-            allowance = DOMPurify.sanitize(wresult);
-        });
-        if(parseInt(allowance) == 0) {
-            document.getElementById("LPdetails1").innerHTML = 'Waiting for router allowance authorization on the blockchain for the LP Tokens...<br><br>' + prevtext;
-            await paircontract.methods.approve(myrouter, "9999999999999999999999999999999999999999999999999999999999999999999999").send({"from":waccount,"gasLimit": 2500000,"gasPrice": gasPrice});
-        }
+      try {
+          showSpinner();
+          await paircontract.methods.allowance(waccount, myrouter).call().then(function (wresult) {
+              allowance = DOMPurify.sanitize(wresult);
+          });
+          if(parseInt(allowance) == 0) {
+              Swal.fire({
+                  icon: 'info',
+                  title: 'Allowance',
+                  text: 'Authorizing Metamask allowance for LP Tokens...',
+                  confirmButtonText: 'Close'
+              });
+              document.getElementById("LPdetails1").innerHTML = 'Waiting for router allowance authorization on the blockchain for the LP Tokens...<br><br>' + prevtext;
+              await paircontract.methods.approve(myrouter, "9999999999999999999999999999999999999999999999999999999999999999999999").send({"from":waccount,"gasLimit": 2500000,"gasPrice": gasPrice});
+          }
+      } catch (e) {
+          console.log(e);
+          document.getElementById("LPdetails1").innerHTML = 'Approval failed';
+          Swal.fire({
+              icon: 'error',
+              title: 'Approval failed',
+              confirmButtonText: 'Close'
+          });
+          hideSpinner();
+          return;
+      }
+      if(/^0x0+$/.test(mypair) == false) {
+          await liquiditypool.methods.poolhighkey(mypair).call().then(function (wresult) {
+              myhighkey = parseInt(DOMPurify.sanitize(wresult));
+          });
+          section = Math.floor(networkvars[0] / networkvars[2]);
+          if(myhighkey != section) {
+              Swal.fire({
+                  icon: 'info',
+                  title: 'Syncing AMM',
+                  text: 'Authorizing Metamask to sync AMM pair...',
+                  confirmButtonText: 'Close'
+              });
+              document.getElementById("LPdetails1").innerHTML = 'Syncing AMM...<br><br>' + prevtext;
+              try {
+                  await liquiditypool.methods.syncAMM(mypair).send({"from":waccount,"gasLimit": 2500000,"gasPrice": gasPrice});
+              } catch (e) {
+                  console.log(e);
+                  document.getElementById("LPdetails1").innerHTML = 'Syncing failed';
+                  Swal.fire({
+                      icon: 'error',
+                      title: 'Syncing failed',
+                      confirmButtonText: 'Close'
+                  });
+                  hideSpinner();
+                  return;
+              }
+              document.getElementById("LPdetails1").value = '';
+          }
+      } else {
+          document.getElementById("LPdetails1").innerHTML = 'Pair does not exist yet. Please deposit liquidity to the pair.';
+          Swal.fire({
+              icon: 'info',
+              text: 'Pair does not exist yet. Please deposit liquidity to the pair.',
+              confirmButtonText: 'Close'
+          });
+          hideSpinner();
+          return;
+      }
+      if(myhighkey != section) {
+          document.getElementById("LPdetails1").innerHTML = 'This pair is now in sync. Please recalculate your withdrawal.';
+          Swal.fire({
+              icon: 'info',
+              text: 'This pair is now in sync. Please recalculate your withdrawal.',
+              confirmButtonText: 'Close'
+          });
+          hideSpinner();
+          return;
+      }
+      if(parseFloat(wval) == 0) {
+          document.getElementById("LPdetails1").innerHTML = 'Amount can not be zero';
+          Swal.fire({
+              icon: 'warning',
+              text: 'Amount can not be zero',
+              confirmButtonText: 'Close'
+          });
+          hideSpinner();
+          return;
+      }
+      await paircontract.methods.balanceOf(waccount).call().then(function (wval2) {
+          wval2 = new BN(DOMPurify.sanitize(wval2))
+          if(new BN(wval).gt(wval2)) {
+              Swal.fire({
+                  icon: 'warning',
+                  text: 'Not enough LP tokens for withdrawal',
+                  confirmButtonText: 'Close'
+              });
+              document.getElementById("LPdetails1").innerHTML = 'Not enough LP tokens for withdrawal';
+              returnthis = 1;
+          }
+      })
+      if(returnthis == 1) {
+          hideSpinner();
+          return;
+      }
+      var block = await web3.eth.getBlock(await web3.eth.getBlockNumber());
+      var deadline = (block.timestamp + 1200).toString();
+      console.log(wval);
+      Swal.fire({
+          icon: 'info',
+          title: 'Withdrawal',
+          text: 'Attempting to perform the withdrawal, please approve the transaction...',          
+          confirmButtonText: 'Close'
+      });
+      document.getElementById("LPdetails1").innerHTML = 'Attempting to perform the withdrawal, please approve the transaction...<br><br>' + prevtext;
+      try {
+          if(weth) {
+              await routercontract.methods.removeLiquidityETH(bayaddy,wval,withdrawMin1,withdrawMin2,waccount,deadline,exchange).send({"from":waccount,"gasLimit": 9000000,"gasPrice": gasPrice});
+          } else {
+              await routercontract.methods.removeLiquidity(coin1,bayaddy,wval,withdrawMin1,withdrawMin2,waccount,deadline,exchange).send({"from":waccount,"gasLimit": 9000000,"gasPrice": gasPrice});
+          }
+      } catch (e) {
+          console.log(e);
+          document.getElementById("LPdetails1").innerHTML = 'Withdrawal failed';
+          Swal.fire({
+              icon: 'error',
+              title: 'Withdrawal failed',
+              text: e.message,
+              confirmButtonText: 'Close'
+          });
+          hideSpinner();
+          return;
+      }
+      document.getElementById("LPdetails1").innerHTML = 'Success!<br><br>' + prevtext;
+      checkbalances();
+      Swal.fire({
+          icon: 'success',
+          title: 'Withdrawal Successful!',
+          confirmButtonText: 'Close'
+      });
+      hideSpinner();
     } catch (e) {
-        console.log(e);
-        document.getElementById("LPdetails1").innerHTML = 'Approval failed';
+      console.log(e);
+      hideSpinner();
     }
-    if(/^0x0+$/.test(mypair) == false) {
-        await liquiditypool.methods.poolhighkey(mypair).call().then(function (wresult) {
-            myhighkey = parseInt(DOMPurify.sanitize(wresult));
-        });
-        section = Math.floor(networkvars[0] / networkvars[2]);
-        if(myhighkey != section) {
-            document.getElementById("LPdetails1").innerHTML = 'Syncing AMM...<br><br>' + prevtext;
-            try {
-                await liquiditypool.methods.syncAMM(mypair).send({"from":waccount,"gasLimit": 2500000,"gasPrice": gasPrice});
-            } catch (e) {
-                console.log(e);
-                document.getElementById("LPdetails1").innerHTML = 'Syncing failed';
-                return;
-            }
-            document.getElementById("LPdetails1").value = '';
-        }
-    } else {
-        document.getElementById("LPdetails1").innerHTML = 'Pair does not exist yet. Please deposit liquidity to the pair.';
-        return;
-    }
-    if(myhighkey != section) {
-        document.getElementById("LPdetails1").innerHTML = 'This pair is now in sync. Please recalculate your withdrawal.';
-        return;
-    }
-    if(parseFloat(wval) == 0) {
-        document.getElementById("LPdetails1").innerHTML = 'Amount can not be zero';
-        return;
-    }
-    await paircontract.methods.balanceOf(waccount).call().then(function (wval2) {
-        wval2 = new BN(DOMPurify.sanitize(wval2))
-        if(new BN(wval).gt(wval2)) {
-            document.getElementById("LPdetails1").innerHTML = 'Not enough LP tokens for withdrawal';
-            returnthis = 1;
-        }
-    })
-    if(returnthis == 1) {
-        return;
-    }
-    var block = await web3.eth.getBlock(await web3.eth.getBlockNumber());
-    var deadline = (block.timestamp + 1200).toString();
-    console.log(wval);
-
-    document.getElementById("LPdetails1").innerHTML = 'Attempting to perform the withdrawal, please approve the transaction...<br><br>' + prevtext;
-    try {
-        if(weth) {
-            await routercontract.methods.removeLiquidityETH(bayaddy,wval,withdrawMin1,withdrawMin2,waccount,deadline,exchange).send({"from":waccount,"gasLimit": 9000000,"gasPrice": gasPrice});
-        } else {
-            await routercontract.methods.removeLiquidity(coin1,bayaddy,wval,withdrawMin1,withdrawMin2,waccount,deadline,exchange).send({"from":waccount,"gasLimit": 9000000,"gasPrice": gasPrice});
-        }
-    } catch (e) {
-        console.log(e);
-        document.getElementById("LPdetails1").innerHTML = 'Withdrawal failed';
-        return;
-    }
-    document.getElementById("LPdetails1").innerHTML = 'Success!<br><br>' + prevtext;
-    checkbalances();
 }
 
 //Useful for situations where pair becomes illiquid and ratio of funds has to be fixed manually
