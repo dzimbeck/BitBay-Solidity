@@ -59,7 +59,7 @@ RouterABI = [
 			},
 			{
 				"internalType": "uint256",
-				"name": "amountAMin",
+				"name": "amountAMinMax",
 				"type": "uint256"
 			},
 			{
@@ -123,7 +123,7 @@ RouterABI = [
 			},
 			{
 				"internalType": "uint256",
-				"name": "amountTokenMin",
+				"name": "amountTokenMinMax",
 				"type": "uint256"
 			},
 			{
@@ -248,34 +248,16 @@ RouterABI = [
 			},
 			{
 				"internalType": "uint256",
+				"name": "amount2",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
 				"name": "BAY_BAYR",
 				"type": "uint256"
 			}
 		],
 		"name": "donateLiquidity",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "bool",
-				"name": "status",
-				"type": "bool"
-			},
-			{
-				"internalType": "uint256",
-				"name": "toleranceL",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "toleranceR",
-				"type": "uint256"
-			}
-		],
-		"name": "enforceRatio",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
@@ -394,19 +376,6 @@ RouterABI = [
 				"internalType": "uint256[]",
 				"name": "amounts",
 				"type": "uint256[]"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "minter",
-		"outputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
 			}
 		],
 		"stateMutability": "view",
@@ -722,19 +691,9 @@ RouterABI = [
 				"type": "address"
 			},
 			{
-				"internalType": "uint256",
+				"internalType": "address",
 				"name": "",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			},
-			{
-				"internalType": "bool",
-				"name": "",
-				"type": "bool"
+				"type": "address"
 			}
 		],
 		"stateMutability": "view",
