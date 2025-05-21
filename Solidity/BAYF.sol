@@ -66,7 +66,7 @@ contract BAYF is IHALO {
                 while(y < 30) {
                     val += fval[x][y];
                     y += 1;
-                }                
+                }
             }
             x += 1;
         }

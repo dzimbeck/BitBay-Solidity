@@ -42,12 +42,14 @@ contract Administration is IAdministration {
     mapping (uint => bytes32[]) public hashes;
     mapping (uint => address[]) public addresses; //Useful cross reference
     mapping (uint => uint) public processingTime;
+
     uint public nonce;
     uint public intervaltime = 43200; //12 hour batches of transactions. And stakers can wait a few hours to finalize data.
     uint public timeLimit = 15552000; //Curators should be encouraged to stay active
     uint public startingNonce = 0; //Increment this by a billion for each new bridge to keep hashes unique    
     bool public enableSpecialTX = false;
     bool public automaticUnfreeze = true;
+    address[] public syncAMM;
     uint[2][7] public proxylock;
     bytes32[] public Merkles; //This can be validated by looking at the BitBay network.
     mapping (bytes32 => uint) public MerkleConfirm; //Gives time for users to react to a bad Merkle
@@ -73,7 +75,7 @@ contract Administration is IAdministration {
     constructor() {
         nonce = startingNonce;
         minter = msg.sender;
-        mintmode = 1;
+        mintmode = 0;
         totalSupply = 1e17;
         myweight[msg.sender] = 100;
         isCurator[msg.sender] = true;
@@ -86,7 +88,7 @@ contract Administration is IAdministration {
             x += 1;
         }
         maxweight = 100000;
-        delayTime = 7257600; //3 month delay for major proxy changes
+        delayTime = 3888000; //45 day delay for major proxy changes
     }
 
     //Solidity limits the number of variables to a function so a struct is used here
@@ -155,6 +157,8 @@ contract Administration is IAdministration {
         return true;
     }
 
+    //If there is ever a concern of all curators becoming inactive then one curator could be a smart contract
+    //The contract could be decentralized voting based on staking from protocol owned assets
     function removeCurator(address curator, bool reset) public returns (bool){
         require(msg.sender == minter || isCurator[msg.sender]);
         if(reset == true && msg.sender == minter) {
@@ -175,6 +179,35 @@ contract Administration is IAdministration {
         myweight[curator] = 0;
         require(totalvotes != 0);
         return true;
+    }
+
+    function modifySync(address target, bool addThis) external {
+        require(msg.sender == minter);
+        require(target != address(0));
+        if (addThis) {
+            bool added = false;
+            for (uint i = 0; i < syncAMM.length; i++) {
+                if (syncAMM[i] == address(0)) {
+                    syncAMM[i] = target;
+                    added = true;
+                    break;
+                }
+            }
+            if (!added) {
+                syncAMM.push(target);
+            }
+        } else {
+            for (uint i = 0; i < syncAMM.length; i++) {
+                if (syncAMM[i] == target) {
+                    uint last = syncAMM.length - 1;
+                    if (i != last) {
+                        syncAMM[i] = syncAMM[last];
+                    }
+                    syncAMM[last] = address(0);
+                    break;
+                }
+            }
+        }
     }
 
     function checkProposal(bytes32 myprop, uint mytype) private returns (bool){
@@ -319,6 +352,16 @@ contract Administration is IAdministration {
                 (success, result) = poolProxy.call(abi.encodeWithSignature("syncAMM(address)",sync[x]));
                 require(success);
                 x += 1;
+            }
+            if(len == 0 && syncAMM.length != 0) {
+                len = syncAMM.length;
+                while(x < len) {
+                    if(syncAMM[x] != address(0)) {
+                        (success, result) = poolProxy.call(abi.encodeWithSignature("syncAMM(address)",syncAMM[x]));
+                        require(success);
+                    }
+                    x += 1;
+                }
             }
         }
         emit emitProposal(msg.sender, 7, abi.encodePacked("setSupply",supply));
@@ -620,7 +663,7 @@ contract Administration is IAdministration {
     }
 
     function updateProxies() public returns(bool) {
-        require(msg.sender == minter);
+        require(msg.sender == minter || isCurator[msg.sender]);
         uint i = lastProxyPosition;
         uint count;
         bool success;

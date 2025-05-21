@@ -179,11 +179,6 @@ BAYRabi = [
 				"internalType": "address",
 				"name": "verify",
 				"type": "address"
-			},
-			{
-				"internalType": "bool",
-				"name": "checkSync",
-				"type": "bool"
 			}
 		],
 		"name": "checkAddress",

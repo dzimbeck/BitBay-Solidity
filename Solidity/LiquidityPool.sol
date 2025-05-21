@@ -36,22 +36,6 @@ contract Pool is ILiquidityPool {
         minter = msg.sender;
     }
 
-    //Safe math functions
-    function mulDiv(uint x, uint y, uint z) internal pure returns (uint) {
-      uint a = x / z; uint b = x % z; // x = a * z + b
-      uint c = y / z; uint d = y % z; // y = c * z + d
-      return a * b * z + a * d + b * c + b * d / z;
-    }
-    function add(uint x, uint y) internal pure returns (uint z) {
-        require((z = x + y) >= x, 'ds-math-add-overflow');
-    }
-    function sub(uint x, uint y) internal pure returns (uint z) {
-        require((z = x - y) <= x, 'ds-math-sub-underflow');
-    }
-    function mul(uint x, uint y) internal pure returns (uint z) {
-        require(y == 0 || (z = x * y) / y == x, 'ds-math-mul-overflow');
-    }
-
     function setProxy(address myproxy) public returns (bool) {
         require(msg.sender == minter);
         require(proxy == address(0)); //Set this one time
@@ -262,7 +246,7 @@ contract Pool is ILiquidityPool {
             reserve2[a.i] -= difference[a.i];
             a.i += 1;
         }
-        LPtokens[user][pool] = sub(LPtokens[user][pool],liquidity);
+        LPtokens[user][pool] -= liquidity;
         reserveatpool[user][pool] = store64(reserve2);
         highkeyatpool[user][pool] = (a.supply / a.mk);
         poolbalance[pool] = store64(a.reserve);
@@ -276,7 +260,7 @@ contract Pool is ILiquidityPool {
         require(success);
         success = abi.decode(result, (bool));
         require(success);
-        LPtokens[to][pool] = add(LPtokens[to][pool],liquidity);
+        LPtokens[to][pool] += liquidity;
     }
     function LPbalance(address pool) external {
         bool success;
@@ -467,10 +451,10 @@ contract Pool is ILiquidityPool {
         }
         //Now expand the size of the proposed pool chart to account for the amount requested from the pool
         //The users liquid chart will be magnified or diminished depending on if the pool has gained or lost coins
-        b.amount = (mul((b.poolliquid + b.poolrval),LP)) / LPsupply;
+        b.amount = ((b.poolliquid + b.poolrval) * LP) / LPsupply;
         if(bothsides == true) {
-            b.prval = (mul((b.poolrval),LP)) / LPsupply;
-            b.plval = (mul((b.poolliquid),LP)) / LPsupply;
+            b.prval = (b.poolrval * LP) / LPsupply;
+            b.plval = (b.poolliquid * LP) / LPsupply;
         }
         a.i = 0;
         if(a.newtot != b.amount && skip == 0) {
@@ -634,7 +618,7 @@ contract Pool is ILiquidityPool {
             a.i = 0;
             a.newtot = 0;
             while (a.i < a.mk) {
-                a.liquid = mul(b.poolreserve[a.pegsteps + a.i],val) / a.highkey;
+                a.liquid = (b.poolreserve[a.pegsteps + a.i] * val) / a.highkey;
                 b.poolreserve[a.pegsteps + a.i] -= a.liquid;
                 newreserve[a.pegsteps + a.i] += a.liquid;
                 a.newtot += a.liquid;
@@ -642,13 +626,13 @@ contract Pool is ILiquidityPool {
             }
             a.i = 0; //We iterate liquid and reserve
             while (a.i < a.pegsteps) {
-                a.liquid = mul(b.poolreserve[a.i],val) / a.highkey;
+                a.liquid = (b.poolreserve[a.i] * val) / a.highkey;
                 b.poolreserve[a.i] -= a.liquid;
                 newreserve[a.i] += a.liquid;
                 a.newtot += a.liquid;
                 a.i += 1;
             }
-            a.highkey = sub(val, a.newtot); //remainder
+            a.highkey = val - a.newtot; //remainder
             a.i = 0;
             while (a.i < a.mk) {
                 if (a.highkey == 0) {

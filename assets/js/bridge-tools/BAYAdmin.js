@@ -827,6 +827,24 @@ BAYAdminAbi = [
 		"inputs": [
 			{
 				"internalType": "address",
+				"name": "target",
+				"type": "address"
+			},
+			{
+				"internalType": "bool",
+				"name": "addThis",
+				"type": "bool"
+			}
+		],
+		"name": "modifySync",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
 				"name": "",
 				"type": "address"
 			},
@@ -1330,6 +1348,25 @@ BAYAdminAbi = [
 				"internalType": "uint256",
 				"name": "",
 				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"name": "syncAMM",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
 			}
 		],
 		"stateMutability": "view",

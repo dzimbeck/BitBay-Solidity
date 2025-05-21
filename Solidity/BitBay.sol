@@ -72,9 +72,9 @@ contract BITBAY {
         microsteps = 8; //25-12-4,30-5-8,30-10-4 (different factor combinations have varied smoothness and costs)
         intervaltime = block.timestamp;
         currentSupply = 0;
-        maxchange = 40;
-        reservetimelock = 600; //10 minutes for testing, BitBay's actual delay is one month
-        changefrequency = 120; //2 minutes for testing
+        maxchange = 20;
+        reservetimelock = 2592000; //One month delay to send reserve
+        changefrequency = 1800; //30 minutes per supply change
         totalSupply = 1e17;
     }
     
