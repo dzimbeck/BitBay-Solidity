@@ -82,7 +82,7 @@
           <ul class="options">
               <li class="option">
                   <i class="bx bxl-github" style="color: #171515;"></i>
-                  <span class="option-text">Ethereum (Sepolia Testnet)</span>
+                  <span class="option-text" id="current-network">Polygon</span>
               </li>
               
           </ul>
@@ -1573,6 +1573,7 @@ const BN = BigNumber;
 document.getElementById("CoinPercent").value = '10';
 document.getElementById('SwapCoin').value = "0";
 document.getElementById('SwapCoin2').value = "0";
+var updates = "";
 
 function defaultvars() {
     myaccounts = [];
@@ -1678,6 +1679,7 @@ async function checkbalances() {
     var netname = "unknown";
     var netname2 = "ETH";
     if (currentChainId == "11155111") {
+        document.getElementById("current-network").innerHTML = "Sepolia Testnet";        
         netname = "Sepolia Testnet";
         netname2 = "ETH";
         BAYLaddy = "0x009A9691B789b3E3082f727CD32130E1fdEEb618";
@@ -1693,6 +1695,7 @@ async function checkbalances() {
         reservetimelock = 600; //Testnet is 10 minutes
     }
     if (currentChainId == "137") {
+        document.getElementById("current-network").innerHTML = "Polygon";
         netname = "Polygon";
         netname2 = "POL";
         BAYLaddy = "0x05aB92a131A489e23bE8eBA829F3986D72af6A2E";
@@ -1758,10 +1761,28 @@ async function checkbalances() {
     //    if(parseInt(DOMPurify.sanitize(isActive)) > 1) {            
     //        modalDialog('Connect', "NOTICE: Spending is currently disabled as this contract may be under maintenance.", "warning");
     //    }
-    //})
+    //})    
+    try {
+      var lastCheck = localStorage.getItem("lastDelayCheck");
+      const now = Date.now();
+      if (!lastCheck) {
+        lastCheck = now;
+      }
+      if (((now - parseInt(lastCheck, 10)) > 60 * 60 * 1000) || parseInt(lastCheck) == parseInt(now)) {
+        localStorage.setItem("lastDelayCheck", now.toString());
+        const pos = parseInt(DOMPurify.sanitize(await bayadmincontract.methods.lastProxyPosition().call()));
+        updates = DOMPurify.sanitize(JSON.parse(await bayadmincontract.methods.delayedChanges(pos).call()));
+        console.log(updates);
+      }
+    } catch (e) {
+      //This is expected to catch if no updates are incoming. List length is not available directly in the contract.
+    }
+    if(updates != "") {
+      document.getElementById("balance_network").innerHTML += "<br><br>NOTICE: Contract updates are pending. Please check the delayed changes in the contract.";
+    }
     document.getElementById("contractinfo").innerHTML = "Contracts to import into Metamask so that you may interact with BitBay: <br>BitBay - " +  BAYLaddy + "<br>BitBay Reserve - " + BAYRaddy + "<br>BitBay Frozen - " + BAYFaddy + "<br><br>";
     await getNetworkInfo();
-    await getMarketData();    
+    await getMarketData();
 }
 
 async function getNetworkInfo() {
