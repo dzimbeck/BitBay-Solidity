@@ -41,6 +41,7 @@ contract Administration is IAdministration {
     mapping (address => uint[]) public mynonces;
     mapping (uint => bytes32[]) public hashes;
     mapping (uint => address[]) public addresses; //Useful cross reference
+    mapping (uint => uint) public totalSpent;
     mapping (uint => uint) public processingTime;
 
     uint public nonce;
@@ -50,7 +51,7 @@ contract Administration is IAdministration {
     bool public enableSpecialTX = false;
     bool public automaticUnfreeze = true;
     address[] public syncAMM;
-    uint[2][7] public proxylock;
+    uint[2][6] public proxylock;
     bytes32[] public Merkles; //This can be validated by looking at the BitBay network.
     mapping (bytes32 => uint) public MerkleConfirm; //Gives time for users to react to a bad Merkle
     uint unlock = 0;
@@ -147,10 +148,10 @@ contract Administration is IAdministration {
 
     function lockProxies(uint locktime, uint pos) public returns (bool){
         require(msg.sender == minter);
-        require(proxylock[pos][0] < block.timestamp);
+        require(proxylock[pos][0] < block.timestamp - 86400);
         if(proxylock[pos][1] < 3) {
             require(locktime < 7257600);
-            require(locktime > 1209600);
+            require(locktime > 2419200);
         }
         proxylock[pos][0] = block.timestamp + locktime;
         proxylock[pos][1] += 1;
@@ -295,9 +296,7 @@ contract Administration is IAdministration {
     }
     
     function setActive(bool status) public returns (bool){
-        if(proxylock[3][1] > 3) {
-            require(proxylock[3][0] < block.timestamp);
-        }
+        require(status != false);
         bytes32 proposal = keccak256(abi.encodePacked("setActive",status));
         bool res = checkProposal(proposal, 4);
         if (res) {
@@ -394,7 +393,7 @@ contract Administration is IAdministration {
     //Custom routers are needed to set temporary variables to authorize correct AMM trades
     //Since users choose to use these exchanges they can also audit new routers.
     function changeRouter(address myAMM, bool status) public returns (bool){
-        require(proxylock[4][0] < block.timestamp);
+        require(proxylock[3][0] < block.timestamp);
         bytes32 proposal = keccak256(abi.encodePacked("changeRouter",myAMM,status));
         bool res = checkProposal(proposal, 10);
         if (res) {
@@ -405,7 +404,7 @@ contract Administration is IAdministration {
     }
 
     function setLiquidityPool(address targetProxy, address LP) public returns (bool){
-        require(proxylock[5][0] < block.timestamp);
+        require(proxylock[4][0] < block.timestamp);
         bytes32 proposal = keccak256(abi.encodePacked("setLiquidityPool",targetProxy,LP));
         bool res = checkProposal(proposal, 11);
         if (res) {
@@ -427,7 +426,7 @@ contract Administration is IAdministration {
 
     //This will change the proxy contract of a target contract so proceed with caution
     function changeTargetProxy(address targetproxy, address newproxy) public returns (bool){
-        require(proxylock[6][0] < block.timestamp);
+        require(proxylock[5][0] < block.timestamp);
         bytes32 proposal = keccak256(abi.encodePacked("changeTargetProxy",targetproxy,newproxy));
         bool res = checkProposal(proposal, 13);
         if (res) {
@@ -585,6 +584,12 @@ contract Administration is IAdministration {
             nonce += 1; //Start making a new tree
             processingTime[nonce] = block.timestamp;
         }
+        uint tot;        
+        while(a.i < reserve.length) {
+            tot += reserve[a.i];
+        }
+        a.i = 0;
+        totalSpent[nonce] += tot;
         if(filled[nonce][sender] == false) {
             BAYdata[nonce][sender] = store64(reserve);
             highkey[nonce][sender] = section;

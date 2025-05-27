@@ -713,7 +713,7 @@ contract HALO {
     }
 }
 
-//The AMM liquid mix strategy is as follows:
+//The AMM liquid mix strategy as spot is as follows:
 //User deposits and their funds are moved to a new non-mixed smart contract instead of the pool. Everything is tracked and the
 //AMM tokens are moved to a contract that manages everything separately for all the users. The AMM tokens are representing ETH only.
 //Then, when a buyer purchases it iterates the users and sends to them directly by crediting them the amount of ETH owed for
@@ -723,3 +723,7 @@ contract HALO {
 //Liquidity pool balance inquiries may defer to the connected contract to the AMM iterating all the users.
 //For reserve there would only be individual markets for each specific index like a bond. It's recommended that those are spot
 //because as it approaches to be released it's value would change. Although automatic price calculations can be made respectively.
+//The AMM liquid mix method as true AMM:
+//The only known method to still have an AMM without users mixing with the reserve of others is to force them to deposit liquid
+//and all reserve shards at identical ratios per shard. Since liquid mix already represents reserve as bonds they can buy them
+//across all bond pools and deposit them at the same ratios as the liquid pool.
