@@ -19,7 +19,7 @@ contract BAYL is IHALO {
     string public constant symbol   = "BAY";
     string public version  = "1";
     uint public decimals = 8;
-    bool public showCirculating = false;
+    bool public showCirculating = true;
     
     event Approval(address indexed from, address indexed to, uint amount);
     event Transfer(address indexed from, address indexed to, uint amount);

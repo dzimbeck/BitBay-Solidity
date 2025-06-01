@@ -43,7 +43,6 @@ contract Administration is IAdministration {
     mapping (uint => address[]) public addresses; //Useful cross reference
     mapping (uint => uint) public totalSpent;
     mapping (uint => uint) public processingTime;
-
     uint public nonce;
     uint public intervaltime = 43200; //12 hour batches of transactions. And stakers can wait a few hours to finalize data.
     uint public timeLimit = 15552000; //Curators should be encouraged to stay active
@@ -82,7 +81,7 @@ contract Administration is IAdministration {
         isCurator[msg.sender] = true;
         curators.push(msg.sender);
         totalvotes += 100;
-        voteperc = 55; //55 percent consensus
+        voteperc = 40; //40 percent consensus
         uint x = 0;
         while(x < 14) {
             votetimelimit[x] = 5400;
@@ -584,9 +583,10 @@ contract Administration is IAdministration {
             nonce += 1; //Start making a new tree
             processingTime[nonce] = block.timestamp;
         }
-        uint tot;        
+        uint tot;
         while(a.i < reserve.length) {
             tot += reserve[a.i];
+            a.i +=1;
         }
         a.i = 0;
         totalSpent[nonce] += tot;

@@ -1698,12 +1698,12 @@ async function checkbalances() {
         document.getElementById("current-network").innerHTML = "Polygon";
         netname = "Polygon";
         netname2 = "POL";
-        BAYLaddy = "0x05aB92a131A489e23bE8eBA829F3986D72af6A2E";
-        BAYRaddy = "0x8Ec52157Eb32aA9cb88a0a503aaac3641291d419";
-        BAYFaddy = "0x26948f011942B539897f98f99288C340291993c2";
-        BAYDataAddy = "0xA9BF89b0c130Fc8FA9838d923f81d51325909045";
-        BAYAdmin = "0x37a518936B24bc3b6B2D09ac316e4174C26f9199";
-        liquidityAddy = "0x88FBe58291B78C90c361cdc1D1f5dD13b252e5e2";
+        BAYLaddy = "0xD57fc711Fa63a64251a8596D7022cC32663c107E";
+        BAYRaddy = "0x30A7ef30f0786aBfcf59525680177ce0148B6Aa2";
+        BAYFaddy = "0x190F0701b27F67a569C87b8Ffb2DEE7b89064E28";
+        BAYDataAddy = "0xEf4c68F40a8f92623eDF414E39A06223e2dC82A2";
+        BAYAdmin = "0x490189049c9294792E1EA2499B9A9436704feD0a";
+        liquidityAddy = "0x30e91e2C1338B749cbB92fc30Ef6247f084217c6";
         pegsteps = 30;
         microsteps = 8;
         deflationrate = 99;
@@ -1741,6 +1741,18 @@ async function checkbalances() {
     bayfcontract = new web3.eth.Contract(BAYFabi, BAYFaddy);
     bayadmincontract = new web3.eth.Contract(BAYAdminAbi, BAYAdmin);
     liquiditypool = new web3.eth.Contract(LiquidityABI, liquidityAddy);
+    try {
+      document.getElementById('myBAYaddy').style.fontSize = "14px"
+      var registeredBurnAddress = DOMPurify.sanitize(await bayadmincontract.methods.BAYaddress(myaccounts).call());
+      if(registeredBurnAddress != "") {
+        document.getElementById('myBAYaddy').placeholder = registeredBurnAddress;
+        const style = document.createElement('style');
+      } else {
+        document.getElementById('myBAYaddy').placeholder = "BitBay Address"
+      }
+    } catch (e) {
+      console.log(e);
+    }
     var BAYLBal;
     var BAYRBal;
     var BAYFBal;
@@ -1832,8 +1844,8 @@ async function getMarketData(calcbal = 0) {
             exchanges.push({'UniSwap': '0x9e5A52f57b3038F1B8EeE45F28b3C1967e22799C'});
             exchangenum.push(997)
             exchangeImages.push('<img src="./uniswap.png" style="height: 75px; width: 75px;"/>');
-            routers.push({'UniversalRouter': '0x794b0ECfA7ef2ed574a4a2eeba44824926f3ea29'});
-        }        
+            routers.push({'UniversalRouter': '0x51Fd44770dE7dcB066028cF28353F1c69eeF29FD'});
+        }
         document.getElementById("exchangeImage").innerHTML="";
         document.getElementById("Coin1").innerHTML="";
         document.getElementById("exchangeSelect").innerHTML="";
@@ -2760,9 +2772,37 @@ function paintchart(mylabels, mydata, thehighkey, selectedChart) {
     });
 }
 jsondata={}
-async function mintFromBitBay(jsondata) {
-    jsondata = JSON.parse(jsondata.toString().replace(/'/g,'"').replace(/\n/g,'').replace(/\r/g,'').trim());
-    bayadmincontract.methods.redeemTX(jsondata['root'],jsondata['proof'],jsondata['reserve'],jsondata['txid']).send({"from":myaccounts,"gasLimit": 2500000,"gasPrice": gasPrice});
+async function mintFromBitBay(jsondata2="") {
+    try{
+      if (typeof jsondata2 === 'string') {
+        try {
+          jsondata = JSON.parse(jsondata2);
+        } catch {
+          jsondata = JSON.parse(jsondata2.toString().replace(/'/g,'"').replace(/\n/g,'').replace(/\r/g,'').trim());
+        }
+      } else {
+        jsondata=jsondata2;
+      }
+      var status = parseInt(DOMPurify.sanitize(await bayadmincontract.methods.MerkleConfirm(jsondata['root']).call()))
+      if(status == 0) {
+        await Swal.fire({"text":"Merkle has not yet been posted to the chain. Please try again later."});
+        return
+      }
+      var blocktime = parseInt(JSON.parse(DOMPurify.sanitize(JSON.stringify(await web3.eth.getBlock(await web3.eth.getBlockNumber())))).timestamp);
+      if(blocktime < status) {
+        await Swal.fire({"text":"Merkle root hash will be confirmed in approximately: " + ((status-blocktime)/60).toFixed(2) + " minutes"});
+        return
+      }
+      showSpinner();
+      await bayadmincontract.methods.redeemTX(jsondata['root'],jsondata['proof'],jsondata['reserve'],jsondata['txid']).send({"from":myaccounts,"gasLimit": 2500000,"gasPrice": gasPrice});      
+      hideSpinner();
+      await Swal.fire("Minting succesful");
+      checkbalances();
+    } catch (e) {
+      hideSpinner();
+      console.log(e);
+      await Swal.fire({"text":"Error reading the merkle proof. Please make sure it is typed correctly."});
+    }
 }
 
 async function registerBitBay(regaddy) {
@@ -2777,11 +2817,11 @@ async function registerBitBay(regaddy) {
     //}
     if(coinjs.addressDecode(regaddy) == false) {
         //document.getElementById("text1").innerHTML += "<br><br>Invalid BitBay address.";
-        Swal.fire({
-            icon: 'warning',
-            title: 'Invalid BitBay address',
-            confirmButtonText: 'Close'
-        });
+        //Swal.fire({
+        //    icon: 'warning',
+        //    title: 'Invalid BitBay address',
+        //    confirmButtonText: 'Close'
+        //});
         modalDialog('Connect', "Invalid BitBay address.", "danger");
         return;
     }
@@ -2791,11 +2831,11 @@ async function registerBitBay(regaddy) {
         if(DOMPurify.sanitize(myresult5) == regaddy){
             found = 0;
             //document.getElementById("text1").innerHTML += "<br><br>A BitBay address is already registered to your address.";
-            Swal.fire({
-                icon: 'warning',
-                title: 'A BitBay address is already registered to your address.',
-                confirmButtonText: 'Close'
-            });
+            //Swal.fire({
+            //    icon: 'warning',
+            //    title: 'A BitBay address is already registered to your address.',
+            //    confirmButtonText: 'Close'
+            //});
             modalDialog('Connect', "A BitBay address is already registered to your address.", "danger");
             return;
         }    
@@ -2803,7 +2843,19 @@ async function registerBitBay(regaddy) {
     if(found == 0) {
         return;
     }
-    bayadmincontract.methods.register(regaddy).send({"from":selectedaccount,"gasLimit": 500000,"gasPrice": gasPrice});
+    try {
+      showSpinner();
+      await bayadmincontract.methods.register(regaddy).send({"from":selectedaccount,"gasLimit": 500000,"gasPrice": gasPrice});
+      hideSpinner();
+      await Swal.fire("Success!");
+    } catch (e) {
+      await Swal.fire({
+          icon: 'error',
+          text: 'Transaction failed: ' + e.message,
+          confirmButtonText: 'Close'
+      });
+      hideSpinner();
+    } 
 }
 
 async function burnToBitBay(burnamount) {
@@ -2813,11 +2865,11 @@ async function burnToBitBay(burnamount) {
     lastrun = (Math.floor(Date.now() / 1000)) + 7;
     if(await web3.eth.net.getId() != currentChainId) {
         //document.getElementById("text1").innerHTML += "<br><br>The selected chain was recently changed or you are not logged in, please log in again.";
-        Swal.fire({
-            icon: 'warning',
-            title: 'The selected chain was recently changed or you are not logged in, please log in again.',
-            confirmButtonText: 'Close'
-        });
+        //Swal.fire({
+        //    icon: 'warning',
+        //    title: 'The selected chain was recently changed or you are not logged in, please log in again.',
+        //    confirmButtonText: 'Close'
+        //});
         modalDialog('Connect', "The selected chain was recently changed or you are not logged in, please log in again.", "danger");
         return;
     }
@@ -2833,11 +2885,11 @@ async function burnToBitBay(burnamount) {
         results = DOMPurify.sanitize(results);
         if(!results && results.length == 0){
             //document.getElementById("text1").innerHTML += "<br><br>You need to register your BitBay address before burning.";
-            Swal.fire({
-                icon: 'warning',
-                title: 'You need to register your BitBay address before burning.',
-                confirmButtonText: 'Close'
-            });
+            //Swal.fire({
+            //    icon: 'warning',
+            //    title: 'You need to register your BitBay address before burning.',
+            //    confirmButtonText: 'Close'
+            //});
             modalDialog('Connect', "You need to register your BitBay address before burning.", "danger");
             found = 0;
         }
@@ -2847,21 +2899,34 @@ async function burnToBitBay(burnamount) {
     }
     if(BAYAdmin != myadmin) {
         //document.getElementById("text1").innerHTML += "<br><br>Burn address does not match known admin contract.";
-        Swal.fire({
-            icon: 'warning',
-            title: 'Burn address does not match known admin contract.',
-            confirmButtonText: 'Close'
-        });
+        //Swal.fire({
+        //    icon: 'warning',
+        //    title: 'Burn address does not match known admin contract.',
+        //    confirmButtonText: 'Close'
+        //});
         modalDialog('Connect', "Burn address does not match known admin contract.", "danger");
         return;
     }
     console.log(burnamount);
-    if(myvar == "Reserve Coins") {
-        bayrcontract.methods.transfer(myadmin, burnamount).send({"from":selectedaccount,"gasLimit": 2500000,"gasPrice": gasPrice});
-    }
-    if(myvar == "Liquid Coins") {
-        baylcontract.methods.transfer(myadmin, burnamount).send({"from":selectedaccount,"gasLimit": 2500000,"gasPrice": gasPrice});
-    }
+    console.log(myadmin)
+    try {
+      showSpinner();
+      if(myvar == "Reserve Coins") {
+          await bayrcontract.methods.transfer(myadmin, burnamount).send({"from":selectedaccount,"gasLimit": 2000000,"gasPrice": gasPrice});
+      }
+      if(myvar == "Liquid Coins") {
+          await baylcontract.methods.transfer(myadmin, burnamount).send({"from":selectedaccount,"gasLimit": 2000000,"gasPrice": gasPrice});
+      }
+      hideSpinner();
+      await Swal.fire("Success!");
+    } catch (e) {
+      await Swal.fire({
+          icon: 'error',
+          text: 'Transaction failed: ' + e.message,
+          confirmButtonText: 'Close'
+      });
+      hideSpinner();
+    } 
 }
 
 jsonreceipt = {};
@@ -2921,7 +2986,7 @@ async function showNonces() {
     }
     amt = stripZeros(amt.dividedBy(1e8).toFixed(8));
     document.getElementById("merkletext").innerHTML = DOMPurify.sanitize("Nonce: " + item + "<br>Hash: " + myhash + "<br>Total coins: " + amt);
-    var block = JSON.parse(DOMPurify.sanitize(JSON.stringify(await web3.eth.getBlock(await web3.eth.getBlockNumber()))));;
+    var block = JSON.parse(DOMPurify.sanitize(JSON.stringify(await web3.eth.getBlock(await web3.eth.getBlockNumber()))));
     if ((parseInt(processingTime) + parseInt(intervaltime) + parseInt(intervaltime)) < parseInt(block.timestamp)) {
         document.getElementById("merkletext").innerHTML += "<br>Merkle Proof: Merkle tree ready, you may copy the receipt to the clipboard.";
         var leaves = [];
