@@ -1,6 +1,6 @@
+<!-- Coinleft Public License for BitBay -->
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0">
@@ -10,10 +10,26 @@
   <link rel="stylesheet" href="./assets/css/nouislider.min.css">
   <!-- <link rel="stylesheet" href="./assets/css/line.css"> -->
   <link rel="stylesheet" href="./assets/css/style.css">
+  <script>
+    (function() {
+      var isDark = localStorage.getItem("darkTheme");
+      if (isDark === "true") {
+        document.documentElement.style.filter = 'invert(1) hue-rotate(180deg)';
+        var media = ['img', 'video', 'iframe', 'canvas', 'picture', 'svg'];
+        var observer = new MutationObserver(() => {
+          media.forEach(tag => {
+            Array.prototype.forEach.call(document.getElementsByTagName(tag), el => {
+              el.style.filter = 'invert(1) hue-rotate(180deg)';
+            });
+          });
+        });
+        observer.observe(document.documentElement, { childList: true, subtree: true });
+      }
+    })();
+  </script>
 </head>
 
 <body>
-
   <div class="wrap" id="wrap">
   <!-- top menu -->
    
@@ -46,7 +62,7 @@
             <div class="section-dropdown"> 
               <a href="./information.html">FAQ about the Bridge <i class="uil uil-arrow-right"></i></a>
               <a href="https://www.bitbay.market" target="_blank">Learn more about BitBay <i class="uil uil-arrow-right"></i></a>
-              <a href="https://github.com/dzimbeck/BitBay-Solidity" target="_blank">Open source code on Github <i class="uil uil-arrow-right"></i></a>
+              <a href="https://github.com/bitbaymarket/bridge" target="_blank">Open source code on Github <i class="uil uil-arrow-right"></i></a>
 
               <input class="dropdown-sub" type="checkbox" id="dropdown-sub" name="dropdown-sub"/>
               <label class="for-dropdown-sub" for="dropdown-sub">Help <i class="uil uil-plus"></i></label>
@@ -90,15 +106,28 @@
 
       </div>
       <div class="top_menu_content_right">
-        
+        <div class="sec-center">
+            <button id="themeToggle" onclick="darkTheme()" style="
+              top: 10px;
+              right: 10px;
+              background: none;
+              border: none;
+              font-size: 24px;
+              cursor: pointer;
+              z-index: 9999;
+            ">
+              ☀ 
+            </button>
+        </div>
         <div class="sec-center">  
               <!-- <button>?</button> !-->
               <input class="dropdown" type="checkbox" id="dropdown" name="dropdown"/>
               <label class="for-dropdown" for="dropdown">Menu <img class="icon uil uil-arrow-down" src="./assets/images/arrow-down.svg"></label>
-            <div class="section-dropdown"> 
+            <div class="section-dropdown">
+              <br>
               <a href="./information.html">FAQ about the Bridge</a>
               <a href="https://www.bitbay.market" target="_blank">Learn more about BitBay</a>
-              <a href="https://github.com/dzimbeck/BitBay-Solidity" target="_blank">Open source code on Github</a>
+              <a href="https://github.com/bitbaymarket/bridge" target="_blank">Open source code on Github</a>
 
 
               <input class="dropdown-sub" type="checkbox" id="dropdown-sub" name="dropdown-sub"/>
@@ -107,6 +136,7 @@
                 <a href="https://t.me/bitbayofficial" target="_blank">BitBay Telegram</a>
                 <a href="https://nighttrader.exchange/" target="_blank">NightTrader Exchange</a>
               </div>
+              <br>
             </div>
         </div>
 
@@ -1147,6 +1177,13 @@
     max-height: 80vh; /* Prevents the modal from overflowing vertically */
     overflow-y: auto; /* Enables scrolling within the modal */
   }
+  body {
+    background-image: url('bk.png');
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-attachment: fixed;
+    background-size: cover; /* Maintains aspect ratio */
+  }
 </style>
 
 <script type="text/javascript">
@@ -1185,7 +1222,45 @@ Swal = Swal.mixin({
     }
 });
 
+function darkTheme(toggle=true) {
+  if(toggle) {
+    isDarkTheme = !isDarkTheme;
+    localStorage.setItem("darkTheme", isDarkTheme);
+    console.log(isDarkTheme)
+  }
+  if (isDarkTheme) {
+    document.documentElement.style.filter = 'invert(1) hue-rotate(180deg)';
+
+    // Re-invert media elements to look normal
+    const media = document.querySelectorAll('img, video, iframe, canvas, picture, svg');
+    media.forEach(el => {
+      el.style.filter = 'invert(1) hue-rotate(180deg)';
+    });
+  } else {
+    // Remove filter
+    document.documentElement.style.filter = '';
+
+    const media = document.querySelectorAll('img, video, iframe, canvas, picture, svg');
+    media.forEach(el => {
+      el.style.filter = '';
+    });
+  }
+}
+
+var isDarkTheme = (localStorage.getItem("darkTheme") || false);
+if(isDarkTheme == "false" || isDarkTheme == false) {
+  isDarkTheme = false;
+} else {
+  isDarkTheme = true;
+}
 let spinnerElement;
+
+window.addEventListener('load', () => {
+  console.log(isDarkTheme)
+  if (isDarkTheme == true) {
+    darkTheme(false);
+  }
+});
 
 function showSpinner() {
     hideSpinner(); // Ensure no duplicate spinners
@@ -1485,7 +1560,7 @@ async function login() {
           hideSpinner();
         } catch (e) {
           hideSpinner()
-          console.error("Await failed:", e.message);
+          console.error("Login failed:", e.message);
           // Check if the error message contains '502 Bad Gateway'
           if (e.message.includes("502 Bad Gateway")) {              
               Swal.fire({
@@ -1712,7 +1787,13 @@ async function checkbalances() {
     }    
     if (netname == "unknown") {
         //document.getElementById("text1").innerHTML = "Unsupported network";
-        modalDialog('Connect', "Unsupported network.", "danger");
+        Swal.fire({
+            icon: 'warning',
+            title: 'Error',
+            text: 'Unsupported network.',
+            confirmButtonText: 'Close'
+        });
+        //modalDialog('Connect', "Unsupported network.", "danger");
         return;
     }
     gasPrice = "20000000000";
@@ -1765,7 +1846,35 @@ async function checkbalances() {
             return;
         } else {
             var ETHBalance = window.web3.utils.fromWei(DOMPurify.sanitize(result1), "ether");
-            document.getElementById("balance_network").innerHTML = DOMPurify.sanitize("Current Network: "+ netname + "<br> Address: " + myaccounts + "<br>" + netname2 + " balance:" + ETHBalance + "<br>BAY Liquid:" + BAYLBal + "<br>BAY Reserve:" + BAYRBal + "<br>BAY Frozen:" + BAYFBal);
+            //document.getElementById("balance_network").innerHTML = DOMPurify.sanitize("Current Network: "+ netname + "<br> Address: " + myaccounts + "<br>" + netname2 + " balance:" + ETHBalance + "<br>BAY Liquid:" + BAYLBal + "<br>BAY Reserve:" + BAYRBal + "<br>BAY Frozen:" + BAYFBal);
+            document.getElementById("balance_network").innerHTML = DOMPurify.sanitize(
+              '<div style="font-family: \'Lucida Console\', Monaco, monospace; background-color: #fff; color: #004400; padding: 20px; border: 2px solid #333; max-width: 500px; margin: auto; text-align: left; box-shadow: 4px 4px 0 #ccc; border-radius: 6px;">' +
+                '<div style="background-color: #e0e0ff; color: #004400; padding: 10px; margin-bottom: 12px; font-weight: bold; font-size: 15px; border: 1px solid #aaffaa;">' +
+                  'Current Network: ' + netname +
+                '</div>' +
+                '<div style="background-color: #f5f4ff; color: #004400; padding: 8px; font-size: 14px; border-bottom: 1px dashed #aaffaa;">' +
+                  'Address: ' + myaccounts +
+                '</div>' +
+                '<div style="background-color: #f5f4ff; color: #004400; padding: 8px; font-size: 14px; border-bottom: 1px dashed #aaffaa;">' +
+                  netname2 + ' Balance: ' + ETHBalance +
+                '</div>' +
+                '<div style="background-color: #f5f4ff; color: #004400; padding: 8px; font-size: 14px; border-bottom: 1px dashed #aaffaa;">' +
+                  'BAY Liquid: ' + BAYLBal +
+                '</div>' +
+                '<div style="background-color: #f5f4ff; color: #004400; padding: 8px; font-size: 14px; border-bottom: 1px dashed #aaffaa;">' +
+                  'BAY Reserve: ' + BAYRBal +
+                '</div>' +
+                '<div style="background-color: #f5f4ff; color: #004400; padding: 8px; font-size: 14px;">' +
+                  'BAY Frozen: ' + BAYFBal +
+                '</div>' +
+                // RGB accent line
+                '<div style="margin-top: 16px; height: 4px; display: flex;">' +
+                  '<div style="flex: 1; background-color: purple;"></div>' +
+                  '<div style="flex: 1; background-color: #3b00b2;"></div>' +
+                  '<div style="flex: 1; background-color: blue;"></div>' +
+                '</div>' +
+              '</div>'
+            );
         //document.getElementById("text1").innerHTML = DOMPurify.sanitize("Current Network: "+ netname + "<br>" + myaccounts + "<br>" + netname2 + " balance:" + ETHBalance + "<br>BAY Liquid:" + BAYLBal + "<br>BAY Reserve:" + BAYRBal + "<br>BAY Frozen:" + BAYFBal);
         }
     })
@@ -1790,18 +1899,127 @@ async function checkbalances() {
       //This is expected to catch if no updates are incoming. List length is not available directly in the contract.
     }
     if(updates != "") {
-      document.getElementById("balance_network").innerHTML += "<br><br>NOTICE: Contract updates are pending. Please check the delayed changes in the contract.";
+      document.getElementById("balance_network").innerHTML += 
+        '<div style="margin-top: 20px; background-color: #fffbe6; color: #555; border-left: 4px solid #ffa500; padding: 10px; font-family: \'Lucida Console\', monospace; font-size: 13px;">' +
+        '<span style="font-weight: bold;">ⓘ NOTICE:</span> Contract updates are pending.<br>Please check the delayed changes in the contract.' +
+        '</div>';
     }
-    document.getElementById("contractinfo").innerHTML = "Contracts to import into Metamask so that you may interact with BitBay: <br>BitBay - " +  BAYLaddy + "<br>BitBay Reserve - " + BAYRaddy + "<br>BitBay Frozen - " + BAYFaddy + "<br><br>";
+    var unknownHash = await getMerkleStatus();
+    if (unknownHash != "") {
+      document.getElementById("balance_network").innerHTML += 
+        '<div style="margin-top: 20px; background-color: #fff0f0; color: #800000; border-left: 4px solid #cc0000; padding: 10px; font-family: \'Lucida Console\', monospace; font-size: 13px;">' +
+        '<span style="font-weight: bold;">⚠️ WARNING:</span> Unknown hash detected.<br>Please verify it on the BitBay network – <span style="word-break: break-all;">' + unknownHash + '</span>' +
+        '</div>';
+    }
+    document.getElementById("contractinfo").innerHTML = 
+      '<div style="font-family: \'Lucida Console\', Monaco, monospace; background-color: #f4f4ff; color: #004400; padding: 16px; border: 2px solid #333; border-radius: 6px; max-width: 500px; margin: auto; box-shadow: 4px 4px 0 #bbb;">' +
+        '<div style="margin-bottom: 10px; font-weight: bold;">Contracts to import into MetaMask to interact with BitBay:</div>' +
+
+        createAddressBlock("BitBay", BAYLaddy) +
+        createAddressBlock("BitBay Reserve", BAYRaddy) +
+        createAddressBlock("BitBay Frozen", BAYFaddy) +
+      '</div>';
+
+    function createAddressBlock(label, address) {
+      return (
+        '<div style="margin-bottom: 10px;">' +
+          '<div style="color: #000066; font-weight: bold; font-size: 12px;">' + label + ':</div>' +
+          '<div style="display: flex; align-items: center; flex-wrap: wrap;">' +
+            '<div style="background-color: #ffffff; border: 1px dashed #888; padding: 6px 8px; margin-right: 8px; font-size: 11px; overflow-wrap: break-word; word-break: break-all; flex: 1;">' +
+              address +
+            '</div>' +
+            '<div style="cursor: pointer; font-size: 16px; user-select: none;" onclick="copyAddress(\'' + address + '\')" title="Copy address">' +
+              '📋' +
+            '</div>' +
+          '</div>' +
+        '</div>'
+      );
+    }
     await getNetworkInfo();
     await getMarketData();
+}
+
+function copyAddress(address) {
+  const tempInput = document.createElement("textarea");
+  tempInput.value = address;
+
+  tempInput.setAttribute("readonly", "");
+  tempInput.style.position = "absolute";
+  tempInput.style.left = "-9999px";
+
+  document.body.appendChild(tempInput);
+  tempInput.select();
+
+  try {
+    const successful = document.execCommand("copy");
+    if (successful) {
+      Swal.fire({
+        title: 'Copied!',
+        text: 'Address copied to clipboard.',
+        icon: 'success',
+        timer: 1500,
+        showConfirmButton: false
+      });
+    } else {
+      Swal.fire({
+        title: 'Copy Failed',
+        text: 'Please copy the address manually.',
+        icon: 'error',
+        confirmButtonText: 'OK'
+      });
+    }
+  } catch (err) {
+    Swal.fire({
+      title: 'Error',
+      text: 'Clipboard access error. Try manually copying.',
+      icon: 'error',
+      confirmButtonText: 'OK'
+    });
+  }
+
+  document.body.removeChild(tempInput);
 }
 
 async function getNetworkInfo() {
     await baydatacontract.methods.getState().call().then(function (netvars) {
         networkvars = JSON.parse(DOMPurify.sanitize(JSON.stringify(netvars)));
     })
-    document.getElementById("networkinfo").innerHTML = DOMPurify.sanitize("Current Total Network Supply: " + calculateSupply(networkvars[0],networkvars[4],networkvars[3]) + "% (" + networkvars[0] + " / " + (networkvars[1] * networkvars[2]) + ")<br>Peg compression(steps, microsteps): " + networkvars[1] + ", "+ networkvars[2] + "<br>Deflation rate and compound rate: (" + networkvars[4] + "% ^ " + (100 - networkvars[3]) + ")<br>Three way factor to BitBay's 1200 possible supplies: (" + networkvars[1] + " * " + networkvars[2] + " * " + (100 - networkvars[3]) + ")<br>Time delay for reserve payments(in seconds): " + reservetimelock);
+    const supplyPercent = calculateSupply(networkvars[0], networkvars[4], networkvars[3]);
+    const totalSupply = networkvars[1] * networkvars[2];
+    const deflationFormula = "(" + networkvars[4] + "% ^ " + (100 - networkvars[3]) + ")";
+    const pegFactors = "(" + networkvars[1] + " * " + networkvars[2] + " * " + (100 - networkvars[3]) + ")";
+    const reserveDelayDays = (reservetimelock / 86400).toFixed(2);
+
+    document.getElementById("networkinfo").innerHTML = DOMPurify.sanitize(
+      '<div style="font-family:\'Lucida Console\', Monaco, monospace; background-color:#f0f4ff; color:#002244; padding:20px; border:2px solid #333; border-radius:6px; max-width:550px; margin:auto; box-shadow:4px 4px 0 #bbb;">' +
+        '<div style="margin-bottom:16px; font-weight:bold; font-size:14px; color:#001133;">Network Metrics Overview:</div>' +
+
+        '<div style="margin-bottom:12px;">' +
+          '<span style="color:#003399; font-weight:200;">Total Network Supply:</span><br>' +
+          '<span style="background:#d0e1ff; color:#002244; font-weight:100; padding:2px 6px; border-radius:4px;">' + supplyPercent + '% (' + networkvars[0] + ' / ' + totalSupply + ')</span>' +
+        '</div>' +
+
+        '<div style="margin-bottom:12px;">' +
+          '<span style="color:#660099; font-weight:200;">Peg Compression (steps, microsteps):</span><br>' +
+          '<span style="background:#e8d7ff; color:#330044; font-weight:100; padding:2px 6px; border-radius:4px;">' + networkvars[1] + ', ' + networkvars[2] + '</span>' +
+        '</div>' +
+
+        '<div style="margin-bottom:12px;">' +
+          '<span style="color:#008080; font-weight:200;">Deflation and Compound Rate:</span><br>' +
+          '<span style="background:#d4f0f0; color:#004d4d; font-weight:100; padding:2px 6px; border-radius:4px;">' + deflationFormula + '</span>' +
+        '</div>' +
+
+        '<div style="margin-bottom:12px;">' +
+          '<span style="color:#4b0082; font-weight:200;">BitBay Supply Factor:</span><br>' +
+          '<span style="background:#e0d4ff; color:#2c004d; font-weight:100; padding:2px 6px; border-radius:4px;">' + pegFactors + '</span>' +
+        '</div>' +
+
+        '<div style="margin-bottom:0;">' +
+          '<span style="color:#004080; font-weight:200;">Reserve Payment Delay:</span><br>' +
+          '<span style="background:#cde6ff; color:#002244; font-weight:100; padding:2px 6px; border-radius:4px;">' + reserveDelayDays + ' days</span>' +
+        '</div>' +
+      '</div>'
+    );
 }
 
 async function getMarketData(calcbal = 0) {
@@ -2007,6 +2225,88 @@ async function getMarketData(calcbal = 0) {
         document.getElementById("LPdetails2").innerHTML = DOMPurify.sanitize(text);
 
     }
+}
+
+async function getMerkleStatus() {
+    try {
+        var web3Temp = new Web3("https://polygon-rpc.com");
+        var DDEaddy = "0x213DB7D60F33f3D1Ca9e13F298Ac6578d5Fc20fc";
+        DDEabi = [
+            {
+            "inputs": [
+              {
+                "internalType": "string",
+                "name": "data",
+                "type": "string"
+              }
+            ],
+                "name": "adduserdata",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "address",
+                        "name": "user",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "arrayId",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "getArrayLength",
+                "outputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "",
+                        "type": "uint256"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "address",
+                        "name": "",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "userdata",
+                "outputs": [
+                    {
+                        "internalType": "string",
+                        "name": "",
+                        "type": "string"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            }
+        ]
+        DDEcontract = new web3Temp.eth.Contract(DDEabi, DDEaddy);
+        var datalen = parseInt(DOMPurify.sanitize(await DDEcontract.methods.getArrayLength("0xF557464ba0b043c83726c95BD686293B5aF16382", 3).call()));
+        var thislasthash = "";
+        if(datalen != 0) {
+            thislasthash = DOMPurify.sanitize(await DDEcontract.methods.userdata("0xF557464ba0b043c83726c95BD686293B5aF16382", datalen-1).call());
+        }
+        if(thislasthash.includes("0x")) {
+          return thislasthash;
+        }
+    } catch (e) {
+        console.log(e);
+    }
+    return ""
 }
 
 async function getDecimals(myobj) {
@@ -2849,12 +3149,15 @@ async function registerBitBay(regaddy) {
       hideSpinner();
       await Swal.fire("Success!");
     } catch (e) {
+      console.log(e)
+      hideSpinner();
+      const message = 'Transaction failed: ' + e.message;
+      const output = message.length > 250 ? message.slice(0, 250) + '...' : message;
       await Swal.fire({
           icon: 'error',
-          text: 'Transaction failed: ' + e.message,
+          text: message,
           confirmButtonText: 'Close'
-      });
-      hideSpinner();
+      });      
     } 
 }
 
@@ -2920,12 +3223,15 @@ async function burnToBitBay(burnamount) {
       hideSpinner();
       await Swal.fire("Success!");
     } catch (e) {
+      console.log(e);
+      hideSpinner();
+      const message = 'Transaction failed: ' + e.message;
+      const output = message.length > 250 ? message.slice(0, 250) + '...' : message;
       await Swal.fire({
           icon: 'error',
-          text: 'Transaction failed: ' + e.message,
+          text: output,
           confirmButtonText: 'Close'
-      });
-      hideSpinner();
+      });      
     } 
 }
 
@@ -3306,13 +3612,15 @@ async function addLiquidity() {
       } catch (e) {
           console.log(e);
           //document.getElementById("addliquidtext").innerHTML = 'Transaction failed';
-          modalDialog('Connect', "Transaction failed", "danger");        
+          //modalDialog('Connect', "Transaction failed", "danger");
+          hideSpinner();
+          const message = 'Transaction failed: ' + e.message;
+          const output = message.length > 250 ? message.slice(0, 250) + '...' : message;
           Swal.fire({
               icon: 'error',
-              text: 'Transaction failed: ' + e.message,
+              text: output,
               confirmButtonText: 'Close'
-          });
-          hideSpinner();
+          });          
           return;
       }
       //document.getElementById("addliquidtext").innerHTML = 'Success!';
@@ -3585,7 +3893,7 @@ async function Swap() {
           hideSpinner();
           return;
       }
-      var block = JSON.parse(DOMPurify.sanitize(JSON.stringify(await web3.eth.getBlock(await web3.eth.getBlockNumber()))));;
+      var block = JSON.parse(DOMPurify.sanitize(JSON.stringify(await web3.eth.getBlock(await web3.eth.getBlockNumber()))));
       var deadline = (block.timestamp + 1200).toString();
       if(lastSelect == "SwapAmount2") {
           swapval = new BN(swapval.toString()).times(new BN(decimals.toString()));
@@ -3674,14 +3982,16 @@ async function Swap() {
           }
       } catch (e) {
           console.log(e);
-          document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-danger" >Error: Swap failed!</div>';
-          Swal.fire({
+          hideSpinner();
+          //document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-danger" >Error: Swap failed!</div>';
+          const message = 'Swap failed: ' + e.message;
+          const output = message.length > 250 ? message.slice(0, 250) + '...' : message;
+          await Swal.fire({
               icon: 'error',
-              title: 'Swap failed',
-              text: e.message,
+              title: 'Transaction failed',
+              text: output,
               confirmButtonText: 'Close'
           });
-          hideSpinner();
           return;
       }
       document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-success" >Success!</div><br>' + prevtext;
@@ -3857,14 +4167,16 @@ async function withdrawLP() {
           }
       } catch (e) {
           console.log(e);
-          document.getElementById("LPdetails1").innerHTML = 'Withdrawal failed';
+          hideSpinner();
+          //document.getElementById("LPdetails1").innerHTML = 'Withdrawal failed';
+          const message = 'Withdrawal failed: ' + e.message;
+          const output = message.length > 250 ? message.slice(0, 250) + '...' : message;
           Swal.fire({
               icon: 'error',
-              title: 'Withdrawal failed',
-              text: e.message,
+              title: 'Transaction failed',
+              text: output,
               confirmButtonText: 'Close'
-          });
-          hideSpinner();
+          });          
           return;
       }
       document.getElementById("LPdetails1").innerHTML = 'Success!<br><br>' + prevtext;
