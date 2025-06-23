@@ -2,47 +2,6 @@ RouterABI = [
 	{
 		"inputs": [
 			{
-				"internalType": "address",
-				"name": "_factory",
-				"type": "address"
-			},
-			{
-				"internalType": "address",
-				"name": "_WETH",
-				"type": "address"
-			},
-			{
-				"internalType": "address",
-				"name": "_minter",
-				"type": "address"
-			},
-			{
-				"internalType": "bytes",
-				"name": "init",
-				"type": "bytes"
-			},
-			{
-				"internalType": "uint256",
-				"name": "mynumerator",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "fnum",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "fden",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "nonpayable",
-		"type": "constructor"
-	},
-	{
-		"inputs": [
-			{
 				"internalType": "address[2]",
 				"name": "tokenAB",
 				"type": "address[2]"
@@ -260,154 +219,6 @@ RouterABI = [
 		"name": "donateLiquidity",
 		"outputs": [],
 		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "factory",
-		"outputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "amountOut",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "reserveIn",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "reserveOut",
-				"type": "uint256"
-			}
-		],
-		"name": "getAmountIn",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "amountIn",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "amountIn",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "reserveIn",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "reserveOut",
-				"type": "uint256"
-			}
-		],
-		"name": "getAmountOut",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "amountOut",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "amountOut",
-				"type": "uint256"
-			},
-			{
-				"internalType": "address[]",
-				"name": "path",
-				"type": "address[]"
-			}
-		],
-		"name": "getAmountsIn",
-		"outputs": [
-			{
-				"internalType": "uint256[]",
-				"name": "amounts",
-				"type": "uint256[]"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "amountIn",
-				"type": "uint256"
-			},
-			{
-				"internalType": "address[]",
-				"name": "path",
-				"type": "address[]"
-			}
-		],
-		"name": "getAmountsOut",
-		"outputs": [
-			{
-				"internalType": "uint256[]",
-				"name": "amounts",
-				"type": "uint256[]"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "amountA",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "reserveA",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "reserveB",
-				"type": "uint256"
-			}
-		],
-		"name": "quote",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "amountB",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "pure",
 		"type": "function"
 	},
 	{
@@ -667,83 +478,6 @@ RouterABI = [
 		"type": "function"
 	},
 	{
-		"inputs": [],
-		"name": "showVariables",
-		"outputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			},
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			},
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			},
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			},
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "fact",
-				"type": "address"
-			}
-		],
-		"name": "showfactory",
-		"outputs": [
-			{
-				"internalType": "bytes",
-				"name": "",
-				"type": "bytes"
-			},
-			{
-				"internalType": "bool",
-				"name": "",
-				"type": "bool"
-			},
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			},
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
 		"inputs": [
 			{
 				"internalType": "uint256",
@@ -1000,5 +734,271 @@ RouterABI = [
 	{
 		"stateMutability": "payable",
 		"type": "receive"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_factory",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "_WETH",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "_minter",
+				"type": "address"
+			},
+			{
+				"internalType": "bytes",
+				"name": "init",
+				"type": "bytes"
+			},
+			{
+				"internalType": "uint256",
+				"name": "mynumerator",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "fnum",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "fden",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "constructor"
+	},
+	{
+		"inputs": [],
+		"name": "factory",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "amountOut",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "reserveIn",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "reserveOut",
+				"type": "uint256"
+			}
+		],
+		"name": "getAmountIn",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "amountIn",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "amountIn",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "reserveIn",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "reserveOut",
+				"type": "uint256"
+			}
+		],
+		"name": "getAmountOut",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "amountOut",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "amountOut",
+				"type": "uint256"
+			},
+			{
+				"internalType": "address[]",
+				"name": "path",
+				"type": "address[]"
+			}
+		],
+		"name": "getAmountsIn",
+		"outputs": [
+			{
+				"internalType": "uint256[]",
+				"name": "amounts",
+				"type": "uint256[]"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "amountIn",
+				"type": "uint256"
+			},
+			{
+				"internalType": "address[]",
+				"name": "path",
+				"type": "address[]"
+			}
+		],
+		"name": "getAmountsOut",
+		"outputs": [
+			{
+				"internalType": "uint256[]",
+				"name": "amounts",
+				"type": "uint256[]"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "amountA",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "reserveA",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "reserveB",
+				"type": "uint256"
+			}
+		],
+		"name": "quote",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "amountB",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "pure",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "fact",
+				"type": "address"
+			}
+		],
+		"name": "showfactory",
+		"outputs": [
+			{
+				"internalType": "bytes",
+				"name": "",
+				"type": "bytes"
+			},
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			},
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "showVariables",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
 	}
 ]
