@@ -21,10 +21,14 @@ contract Pool is ILiquidityPool {
     mapping (address => uint) public override poolhighkey;
     bool public magnify = true;
     bool public bothsides = true;
+    bool public withdrawCheck = true;
+    bool public withdrawStarted = false;
     uint public matchprecision = 5;
+    uint public checkThreshold;
     mapping (address => address) public pairtoken;
     mapping (address => address) public myfactory;
     mapping (address => uint) public prevtokenbalance;
+    mapping (address => uint) public prevlpsupply;
     mapping (address => bool) public addresscheck;
     mapping (address => uint) public prevlpbalance;
     mapping (address => bool) public isBAYpair;
@@ -35,7 +39,11 @@ contract Pool is ILiquidityPool {
     constructor() {
         minter = msg.sender;
     }
-
+    
+    function changeMinter(address newminter) public {
+        require(msg.sender == minter);
+        minter = newminter;
+    }
     function setProxy(address myproxy) public returns (bool) {
         require(msg.sender == minter);
         require(proxy == address(0)); //Set this one time
@@ -63,6 +71,26 @@ contract Pool is ILiquidityPool {
         require(msg.sender == minter);
         require(prec != 0);
         matchprecision = prec;
+        return true;
+    }
+    function setThreshold(uint amt) public returns (bool) {
+        require(msg.sender == minter);
+        checkThreshold = amt;
+        return true;
+    }    
+    function setWithdraw(bool status) public returns (bool) {
+        require(msg.sender == minter);
+        withdrawCheck = status;
+        return true;
+    }
+    function setStart(bool status) public returns (bool) {
+        bool success;
+        bytes memory result;
+        (success, result) = proxy.staticcall(abi.encodeWithSignature("isRouter(address)",msg.sender));
+        require(success);
+        success = abi.decode(result, (bool));
+        require(success);
+        withdrawStarted = status;
         return true;
     }
     function store64(uint[38] memory input) private pure returns (uint64[38] memory output) {
@@ -108,9 +136,10 @@ contract Pool is ILiquidityPool {
         uint plval;
     }
 
-    //A person who wants to code a contract that is compatible with BAY can simply add these 4 functions.
+    //A person who wants to code a swap contract that is compatible with BAY must have these 4 functions.
     //These are functions typical to any AMM contract. Sync is required to keep balances up to date.
     //Users should be careful to set a gas limit when using regular BitBay payments to new addresses.
+    //Code hash is not enforced to be flexible however it is recommended to check it on front end.    
     function checkAMM(address AMM) external returns (address, address, address) {
         //Users should proceed with caution and audit any AMM they wish to list on
         //This is because it's unclear if the functions operate like a standard AMM
@@ -294,6 +323,9 @@ contract Pool is ILiquidityPool {
                     prevlpbalance[pool] = LPbal;
                 }
             }
+            (success, result) = pool.staticcall(abi.encodeWithSignature("totalSupply()"));
+            require(success);
+            prevlpsupply[pool] = abi.decode(result, (uint));
         }
         skipcheck = false;
         addresscheck[pool] = false;
@@ -308,14 +340,16 @@ contract Pool is ILiquidityPool {
         //So it's still recommended to trade from the official BitBay router.
         if(buffer == 9999) { //Check for potential withdraw or deposit
             buffer = 0;
-            if(user == pool && skipcheck == false) { //Buying or withdrawing funds
+            if(user == pool && skipcheck == false && withdrawCheck == false) { //Buying or withdrawing funds
                 (success, result) = pool.staticcall(abi.encodeWithSignature("balanceOf(address)",pool));
                 require(success);
                 a.i = abi.decode(result, (uint));
                 if(a.i - prevlpbalance[pool] != 0) {
-                    (success, result) = proxy.staticcall(abi.encodeWithSignature("withdrawAddy(address)",pool));
-                    require(success);
-                    require(abi.decode(result, (address)) != address(0), "Action was not performed by the official BitBay router");
+                    if(a.i - prevlpbalance[pool] >= checkThreshold) {
+                        (success, result) = proxy.staticcall(abi.encodeWithSignature("withdrawAddy(address)",pool));
+                        require(success);
+                        require(abi.decode(result, (address)) != address(0), "Action was not performed by the official BitBay router");
+                    }
                 }
             }
             if(user == pool && addresscheck[pool] == true) { //If user didn't receive tokens from an official router then it's not a sale

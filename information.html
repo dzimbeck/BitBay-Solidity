@@ -1,45 +1,219 @@
 <!DOCTYPE html>
 <html>
-<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
 <head>
+    <meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" type="image/x-icon" href="./favicon.ico">
-    <title>BitBay Solidity</title>
+    <title>BitBay Solidity - FAQ</title>
+    <style>
+        body {
+            font-family: 'Lucida Console', 'Courier New', monospace;
+            background-color: #1a1a1a; /* Dark background for retro feel */
+            color: #4e00fe; /* Neon green text */
+            line-height: 1.6;
+            margin: 20px;
+            padding: 20px;
+            border: 2px solid #4e00fe; /* Neon green border */
+            box-shadow: 0 0 15px #4e00fe; /* Neon glow effect */
+            max-width: 900px;
+            margin-left: auto;
+            margin-right: auto;
+            animation: flicker 1s infinite alternate; /* Subtle flicker effect */
+        }
+
+        h1 {
+            color: ivory;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-bottom: 30px;
+            text-shadow: 0 0 10px #4e00fe;
+        }
+
+        .faq-section {
+            background-color: #2a2a2a; /* Slightly lighter dark for sections */
+            border: 1px #008800;
+            padding: 15px 25px;
+            margin-bottom: 25px;
+            border-radius: 5px;
+            box-shadow: inset 0 0 5px #00ff00; /* Inner neon glow */
+        }
+
+        .faq-question {
+            color: ivory; /* Cyan for questions */
+            text-shadow: 0 0 10px #4e00fe;
+            font-weight: bold;
+            margin-bottom: 10px;
+            cursor: pointer; /* Indicate clickable for accordion effect */
+            position: relative;
+            padding-left: 20px; /* Space for arrow */
+        }
+
+        .faq-question:before {
+            content: ">"; /* Retro arrow */
+            position: absolute;
+            left: 0;
+            color: #00ff00;
+        }
+
+        .faq-answer {
+            display: none; /* Hidden by default for accordion */
+            color: ivory;
+            text-shadow: 0 0 10px #4e00fe;
+            margin-top: 10px;
+            padding-left: 20px;
+            border-left: 1px solid #008800; /* Indent and subtle line for answer */
+        }
+
+        .faq-answer.active {
+            display: block; /* Show when active */
+        }
+
+        a {
+            color: #4f87f7;
+            text-decoration: none;
+            border-bottom: 1px #4f87f7;
+            transition: color 0.3s ease, border-color 0.3s ease;
+        }
+
+        a:hover {
+            color: #ffff00; /* Yellow on hover */
+            border-color: #ffff00;
+        }
+
+        p {
+            margin-bottom: 1em;
+        }
+    </style>
 </head>
 <body>
-    Frequently asked questions about BitBay and the solidity bridge:<br><br>
-    What is the BitBay?<br>
-    BitBay is one of the oldest altcoins since 2014 with an honorable and legendary history. It has unbreakable contracts (two party double deposit escrow), decentralized markets (that run on Bitmessage) and the worlds one and only dynamic peg. The peg is not a hard peg like a stablecoin. Instead, it's a system that prevents volatility and supports a strong economy with the potential for growth. BitBay has a fully-functional, decentralized, peer to peer marketplace and trustless contracting platform that allows you to buy and sell goods and services easily, securely, and anonymously. It does this without the use of escrow agents, arbiters or third parties. This method was pioneered by BitHalo and BitBay which made them the first peer to peer contracting platforms in the world.<br><br>
-    What is the Dynamic Peg and how does it help to stabilize the Bitbay Economy?<br>
-    The Dynamic Peg allows users to control inflation and deflation in the Bitbay economy. It does this by enabling stakers/users to vote on the supply of the economy, allowing them to inflate (unfreeze) or deflate (freeze) coins. When the supply deflates, some users may have funds moved into reserve which is similar to a savings account. During inflation, users who have reserve may have some converted back into liquid funds. This system allows the price of liquid funds to stay very strong, regardless of how small the demand is. This is not to be confused with coins that are "elastic" which have absolutely no impact on marketcap or prices. The dynamic peg is unique because it causes a shift in equity during a supply change, in turn causing a change in marketcap and in the distribution of coins.<br><br>
-    What is the difference between BitBay, BitBay Reserve and BitBay Frozen?<br>
-    BitBay represents the liquid funds that can move immediately, just like a regular coin. However, BitBay coins have a memory so that some of them may convert to BitBay reserve when the supply decreases. That's how users can encourage positive price action on BitBay. BitBay reserve coins behave differently because they move slower. For example, on the main BitBay network after you send reserve coins they are "frozen" for a month. However, they also yield double the reward for stakers who process transactions and protect the network. When the stakers vote to increase the supply that causes some of the funds that were just previously set aside to be converted back to liquid BitBay and they no longer are delayed when sent. Click <a href="https://bitbay.market/bitbay-dynamic-peg-visual-reference.pdf">here</a> to see a visual explanation of how it works.<br><br>
-    How is BitBay different from a stablecoin?<br>
-    BitBay allows users to control volatility and keep the price within any range they collectively desire. A stablecoin is typically fixed to the value of a third party asset or currency. In BitBay users actively have a choice on how the economy behaves through inflation and deflation. If the consensus of users want the price to stay at a specific value, they can get it very close to that using their own algorithms. This way users can customize how and when to defend against price crashes, allowing for a temporary defense against aggressive selling or buying.<br><br>
-    Is Bitbay an algorithmically controlled coin?<br>
-    BitBay is not an algorithmic stablecoin either because the users are the ones who choose. They may indeed choose to put up buy walls similar to collateral and make their own custom contracts however, that is entirely up to them. The price of something is determined by supply and demand and although BitBay can not force demand, it can force the supply to adjust to changes in demand. Therefore, if it gets a significant amount of volume and users it's much more likely to survive brutal market conditions. As a comparison, Bitcoin is not able to program its own economy, nor is it deflationary. BitBay takes this to the next level and programs the coins to respond to the peoples wishes.<br><br>
-    What is the BitBay bridge?<br>
-    BitBay has its own custom coded proof of stake network. Since the peg was activated, BitBay had to switch to decentralized exchanges because the peg requires complex custom code for exchanges to run it. BitBay therefore was forced to make a watered down version of the dynamic peg that can run on any solidity based network(Ethereum, Polygon, Binance). The bridge allows users to move coins from BitBay to these networks so that it can be traded on the exchanges. Users may also move funds off of those networks and back to BitBay.<br><br>
-    Is BitBay and the Bridge decentralized?<br>
-    The bridge is decentralized because BitBay stakers form a consensus and batch transactions together and vote on merkle proofs that can be minted to other networks. Then users only need to present their receipt to redeem the transaction. This same action can be performed in reverse to put funds back into BitBay. Although BitBay will always be the cheaper network costing almost nothing to send transactions, the bridge allows it to be traded on some of the most popular decentralized exchanges in the world. Also, the bridge allows BitBay to take advantage of smart contracts in Solidity. This way, the BitBay chain is never bloated and can scale properly while having advantages of being able to choose any other network like a sidechain to run its contracts.<br><br>
-    How does the BitBay bridge contract differ from the ERC-20 standard?<br>
-    BitBay is extremely different from any token ever conceived on Ethereum. BitBay runs three different contracts(liquid, reserve and frozen) which access the main data contract which handles all peg operations. This allows it to conveniently be integrated into popular wallets such as Metamask. Under the hood however, a user's balance is not actually a single set of values. Instead, it is a series of matrices/arrays that represent a range of values that may be available at different supplies or conditions.<br><br>
-    How was it possible to code something so complex in Solidity?<br>
-    The main BitBay network uses arrays of 1200 values to represent someones balance. The supply can deflate/inflate by 1% up to 1200 times and values less than the supply index are determined to be reserve while the remainder are liquid. Every coin has "memory" of when it is made available. However, this became extremely problematic when trying to publish a similar contract on Ethereum as it would cost up to a thousand times more in gas than a typical transaction and could exceed block size limitations. However a recent breakthrough innovation allowed the costs to be dramatically reduced to only 20-50 times more than a typical transaction. Although this is a bit too expensive for Ethereum, it is quite affordable on 2nd layer networks such as Polygon. The innovation was to use two arrays and mix some of the coins by "forgetting" their exact positions in the larger array. For example, a three-way factor of 1200 can be chosen with 30 large sections, and 8 temporary values representing 5 compound supply changes for each 1% step. The 8 temporary values allow for a "smooth" deflation and inflation experience. When the supply leaves its current section of 8 values the coins are added together and stored as one of the 30 sections that the supply can move through. When a new section is entered, the coins are evenly distributed along the 8 values because the network simply doesn't remember where they were. This method of compression and decompression is used so the payments can represent the main network experience as closely as possible. Obviously the more sections and subsections that can be afforded, the better the user experience will be. When minting coins back to BitBay, the 38 values are then given the closest match possible from the liquidity pool of that specific bridge array. There is many other important maneuvers that happen and they can be seen in the official <a href="https://github.com/bitbaymarket/Bitbay-Solidity">source code.</a><br><br>
-    Why can't users interact with some of the AMM exchanges directly at their website?<br>
-    We wanted our volume to register at the most popular exchanges because they have so many users. However those exchanges are not coded to understand that some reserve or liquid coins may be left behind on a pair during a supply change. Also, because every liquidity provider will have different unique shards to their array balance, how can they possibly share a single liquidity pool and still maintain fair withdraws and trades? The solution was another breakthrough which was coding a custom router that interacts with the exchange and accounts for all these major differences. BitBay has automatic detection of popular AMM contracts typical to Uniswap and Pancakeswap. When BitBay sees a user trying to interact with an AMM, it declines the transaction if they attempt an operation that bypasses the custom rules. Since withdraws, sales and deposits must perform certain safety checks, the official router contract properly handles all of those calculations. Fortunately buying and selling is  still possible directly through Uniswap and Pancakeswap whitelisted router contracts so this will not deter users who are interested in the project. This is done to guarantee that deposits will only happen through the official BitBay router. Liquidity providers must also never send their LP tokens privately to another user because the system requires that those coins are kept by the original depositor in order to withdraw.<br><br>
-    Why must users deposit both liquid and reserve coins on a pair?<br>
-    Since the liquidity pool contract can't determine if coins have been bought, sold, withdrawn or deposited since the users deposit was registered, it tries to make all users deposit both liquid and reserve coins regardless of which pair they are bidding on. This is the fairest way to handle things because supply can change and move other users coins into the pool. The way Uniswap calculates LP tokens is by looking at the lowest percentage of coins deposited based on what's in the pool. However, it doesn't consider all the coins that might be left behind. Also, because supply inflates and deflates, it's good to encourage a relatively smooth deposit that will always have coins available for the different supply changes. You will also notice that excess reserve coins in the liquid pair will not be available at the reserve pair and visa versa. That's because the pairs are held at different addresses and users have to deposit an altcoin to a pair. They are completely separate bids, so they can't share coins.<br><br>
-    How can users share liquidity in a pool if they all deposited a different array?<br>
-    The router registers the array the users deposit and then during a withdraw it runs several operations to get a withdraw that matches their original deposit as closely as possible. The algorithm for this has several important steps that keep withdraws fair. First, it checks to see if the pool has gained or lost coins. Then, it expands the users array to match the new amount. The original deposit array is also deducted although that deduction is different from the coins they receive because it's a different pattern and the pool may not have all the coins available that they originally deposited as coins are bought and sold into the pool from people trading. However, they can iterate each shard and "radiate outward" from that shard up to a certain number of times searching for the closest match for every individual shard. Since this is a lot of iterations, it can cost a lot of gas so if they aren't able to find all the coins nearby they proceed to the final step. If there is any remaining coins owed they are taken from the pool as a traditional payment. The effects are interesting because it also means the higher quality a users deposit is, the higher quality their withdraw is. If the pool nets a profit users who deposit more fairly may also get higher quality liquid and reserve charts paid out to them.<br><br>
-    Can central exchanges also run BitBay?<br>
-    BitBay has an incredibly well documented and highly advanced system for integration with centralized and decentralized exchanges located <a href="https://github.com/bitbaymarket/bitbay-doc-exchange">here</a>.
-    BitBay used to be a top 40 coin hosted on many different central exchanges. After the peg was finished in 2019 BitBay also coded a demo exchange that showed exactly how to adjust orderbooks and perform the complex accounting needed for large volumes of trades. This was done primarily as a courtesy to make integration as easy as possible for interested exchanges. By that time many exchanges disappeared and a few major exchanges remained. The remaining exchanges dropped BitBay as they were either too lazy, greedy or politically motivated to abandon the new technology. Attempts to get new listings resulted in exchanges stealing listing fees or asking for outrageous integration fees without escrow. Even when an exchange did adopt BitBay's peg, it was a short lived success until the exchange became insolvent. Therefore, BitBay has chosen to not pay listing fees to new exchanges as central exchanges compromise user security by not giving them control of their funds, not being open source, at risk for scams, potential front running and potential failure. However exchanges may choose to list for free and BitBay developers and users are able to assist in the auditing of the process.<br><br>
-    Does BitBay work with any AMM exchange?<br>
-    The only exchanges that BitBay is compatible with are ones that are similar to Uniswap V2. These exchanges must contain the ability to "sync" balances and have the same names for their functions as Uniswap. Therefore any exchange can add support for BitBay directly at their site by using the official router and carefully following the proper calculations for deposits. BitBay nodes may choose to automatically synchronize popular pairs so users don't have to. All AMM services that wish to integrate BitBay should also discourage and disable private sending of LP tokens so users may withdraw through the router.<br><br>
-    How can a smart contract developer interact with BitBay?<br>
-    Other financial services that wish to support BitBay could use the router functions by making their contract appear like an AMM. They might do this if their service requires the sharing of liquidity among users. If the users aren't sharing liquidity they can use standard payments for liquid and reserve. However, they must be aware that they have to account for liquid, reserve and frozen funds that move through their service. They must also be aware of supply changes and how that will affect their financial service. BitBay in solidity has curators that form the consensus for making important changes to BitBay and properly adjusting the supply. The curators are also able to approve custom routers that are allowed to handle arrays in any way they see fit as long as the router has those funds available. Developers should communicate to the BitBay community if they wish to perform customized operations on an array within their contract.<br><br>
-    How is BitBays governance structured?<br>
-    BitBay has a decentralized governance with a flexible system of contract administration. Curators are added that can vote on important issues. The curators may originate from the BitBay block explorer rich list or they may be chosen because they are trusted members of the community. Contracts can be made to expand on the roles different curators can play in decision making. Each proposal has a different threshold of consensus for when it becomes valid. A user may vote on a proposal only once within its given time frame. Any proposal that effects something major that can impact security such as a proxy contract or an upgrade can only happen while transactions are paused. Also during this pause after consensus is achieved, a certain amount of time is given for users to review changes by comparing the new values that were registered. Merkle proofs also have a pause for confirmation. This way if any vulnerabilities are detected, users have more than enough time to react and protect their coins. The users who vote on supply changes can also include a list of AMM exchanges they wish to sync with their winning vote. If they don't automatically sync an AMM pair, it's not a problem because the users can also sync the pair before interacting with it.
+    <h1>Frequently Asked Questions</h1>
+
+    <div class="faq-section">
+        <div class="faq-question">What is BitBay?</div>
+        <div class="faq-answer">
+            <p>BitBay, launched in 2014, was the world’s first smart contracting platform—predating even Ethereum. BitBay can also pump or deflate its own price by placing part of the economy in “reserve,” similar to digital bonds. These reserves are tradable in a separate market. BitBay also invented "unbreakable contracts" which use two party escrow and deposits to eliminate fraud in sales and employment contracts. All of this runs on a decentralized <a href="https://app.bitbay.market/">marketplace</a> that is fully peer to peer with no escrow agents or third parties. The project is so legendary and complex that one paragraph is not enough to describe it. We encourage you to join the community and <a href="https://bitbay.market/">learn more.</a></p>
+        </div>
+    </div>
+
+    <div class="faq-section">
+        <div class="faq-question">What is the Dynamic Peg and how does it help to stabilize the Bitbay Economy?</div>
+        <div class="faq-answer">
+            <p>The Dynamic Peg allows users to control inflation and deflation in the Bitbay economy. It does this by enabling stakers/users to vote on the supply of the economy, allowing them to inflate or deflate specific coins. When the supply deflates, some users may have funds moved into reserve which is similar to a savings account. During inflation, users who have reserve may have some converted back into liquid funds. This system allows the price of liquid funds to stay very strong, regardless of how small the demand is. This is not to be confused with coins that are "elastic" which have absolutely no impact on marketcap or prices. The dynamic peg is unique because it causes a shift in equity during a supply change, in turn causing a change in marketcap and in the distribution of coins.</p>
+        </div>
+    </div>
+
+    <div class="faq-section">
+        <div class="faq-question">What is the difference between BitBay, BitBay Reserve and BitBay Frozen?</div>
+        <div class="faq-answer">
+            <p>BitBay represents the liquid funds that can move immediately, just like a regular coin. However, BitBay coins have a memory so that some of them may convert to BitBay reserve when the supply decreases. That's how users can encourage positive price action on BitBay. BitBay reserve coins behave differently because they move slower. For example, on the main BitBay network after you send reserve coins they are "frozen" for a month. However, they also yield double the reward for stakers who process transactions and protect the network. When the stakers vote to increase the supply that causes some of the funds that were just previously set aside to be converted back to liquid BitBay and they no longer are delayed when sent. Click <a href="https://bitbay.market/bitbay-dynamic-peg-visual-reference.pdf">here</a> to see a visual explanation of how it works.</p>
+        </div>
+    </div>
+
+    <div class="faq-section">
+        <div class="faq-question">How is BitBay different from a stablecoin?</div>
+        <div class="faq-answer">
+            <p>BitBay allows users to control volatility and keep the price within any range they collectively desire. A stablecoin is typically fixed to the value of a third party asset or currency. In BitBay users actively have a choice on how the economy behaves through inflation and deflation. If the consensus of users want the price to stay at a specific value, they can get it very close to that using their own algorithms. This way users can customize how and when to defend against price crashes, allowing for a temporary defense against aggressive selling or buying.</p>
+        </div>
+    </div>
+
+    <div class="faq-section">
+        <div class="faq-question">Is Bitbay an algorithmically controlled coin?</div>
+        <div class="faq-answer">
+            <p>BitBay is not an algorithmic stablecoin either because the users are the ones who choose. They may indeed choose to put up buy walls similar to collateral and make their own custom contracts however, that is entirely up to them. The price of something is determined by supply and demand and although BitBay can not force demand, it can force the supply to adjust to changes in demand. Therefore, if it gets a significant amount of volume and users it's much more likely to survive brutal market conditions. As a comparison, Bitcoin is not able to program its own economy, nor is it deflationary. BitBay takes this to the next level and programs the coins to respond to the peoples wishes.</p>
+        </div>
+    </div>
+
+    <div class="faq-section">
+        <div class="faq-question">What is the BitBay bridge?</div>
+        <div class="faq-answer">
+            <p>BitBay has its own custom coded proof of stake network. Since the peg was activated, BitBay had to switch to decentralized exchanges because the peg requires complex custom code for exchanges to run it. BitBay therefore was forced to make a watered down version of the dynamic peg that can run on any solidity based network(Ethereum, Polygon, Binance). The bridge allows users to move coins from BitBay to these networks so that it can be traded on the exchanges. Users may also move funds off of those networks and back to BitBay.</p>
+        </div>
+    </div>
+
+    <div class="faq-section">
+        <div class="faq-question">Is BitBay and the Bridge decentralized?</div>
+        <div class="faq-answer">
+            <p>BitBay’s bridge is fully decentralized, with stakers forming consensus to batch transactions and vote on Merkle proofs, which can be minted on other networks. Users simply present a receipt to redeem funds—both to and from BitBay. While BitBay remains ultra-low cost for transactions, the bridge enables trading on major decentralized exchanges and access to Solidity smart contracts. This keeps the BitBay chain lean and scalable, while leveraging any compatible network as a sidechain for contract execution.</p>
+        </div>
+    </div>
+
+    <div class="faq-section">
+        <div class="faq-question">How does the BitBay bridge contract differ from the ERC-20 standard?</div>
+        <div class="faq-answer">
+            <p>BitBay is extremely different from any token ever conceived on Ethereum. BitBay runs three different contracts(liquid, reserve and frozen) which access the main data contract which handles all peg operations. This allows it to conveniently be integrated into popular wallets such as Metamask. Under the hood however, a user's balance is not actually a single set of values. Instead, it is a series of matrices/arrays that represent a range of values that may be available at different supplies or conditions.</p>
+        </div>
+    </div>
+
+    <div class="faq-section">
+        <div class="faq-question">How was it possible to code something so complex in Solidity?</div>
+        <div class="faq-answer">
+            <p>BitBay’s main network uses arrays of 1,200 values to represent each user's balance, allowing for up to 1,200 incremental 1% supply changes. Coins below the current supply index are in reserve; above it, they're liquid. Each coin has “memory” of when it became liquid—crucial for the dynamic peg. Reproducing this on Ethereum posed major challenges: replicating this logic in Solidity led to extreme gas costs—up to 1,000x more than a standard transaction—and even risked exceeding block limits. A breakthrough made this feasible: compressing the full array into two smaller arrays by sacrificing exact position tracking. The method divides the 1,200 steps into 30 large sections, each with 8 temporary values representing fractional steps. This allows smooth deflation/inflation while reducing on-chain data and gas usage dramatically—down to just 20–50x a normal transaction. Although still expensive for Ethereum, this model works well on second-layer solutions like Polygon. When minting back to BitBay, the 38 compressed values are mapped to the closest match in the bridge’s liquidity pool—maintaining fidelity to the main chain’s behavior. This compression/decompression model mimics BitBay's full system with minimal cost and maximum scalability. For full technical details, see the official Solidity <a href="https://github.com/bitbaymarket/bridge">source code.</a></p>
+        </div>
+    </div>
+
+    <div class="faq-section">
+        <div class="faq-question">Why can't users interact with some of the AMM exchanges directly at their website?</div>
+        <div class="faq-answer">
+            <p>We wanted BitBay's volume to register on the most popular exchanges because of their large user bases. However, these exchanges aren’t built to understand that reserve or liquid coins may be left behind during a supply change. Also, because every liquidity provider will have different unique shards to their array balance, how can they possibly share a single liquidity pool and still maintain fair withdraws and trades? The solution was another breakthrough: a custom router that interacts with AMMs and accounts for these differences. BitBay automatically detects popular AMM contracts like those used by Uniswap and PancakeSwap. If a user attempts to bypass BitBay’s rules, the system blocks the transaction. Since withdrawals, deposits, and sales require safety checks, the official BitBay router handles all necessary calculations. Fortunately buying and selling is still possible directly through the exchanges so the process is user friendly. This system ensures deposits are only made through the official BitBay router. Lastly, liquidity providers must never privately transfer their LP tokens—withdrawals depend on the original depositor retaining those tokens to maintain system integrity.</p>
+        </div>
+    </div>
+
+    <div class="faq-section">
+        <div class="faq-question">Why must users deposit both liquid and reserve coins on a pair?</div>
+        <div class="faq-answer">
+            <p>Since the liquidity pool contract can't determine if coins have been bought, sold, withdrawn, or deposited since the user's deposit was registered, it tries to make all users deposit both liquid and reserve coins, regardless of which pair they are bidding on. This is the fairest way to handle things because supply can change and move other users’ coins into the pool. The way Uniswap calculates LP tokens is by looking at the lowest percentage of coins deposited based on what's in the pool. However, it doesn't consider all the coins that might be left behind. Also, because supply inflates and deflates, it's good to encourage a relatively smooth deposit that will always have coins available for the different supply changes. You will also notice that excess reserve coins in the liquid pair will not be available in the reserve pair, and vice versa. That's because the pairs are held at different addresses, and users have to deposit an altcoin to a specific pair. They are completely separate bids, so they can't share coins.</p>
+        </div>
+    </div>
+
+    <div class="faq-section">
+        <div class="faq-question">How can users share liquidity in a pool if they all deposited a different array?</div>
+        <div class="faq-answer">
+            <p>The router registers the array the users deposit and then during a withdraw it runs several operations to get a withdraw that matches their original deposit as closely as possible. The algorithm for this has several important steps that keep withdraws fair. First, it checks to see if the pool has gained or lost coins. Then, it expands the users array to match the new amount. The original deposit array is also deducted although that deduction is different from the coins they receive because it's a different pattern and the pool may not have all the coins available that they originally deposited as coins are bought and sold into the pool from people trading. However, they can iterate each shard and "radiate outward" from that shard up to a certain number of times searching for the closest match for every individual shard. Since this is a lot of iterations, it can cost a lot of gas so if they aren't able to find all the coins nearby they proceed to the final step. If there is any remaining coins owed they are taken from the pool as a traditional payment. The effects are interesting because it also means the higher quality a users deposit is, the higher quality their withdraw is. If the pool nets a profit users who deposit more fairly may also get higher quality liquid and reserve charts paid out to them.</p>
+        </div>
+    </div>
+
+    <div class="faq-section">
+        <div class="faq-question">Can central exchanges also run BitBay?</div>
+        <div class="faq-answer">
+            <p>BitBay has an incredibly well documented and highly advanced system for integration with centralized and decentralized exchanges located <a href="https://github.com/bitbaymarket/bitbay-doc-exchange">here</a>.
+            BitBay used to be a top 40 coin hosted on many different central exchanges. After the peg was finished in 2019 BitBay also coded a demo exchange that showed exactly how to adjust orderbooks and perform the complex accounting needed for large volumes of trades. This was done primarily as a courtesy to make integration as easy as possible for interested exchanges. By that time many exchanges disappeared and a few major exchanges remained. The remaining exchanges dropped BitBay as they were either too lazy, greedy or politically motivated to adopt the new technology. Attempts to get new listings resulted in exchanges stealing listing fees or asking for outrageous integration fees without escrow. Even when an exchange did adopt BitBay's peg, it was a short lived success until the exchange became insolvent. Therefore, BitBay has chosen to not pay listing fees to new exchanges as central exchanges compromise user security by not giving them control of their funds, not being open source, at risk for scams, potential front running and potential failure. However exchanges may choose to list for free and BitBay developers and users are able to assist in the auditing of the process.</p>
+        </div>
+    </div>
+
+    <div class="faq-section">
+        <div class="faq-question">Does BitBay work with any AMM exchange?</div>
+        <div class="faq-answer">
+            <p>The only AMM exchanges that BitBay is currently compatible with are ones that are similar to Uniswap V2. These exchanges must contain the ability to "sync" balances and have the same names for their functions as Uniswap. Therefore any exchange can add support for BitBay directly at their site by using the official router and carefully following the proper calculations for deposits. BitBay nodes may choose to automatically synchronize popular pairs so users don't have to. All AMM services that wish to integrate BitBay should also discourage and disable private sending of LP tokens so users may withdraw through the router.</p>
+        </div>
+    </div>
+
+    <div class="faq-section">
+        <div class="faq-question">How can a smart contract developer interact with BitBay?</div>
+        <div class="faq-answer">
+            <p>Developers can custom code any kind of contract by interacting with BitBay at the base level(the data contract). This may include decentralized exchanges, AMMs, futures and more! Since BitBays economy programs itself, it is highly exciting for new types of financial instruments and Defi. Developers should reach out to our community to <a href="https://bitbay.market/">learn more.</a></p>
+        </div>
+    </div>
+
+    <div class="faq-section">
+        <div class="faq-question">How is BitBays governance structured?</div>
+        <div class="faq-answer">
+            <p>BitBay has a decentralized governance with a flexible system of contract administration. Curators are added that can vote on important issues. The curators may originate from the BitBay block explorer rich list or they may be chosen because they are trusted members of the community. Contracts can be made to expand on the roles different curators can play in decision making. Each proposal has a different threshold of consensus for when it becomes valid. A user may vote on a proposal only once within its given time frame. Any proposal that effects something major is automatically delayed 45 days to give users time to review it. Eventually the contracts can be locked in place so the system only votes primarily on supply. Merkle proofs also have a pause for confirmation. The users who vote on supply changes can also include a list of AMM exchanges they wish to sync with their winning vote. If they don't automatically sync an AMM pair, it's not a problem because the users can also sync the pair before interacting with it.</p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const faqQuestions = document.querySelectorAll('.faq-question');
+
+            faqQuestions.forEach(question => {
+                question.addEventListener('click', () => {
+                    const answer = question.nextElementSibling;
+                    answer.classList.toggle('active');
+                    question.classList.toggle('active'); // Optional: Add active class to question for styling
+                });
+            });
+        });
+    </script>
 </body>
 </html>

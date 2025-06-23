@@ -88,7 +88,7 @@ contract Administration is IAdministration {
             x += 1;
         }
         maxweight = 100000;
-        delayTime = 3888000; //45 day delay for major proxy changes
+        delayTime = 2592000; //30 day delay for major proxy changes
     }
 
     //Solidity limits the number of variables to a function so a struct is used here
@@ -147,7 +147,7 @@ contract Administration is IAdministration {
 
     function lockProxies(uint locktime, uint pos) public returns (bool){
         require(msg.sender == minter);
-        require(proxylock[pos][0] < block.timestamp - 86400);
+        require(proxylock[pos][0] < block.timestamp - 604800);
         if(proxylock[pos][1] < 3) {
             require(locktime < 7257600);
             require(locktime > 2419200);
@@ -396,7 +396,11 @@ contract Administration is IAdministration {
         bytes32 proposal = keccak256(abi.encodePacked("changeRouter",myAMM,status));
         bool res = checkProposal(proposal, 10);
         if (res) {
-            delayedChanges.push(ProxyChangeRequest(block.timestamp + delayTime, 10, myAMM, status, address(0)));
+            uint dtime = delayTime;
+            if(status == true) {
+                dtime = delayTime / 2;
+            }
+            delayedChanges.push(ProxyChangeRequest(block.timestamp + dtime, 10, myAMM, status, address(0)));
         }
         emit emitProposal(msg.sender, 10, abi.encodePacked("changeRouter",myAMM,status));
         return res;

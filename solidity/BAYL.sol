@@ -28,7 +28,9 @@ contract BAYL is IHALO {
     address public proxy; //Where all the peg functions and storage are
     address public LiquidityPool;
     address public lockpair; //An exception to not revert a temporary reentry
+    address public validator;
     uint public proxylock;
+    uint public validatorlock;
     mapping (address => uint8) public checked; //Users should send to approved contracts or send through base contract
     mapping(address => uint) public nonces;
     bytes32 public immutable DOMAIN_SEPARATOR;
@@ -76,9 +78,21 @@ contract BAYL is IHALO {
         LiquidityPool = prox;
     }
 
-    function lockProxies(uint locktime) public returns (bool) {
+    function setValidator(address prox) public {
+        require(block.timestamp > validatorlock);
         require(msg.sender == minter);
-        proxylock = block.timestamp + locktime;
+        validator = prox;
+    }
+
+    function lockProxies(uint locktime, bool vProx) public returns (bool) {
+        require(msg.sender == minter);
+        if(!vProx) {
+            require(proxylock < block.timestamp - 604800);
+            proxylock = block.timestamp + locktime;
+        } else {
+            require(validatorlock < block.timestamp - 604800);
+            validatorlock = block.timestamp + locktime;
+        }
         return true;
     }
 
@@ -91,7 +105,7 @@ contract BAYL is IHALO {
     //This check is to see if a user is sending to an unknown contract without knowing the nature of the peg and its    
     //effect on pools and transactions. They will get denied if they attempt to send this way. This method does not prevent
     //them from sending before the contract exists. If they must interact with contracts they should use the base contract.
-    function checkAddress(address verify) public returns (bool) {
+    function checkAddress(address from, address verify) public returns (bool) {
         bool isRouter;
         bool success;
         bytes memory result;
@@ -131,7 +145,44 @@ contract BAYL is IHALO {
                 }
             }
         }
+        if(validator != address(0)) {
+            (success, result) = validator.staticcall(abi.encodeWithSignature("validate(address,address,uint8,uint8)",from,verify,checked[from],checked[verify]));
+            require(success);
+            uint8 res = abi.decode(result, (uint8));
+            if(res != 0) {
+                if(res == 3) {
+                    checked[from] = 3;
+                }
+                if(res == 4) {
+                    checked[verify] = 3;
+                }
+                return true;
+            }
+        }
         return false;
+    }
+
+    function checkAMM(address from) public view returns (bool) {
+        if(checked[from] == 2) { //Potential withdrawal
+            bool success;
+            bytes memory result;
+            (success, result) = LiquidityPool.staticcall(abi.encodeWithSignature("withdrawCheck()"));
+            require(success);
+            success = abi.decode(result, (bool));
+            if(success) {
+                (success, result) = from.staticcall(abi.encodeWithSignature("totalSupply()"));
+                require(success);
+                uint poolSupply = abi.decode(result, (uint));
+                (success, result) = LiquidityPool.staticcall(abi.encodeWithSignature("prevlpsupply(address)",from));
+                require(success);
+                if(poolSupply < abi.decode(result, (uint))) {
+                    (success, result) = LiquidityPool.staticcall(abi.encodeWithSignature("withdrawStarted()"));
+                    require(success);
+                    require(abi.decode(result, (bool)));
+                }
+            }
+        }
+        return true;
     }
 
     //ERC20 Functions
@@ -182,9 +233,43 @@ contract BAYL is IHALO {
             lockpair = address(0);
             return true;
         }
-        require(checkAddress(to));
+        require(checkAddress(msg.sender, to));
+        checkAMM(msg.sender);
         bool success;
         bytes memory result;
+        if(checked[msg.sender] == 3 && checked[to] == 0) {
+            uint lval = balanceOf(msg.sender);
+            (success, result) = proxy.staticcall(abi.encodeWithSignature("reserveBalanceOf(address,address)",msg.sender,msg.sender));
+            require(success);
+            uint rval = abi.decode(result, (uint));
+            require(value <= lval + rval);
+            uint v1 = (value * lval) / (lval + rval);
+            uint v2 = (value * rval) / (lval + rval);
+            if(v1 + v2 < value) {
+                uint remainder = value - v1 - v2;
+                lval -= v1;
+                rval -= v2;
+                while(remainder > 0) {
+                    if(rval > 0) {
+                        rval -= 1;
+                        v2 += 1;
+                    } else {
+                        if(lval > 0) {
+                            lval -= 1;
+                            v1 += 1;
+                        }
+                    }
+                    remainder -= 1;
+                }
+            }
+            (success, result) = proxy.call(abi.encodeWithSignature("sendLiquid(address,address,uint256,address)",msg.sender,to,v1,msg.sender));
+            require(success);
+            uint[] memory a;
+            (success, result) = proxy.call(abi.encodeWithSignature("sendReserve(address,address,uint256,uint256[],uint256,address)",msg.sender,to,v2,a,0,msg.sender));
+            require(success);
+            emit Transfer(msg.sender, to, value);
+            return true;
+        }
         (success, result) = proxy.call(abi.encodeWithSignature("sendLiquid(address,address,uint256,address)",msg.sender,to,value,msg.sender));
         require(success);
         emit Transfer(msg.sender, to, value);
@@ -196,9 +281,43 @@ contract BAYL is IHALO {
             lockpair = address(0);
             return true;
         }
-        require(checkAddress(to));
+        require(checkAddress(from, to));
+        checkAMM(from);
         bool success;
         bytes memory result;
+        if(checked[from] == 3 && checked[to] == 0) {
+            uint lval = balanceOf(from);
+            (success, result) = proxy.staticcall(abi.encodeWithSignature("reserveBalanceOf(address,address)",from,from));
+            require(success);
+            uint rval = abi.decode(result, (uint));
+            require(value <= lval + rval);
+            uint v1 = (value * lval) / (lval + rval);
+            uint v2 = (value * rval) / (lval + rval);
+            if(v1 + v2 < value) {
+                uint remainder = value - v1 - v2;
+                lval -= v1;
+                rval -= v2;
+                while(remainder > 0) {
+                    if(rval > 0) {
+                        rval -= 1;
+                        v2 += 1;
+                    } else {
+                        if(lval > 0) {
+                            lval -= 1;
+                            v1 += 1;
+                        }
+                    }
+                    remainder -= 1;
+                }
+            }
+            (success, result) = proxy.call(abi.encodeWithSignature("sendLiquid(address,address,uint256,address)",from,to,v1,msg.sender));
+            require(success);
+            uint[] memory a;
+            (success, result) = proxy.call(abi.encodeWithSignature("sendReserve(address,address,uint256,uint256[],uint256,address)",from,to,v2,a,0,msg.sender));
+            require(success);
+            emit Transfer(from, to, value);
+            return true;
+        }
         (success, result) = proxy.call(abi.encodeWithSignature("sendLiquid(address,address,uint256,address)",from,to,value,msg.sender));
         require(success);
         emit Transfer(from, to, value);

@@ -477,8 +477,9 @@ contract UniswapV2Router02 is IUniswapV2Router01 {
         locked = true;
         factory = fact;
         myLocals2 memory a;
-        (amountB, Liquid, a.res) = _addLiquidity(tokenAB[0], tokenAB[1], amountABDesired[0], amountABDesired[1], Liquid, amountAMinMax, amountBMin);
         a.pair = UniswapV2Library.pairFor(factory, tokenAB[0], tokenAB[1], INIT_CODE[factory]);
+        regBalance(a.pair);
+        (amountB, Liquid, a.res) = _addLiquidity(tokenAB[0], tokenAB[1], amountABDesired[0], amountABDesired[1], Liquid, amountAMinMax, amountBMin);        
         //BAY is the first token
         if(tokenAB[0] == BAY) {
             amountA = Liquid;
@@ -507,6 +508,7 @@ contract UniswapV2Router02 is IUniswapV2Router01 {
         }
         liquidity = IUniswapV2Pair(a.pair).mint(to);
         ILiquidityPool(LiquidityPool).addLPTokens(to,a.pair,liquidity);
+        regBalance(a.pair);
         locked = false;
     }
     function addLiquidityETH(
@@ -525,6 +527,8 @@ contract UniswapV2Router02 is IUniswapV2Router01 {
         locked = true;
         factory = fact;
         myLocals2 memory a;
+        a.pair = UniswapV2Library.pairFor(factory, token, WETH[factory], INIT_CODE[factory]);
+        regBalance(a.pair);
         (amountETH, Liquid, a.res) = _addLiquidity(
             token,
             WETH[factory],
@@ -534,7 +538,6 @@ contract UniswapV2Router02 is IUniswapV2Router01 {
             amountTokenMinMax,
             amountETHMin
         );
-        a.pair = UniswapV2Library.pairFor(factory, token, WETH[factory], INIT_CODE[factory]);        
         if(token == BAY) {
             amountToken = Liquid;
         } else {
@@ -564,6 +567,7 @@ contract UniswapV2Router02 is IUniswapV2Router01 {
         ILiquidityPool(LiquidityPool).addLPTokens(to,a.pair,liquidity);
         // refund dust eth, if any
         if (msg.value > amountETH) TransferHelper.safeTransferETH(msg.sender, msg.value - amountETH);
+        regBalance(a.pair);
         locked = false;
     }
 
@@ -583,6 +587,7 @@ contract UniswapV2Router02 is IUniswapV2Router01 {
         locked = true;
         factory = fact;
         address pair = UniswapV2Library.pairFor(factory, tokenA, tokenB, INIT_CODE[factory]);
+        startThis(true);
         regBalance(pair);
         IUniswapV2Pair(pair).transferFrom(msg.sender, pair, liquidity); // send liquidity to pair
         locals2 memory a;
@@ -606,6 +611,8 @@ contract UniswapV2Router02 is IUniswapV2Router01 {
                 TransferHelper.safeTransfer(BAYR, to, a.liq2);
             }
         }
+        regBalance(pair);
+        startThis(false);
         locked = false;
     }
     function removeLiquidityETH(
@@ -696,9 +703,15 @@ contract UniswapV2Router02 is IUniswapV2Router01 {
     }
     function regBalance(address pair) private {
         bool success;
-        bytes memory result;        
+        bytes memory result;
         (success, result) = LiquidityPool.call(abi.encodeWithSignature("LPbalance(address)",pair));
-        require(success);       
+        require(success);
+    }
+    function startThis(bool status) private {
+        bool success;
+        bytes memory result;
+        (success, result) = LiquidityPool.call(abi.encodeWithSignature("setStart(bool)",status));
+        require(success);
     }
     // **** SWAP ****
     // requires the initial amount to have already been sent to the first pair
@@ -942,7 +955,7 @@ library mintLib {
         uint denominator;
     }
     
-    function mintFee(address pair, address factory, uint mynum, uint myden) public view returns (uint liquidity, address feeTo) {
+    function mintFee(address pair, address factory, uint mynum, uint myden) internal view returns (uint liquidity, address feeTo) {
         (uint112 _reserve0, uint112 _reserve1,) = IUniswapV2Pair(pair).getReserves();
         locals memory a;
         feeTo = IUniswapV2Factory(factory).feeTo();
@@ -968,9 +981,9 @@ library UniswapV2Library {
 
     // returns sorted token addresses, used to handle return values from pairs sorted in this order
     function sortTokens(address tokenA, address tokenB) internal pure returns (address token0, address token1) {
-        require(tokenA != tokenB, 'UniswapV2Library: IDENTICAL_ADDRESSES');
+        require(tokenA != tokenB, 'Same account');
         (token0, token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
-        require(token0 != address(0), 'UniswapV2Library: ZERO_ADDRESS');
+        require(token0 != address(0), 'Zero Address');
     }
 
     // calculates the CREATE2 address for a pair without making any external calls
@@ -993,15 +1006,15 @@ library UniswapV2Library {
 
     // given some amount of an asset and pair reserves, returns an equivalent amount of the other asset
     function quote(uint amountA, uint reserveA, uint reserveB) internal pure returns (uint amountB) {
-        require(amountA > 0, 'UniswapV2Library: INSUFFICIENT_AMOUNT');
-        require(reserveA > 0 && reserveB > 0, 'UniswapV2Library: INSUFFICIENT_LIQUIDITY');
+        require(amountA > 0, 'LOW_AMOUNT');
+        require(reserveA > 0 && reserveB > 0, 'LOW_LIQUIDITY');
         amountB = amountA.mul(reserveB) / reserveA;
     }
 
     // given an input amount of an asset and pair reserves, returns the maximum output amount of the other asset
     function getAmountOut(uint amountIn, uint reserveIn, uint reserveOut, uint mynumerator) internal pure returns (uint amountOut) {
-        require(amountIn > 0, 'UniswapV2Library: INSUFFICIENT_INPUT_AMOUNT');
-        require(reserveIn > 0 && reserveOut > 0, 'UniswapV2Library: INSUFFICIENT_LIQUIDITY');
+        require(amountIn > 0, 'LOW_IN_AMOUNT');
+        require(reserveIn > 0 && reserveOut > 0, 'LOW_LIQUIDITY');
         uint amountInWithFee = amountIn.mul(mynumerator); //Uniswap is 997, Pancakeswap is 998
         uint numerator = amountInWithFee.mul(reserveOut);
         uint denominator = reserveIn.mul(1000).add(amountInWithFee);
@@ -1010,8 +1023,8 @@ library UniswapV2Library {
 
     // given an output amount of an asset and pair reserves, returns a required input amount of the other asset
     function getAmountIn(uint amountOut, uint reserveIn, uint reserveOut, uint mynumerator) internal pure returns (uint amountIn) {
-        require(amountOut > 0, 'UniswapV2Library: INSUFFICIENT_OUTPUT_AMOUNT');
-        require(reserveIn > 0 && reserveOut > 0, 'UniswapV2Library: INSUFFICIENT_LIQUIDITY');
+        require(amountOut > 0, 'LOW_OUT_AMOUNT');
+        require(reserveIn > 0 && reserveOut > 0, 'LOW_LIQUIDITY');
         uint numerator = reserveIn.mul(amountOut).mul(1000);
         uint denominator = reserveOut.sub(amountOut).mul(mynumerator);
         amountIn = (numerator / denominator).add(1);
@@ -1019,7 +1032,7 @@ library UniswapV2Library {
 
     // performs chained getAmountOut calculations on any number of pairs
     function getAmountsOut(address factory, uint amountIn, address[] memory path, bytes memory init, uint mynumerator) internal view returns (uint[] memory amounts) {
-        require(path.length >= 2, 'UniswapV2Library: INVALID_PATH');
+        require(path.length >= 2, 'INVALID_PATH');
         amounts = new uint[](path.length);
         amounts[0] = amountIn;
         for (uint i; i < path.length - 1; i++) {
@@ -1030,7 +1043,7 @@ library UniswapV2Library {
 
     // performs chained getAmountIn calculations on any number of pairs
     function getAmountsIn(address factory, uint amountOut, address[] memory path, bytes memory init, uint mynumerator) internal view returns (uint[] memory amounts) {
-        require(path.length >= 2, 'UniswapV2Library: INVALID_PATH');
+        require(path.length >= 2, 'INVALID_PATH');
         amounts = new uint[](path.length);
         amounts[amounts.length - 1] = amountOut;
         for (uint i = path.length - 1; i > 0; i--) {

@@ -215,6 +215,31 @@
 <hr class="logged-in hidden">
     <div class="swapBody">
       <div class="swapFields">
+        <br>
+        <div class="boxTitle">
+          💸 Send Funds
+        </div>
+
+        <div class="swapField">
+          <div class="swapSelector btn"
+               onclick="sendLiquid()"
+               style="display: inline-flex; width: 49%; margin-right: 1%; justify-content: center; align-items: center; text-align: center;">
+            <div class="swapSelectorText"
+                 style="display: flex; align-items: center; justify-content: flex-start; gap: 8px; text-align: left;">
+              💧<span>Send BAY Liquid</span>
+            </div>
+          </div>
+
+          <div class="swapSelector btn"
+               onclick="sendReserve()"
+               style="display: inline-flex; width: 49%; justify-content: center; align-items: center; text-align: center;">
+            <div class="swapSelectorText"
+                 style="display: flex; align-items: center; justify-content: flex-start; gap: 8px; text-align: left;">
+              🏦<span>Send BAY Reserve</span>
+            </div>
+          </div>
+        </div>
+
         <div class="boxTitle ">
           ❄️ Frozen Coins
         </div>
@@ -307,8 +332,8 @@
         </div>
         <div class="swapField">
           <div class="swapSecondCoin swapSelector btn">
-            <img class="swapSelectorLogo" src="./assets/images/0xmnr.png">
-            <div class="swapSelectorText" id="swapCoin2Text">Wrapped ETH</div>
+            <img class="swapSelectorLogo" id="swapLogo" src="./assets/images/dai.png">
+            <div class="swapSelectorText" id="swapCoin2Text">DAI</div>
             <div class="swapSelectorArrow">
               <svg width="12" height="7" viewBox="0 0 12 7" fill="none" xmlns="http://www.w3.org/2000/svg" class="sc-33m4yg-8 khlnVY"><path d="M0.97168 1L6.20532 6L11.439 1" stroke="#AEAEAE"></path></svg>
             </div>
@@ -1226,7 +1251,6 @@ function darkTheme(toggle=true) {
   if(toggle) {
     isDarkTheme = !isDarkTheme;
     localStorage.setItem("darkTheme", isDarkTheme);
-    console.log(isDarkTheme)
   }
   if (isDarkTheme) {
     document.documentElement.style.filter = 'invert(1) hue-rotate(180deg)';
@@ -1256,7 +1280,6 @@ if(isDarkTheme == "false" || isDarkTheme == false) {
 let spinnerElement;
 
 window.addEventListener('load', () => {
-  console.log(isDarkTheme)
   if (isDarkTheme == true) {
     darkTheme(false);
   }
@@ -1456,6 +1479,8 @@ document.getElementById('SwapCoin2').addEventListener('change', function() {
     document.getElementById("SwapAmount").value = '';
     document.getElementById("SwapAmount2").value = '';
     document.getElementById("SwapSummary").innerHTML = '';
+    document.getElementById("swapLogo").setAttribute("src", pairImages[parseInt(document.getElementById("SwapCoin2").value)]);
+    document.getElementById("swapLogo").style.cssText = "width:25px; height:25px;";
     calculateDeposit();
 });
 
@@ -1562,7 +1587,7 @@ async function login() {
           hideSpinner()
           console.error("Login failed:", e.message);
           // Check if the error message contains '502 Bad Gateway'
-          if (e.message.includes("502 Bad Gateway")) {              
+          if (e.message.includes("502 Bad Gateway")) {
               Swal.fire({
                   icon: 'error',
                   title: 'Issue connecting to MetaMask',
@@ -1609,6 +1634,7 @@ currentChainId = '';
 prevChainId = 0;
 lastitem = 10000000;
 pairs = [];
+pairImages = [];
 knowndecimals = [];
 routers = [];
 exchanges = [];
@@ -1665,6 +1691,7 @@ function defaultvars() {
     prevChainId = 0;
     lastitem = 10000000;
     pairs = [];
+    pairImages = [];
     knowndecimals = [];
     routers = [];
     exchanges = [];
@@ -1773,12 +1800,12 @@ async function checkbalances() {
         document.getElementById("current-network").innerHTML = "Polygon";
         netname = "Polygon";
         netname2 = "POL";
-        BAYLaddy = "0xD57fc711Fa63a64251a8596D7022cC32663c107E";
-        BAYRaddy = "0x30A7ef30f0786aBfcf59525680177ce0148B6Aa2";
-        BAYFaddy = "0x190F0701b27F67a569C87b8Ffb2DEE7b89064E28";
-        BAYDataAddy = "0xEf4c68F40a8f92623eDF414E39A06223e2dC82A2";
-        BAYAdmin = "0x490189049c9294792E1EA2499B9A9436704feD0a";
-        liquidityAddy = "0x30e91e2C1338B749cbB92fc30Ef6247f084217c6";
+        BAYLaddy = "0x5119E704BCDF8e81229E19d0794C33A12caCc7Ce";
+        BAYRaddy = "0xA177cB6ae813230618Af26F059d9370af9f4AEE9";
+        BAYFaddy = "0xD89d3c4F439e0AE502B0F3Ca914f82Cb4618e5fB";
+        BAYDataAddy = "0x32f31298e27cd9D263CA5aCdf33548717df97BB2";
+        BAYAdmin = "0xF43a9d2C78bCc22C520Ed5854D7000d7505cf6e7";
+        liquidityAddy = "0x8c412AE83c219db1654b0913035c9eb7424d9b50";
         pegsteps = 30;
         microsteps = 8;
         deflationrate = 99;
@@ -1879,7 +1906,7 @@ async function checkbalances() {
         }
     })
     //await bayadmincontract.methods.isActive().call().then(function (isActive) { //May also check if automatic unfreeze and special transactions are enabled
-    //    if(parseInt(DOMPurify.sanitize(isActive)) > 1) {            
+    //    if(parseInt(DOMPurify.sanitize(isActive)) > 1) {
     //        modalDialog('Connect', "NOTICE: Spending is currently disabled as this contract may be under maintenance.", "warning");
     //    }
     //})    
@@ -1892,7 +1919,7 @@ async function checkbalances() {
       if (((now - parseInt(lastCheck, 10)) > 60 * 60 * 1000) || parseInt(lastCheck) == parseInt(now)) {
         localStorage.setItem("lastDelayCheck", now.toString());
         const pos = parseInt(DOMPurify.sanitize(await bayadmincontract.methods.lastProxyPosition().call()));
-        updates = DOMPurify.sanitize(JSON.parse(await bayadmincontract.methods.delayedChanges(pos).call()));
+        updates = DOMPurify.sanitize(JSON.stringify(await bayadmincontract.methods.delayedChanges(pos).call()));
         console.log(updates);
       }
     } catch (e) {
@@ -2025,6 +2052,7 @@ async function getNetworkInfo() {
 async function getMarketData(calcbal = 0) {
     if (prevChainId == 0) {
         pairs = [];
+        pairImages = [];
         knowndecimals = [];
         routers = [];
         exchanges = [];
@@ -2038,6 +2066,7 @@ async function getMarketData(calcbal = 0) {
     var x;
     if(prevChainId != currentChainId) {
         pairs = [];
+        pairImages = [];
         knowndecimals = [];
         routers = [];
         exchanges = [];
@@ -2047,6 +2076,8 @@ async function getMarketData(calcbal = 0) {
         if (currentChainId == "11155111") {
             pairs.push({'Wrapped ETH': '0x15F6dD401774441D161D1722aF9e975F60A3cb7b'});
             pairs.push({'HappyWalrusCoin': '0xf7F8aB76E62983ec12D97fD026Ab11296EdB2e23'});
+            pairImages.push("/assets/images/eth.png");
+            pairImages.push("/assets/images/0xmnr.png");
             knowndecimals.push(18);
             knowndecimals.push(8);
             exchanges.push({'WalrusSwap': '0xf99eaeEF749F99F826bF3c1150fCD64a0d0CE6EA'});
@@ -2055,14 +2086,22 @@ async function getMarketData(calcbal = 0) {
             routers.push({'UniversalRouter': '0xfe8f06a4435551c1ab93af0B12D12f4873114a09'});
         }
         if (currentChainId == "137") {
-            pairs.push({'Wrapped ETH': '0x7ceb23fd6bc0add59e62ac25578270cff1b9f619'});
             pairs.push({'DAI': '0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063'});
+            pairs.push({'Wrapped ETH': '0x7ceb23fd6bc0add59e62ac25578270cff1b9f619'});
+            //pairs.push({'Polygon': '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270'});
+            pairImages.push("/assets/images/dai.png");
+            pairImages.push("/assets/images/eth.png");
+            //pairImages.push("/assets/images/polygon.png");
             knowndecimals.push(18);
             knowndecimals.push(18);
+            //knowndecimals.push(18);
             exchanges.push({'UniSwap': '0x9e5A52f57b3038F1B8EeE45F28b3C1967e22799C'});
             exchangenum.push(997)
             exchangeImages.push('<img src="./uniswap.png" style="height: 75px; width: 75px;"/>');
-            routers.push({'UniversalRouter': '0x51Fd44770dE7dcB066028cF28353F1c69eeF29FD'});
+            exchanges.push({'QuickSwap': '0x5757371414417b8C6CAad45bAeF941aBc7d3Ab32'});
+            exchangenum.push(997)
+            exchangeImages.push('<img src="./quickswap.png" style="height: 75px; width: 75px;"/>');
+            routers.push({'UniversalRouter': '0x418fBc4E6B5C694495c90C7cDE1f293EE444F10B'});
         }
         document.getElementById("exchangeImage").innerHTML="";
         document.getElementById("Coin1").innerHTML="";
@@ -2078,6 +2117,8 @@ async function getMarketData(calcbal = 0) {
         }
         document.getElementById("Coin1").innerHTML=text;
         document.getElementById("SwapCoin2").innerHTML=text;
+        document.getElementById("swapLogo").setAttribute("src", pairImages[parseInt(document.getElementById("SwapCoin2").value)]);
+        document.getElementById("swapLogo").style.cssText = "width:25px; height:25px;";
         text = '';
         x = 0; 
         while (x < exchanges.length) {
@@ -2094,6 +2135,9 @@ async function getMarketData(calcbal = 0) {
     currentdecimals3 = await getDecimals(coin1);
     coin1 = Object.values(pairs[coin1])[0];
     var exchange = document.getElementById("exchangeSelect").value;
+    if(exchangeImages.length > 0) {
+        document.getElementById("exchangeImage").innerHTML=exchangeImages[parseInt(exchange)];
+    }
     exchange = Object.values(exchanges[exchange])[0];
     var bayselect = document.getElementById("Coin2").value;   
     var totSupply = 0;
@@ -2866,6 +2910,116 @@ async function showFrozen() {
     return true;
 }
 
+async function sendLiquid() {
+    baylcontract = new web3.eth.Contract(BAYLabi, BAYLaddy);
+    var BAYLBal;
+    BAYLBal = stripZeros((new BigNumber(DOMPurify.sanitize(await baylcontract.methods.balanceOf(myaccounts).call())).dividedBy('1e8')).toFixed());
+    const { value: formValues } = await Swal.fire({
+      title: 'Send BAY Liquid',
+      html:
+        '<input id="recipient" class="swal2-input" placeholder="Recipient Address">' +
+        '<input id="amount" class="swal2-input" placeholder="Amount to Send">',
+      focusConfirm: false,
+      showCancelButton: true,
+      preConfirm: () => {
+        return [
+          document.getElementById('recipient').value.trim(),
+          document.getElementById('amount').value.trim()
+        ];
+      }
+    });
+    if (!formValues) return; // cancelled
+    const [addy, amt] = formValues;
+    if (!web3.utils.isAddress(addy)) {
+      return Swal.fire('Error', 'Invalid Ethereum address.', 'error');
+    }
+    if (!/^\d+(\.\d+)?$/.test(amt)) {
+      return Swal.fire('Error', 'Invalid amount format.', 'error');
+    }
+    const amountBN = new BigNumber(amt).times(1e8); // assuming 18 decimals
+    const balanceBN = new BigNumber(BAYLBal).times(1e8); // should be BN or BigInt from Web3
+    if ((amountBN).gt(balanceBN)) {
+      return Swal.fire('Error', 'Insufficient BAY Liquid balance.', 'error');
+    }
+    const confirm = await Swal.fire({
+      title: 'Confirm Transfer',
+      html: `Send <b>${amt} BAYL</b> to <code style="font-size:7pt">${addy}</code>`,
+      showCancelButton: true,
+      confirmButtonText: 'Confirm',
+    });
+    if (!confirm.isConfirmed) return;
+    try {
+      showSpinner();
+      await baylcontract.methods.transfer(addy, amountBN.toFixed()).send({
+        from: myaccounts,
+        gasLimit: 2500000,
+        gasPrice: gasPrice
+      });
+      hideSpinner();
+      Swal.fire('Success', 'Transfer complete.', 'success');
+    } catch (e) { 
+      hideSpinner();
+      const message = 'Transaction failed: ' + e.message;
+      const output = message.length > 250 ? message.slice(0, 250) + '...' : message;
+      Swal.fire('Error', `Transaction failed: ${output}`, 'error');      
+    }
+}
+
+async function sendReserve() {
+    bayrcontract = new web3.eth.Contract(BAYRabi, BAYRaddy);
+    var BAYRBal;
+    BAYRBal = stripZeros((new BigNumber(DOMPurify.sanitize(await bayrcontract.methods.balanceOf(myaccounts).call())).dividedBy('1e8')).toFixed());
+    const { value: formValues } = await Swal.fire({
+      title: 'Send BAY Reserve',
+      html:
+        '<input id="recipient" class="swal2-input" placeholder="Recipient Address">' +
+        '<input id="amount" class="swal2-input" placeholder="Amount to Send">',
+      focusConfirm: false,
+      showCancelButton: true,
+      preConfirm: () => {
+        return [
+          document.getElementById('recipient').value.trim(),
+          document.getElementById('amount').value.trim()
+        ];
+      }
+    });
+    if (!formValues) return; // cancelled
+    const [addy, amt] = formValues;
+    if (!web3.utils.isAddress(addy)) {
+      return Swal.fire('Error', 'Invalid Ethereum address.', 'error');
+    }
+    if (!/^\d+(\.\d+)?$/.test(amt)) {
+      return Swal.fire('Error', 'Invalid amount format.', 'error');
+    }
+    const amountBN = new BigNumber(amt).times(1e8); // assuming 18 decimals
+    const balanceBN = new BigNumber(BAYRBal).times(1e8); // should be BN or BigInt from Web3
+    if ((amountBN).gt(balanceBN)) {
+      return Swal.fire('Error', 'Insufficient BAY Reserve balance.', 'error');
+    }
+    const confirm = await Swal.fire({
+      title: 'Confirm Transfer',
+      html: `Send <b>${amt} BAYR</b> to <code style="font-size:7pt">${addy}</code>`,
+      showCancelButton: true,
+      confirmButtonText: 'Confirm',
+    });
+    if (!confirm.isConfirmed) return;
+    try {
+      showSpinner();
+      await bayrcontract.methods.transfer(addy, amountBN.toFixed()).send({
+        from: myaccounts,
+        gasLimit: 2500000,
+        gasPrice: gasPrice
+      });
+      hideSpinner();
+      Swal.fire('Success', 'Transfer complete.', 'success');
+    } catch (e) { 
+      hideSpinner();
+      const message = 'Transaction failed: ' + e.message;
+      const output = message.length > 250 ? message.slice(0, 250) + '...' : message;
+      Swal.fire('Error', `Transaction failed: ${output}`, 'error');      
+    }
+}
+
 async function sendFrozen() {
     if (await showFrozen()) {
       if(lastrun > (Math.floor(Date.now() / 1000))) {
@@ -2880,7 +3034,6 @@ async function sendFrozen() {
         });
         baydatacontract.methods.ReleaseFrozenFunds(myaccounts).send({"from":myaccounts,"gasLimit": 2500000,"gasPrice": gasPrice});
         checkbalances();
-    }else {      
     }
 }
 
@@ -3324,6 +3477,14 @@ async function copyNonce() {
     }
 }
 
+//Valid pair hash for known AMM types: 0x5b83bdbcc56b2e630f2807bbadd2b0c21619108066b92a58de081261089e9ce5
+async function getExtCodeHash(address) {
+    const code = await web3.eth.getCode(address);
+    const hash = web3.utils.keccak256(code);
+    console.log(`extcodehash of ${address} is ${hash}`);
+    return hash;
+}
+
 async function addLiquidity() {
     if(lastrun > (Math.floor(Date.now() / 1000))) {
         return;
@@ -3343,7 +3504,14 @@ async function addLiquidity() {
     var coin1 = document.getElementById("Coin1").value;
     var weth = false;
     if(coin1 == 0) {
+      if (currentChainId != "137") {
         weth = true;
+      }
+    }
+    if(coin1 == 2) {
+      if (currentChainId == "137") {
+        weth = true;
+      }
     }
     var exchange = document.getElementById("exchangeSelect").value;
     var mycoin1 = coin1;
@@ -3382,7 +3550,7 @@ async function addLiquidity() {
                   text: 'Authorizing Metamask allowance for the first coin...',
                   confirmButtonText: 'Close'
               });
-              modalDialog('Connect', "Waiting for router allowance authorization on the blockchain for the first coin...", "warning");
+              //modalDialog('Connect', "Waiting for router allowance authorization on the blockchain for the first coin...", "warning");
               await coin1contract.methods.approve(myrouter, "9999999999999999999999999999999999999999999999999999999999999999999999").send({"from":currentaccount,"gasLimit": 2500000,"gasPrice": gasPrice});
           }
           allowance = 0;
@@ -3397,7 +3565,7 @@ async function addLiquidity() {
                   text: 'Authorizing Metamask allowance for BAY...',
                   confirmButtonText: 'Close'
               });
-              modalDialog('Connect', "Waiting for router allowance authorization on the blockchain for BAY...", "warning");
+              //modalDialog('Connect', "Waiting for router allowance authorization on the blockchain for BAY...", "warning");
               await baylcontract.methods.approve(myrouter, "9999999999999999999999999999999999999999999999999999999999999999999999").send({"from":currentaccount,"gasLimit": 2500000,"gasPrice": gasPrice});
           }
           allowance = 0;
@@ -3412,7 +3580,7 @@ async function addLiquidity() {
                   text: 'Authorizing Metamask allowance for BAYR...',
                   confirmButtonText: 'Close'
               });
-              modalDialog('Connect', "Waiting for router allowance authorization on the blockchain for BAYR...", "warning");
+              //modalDialog('Connect', "Waiting for router allowance authorization on the blockchain for BAYR...", "warning");
               await bayrcontract.methods.approve(myrouter, "9999999999999999999999999999999999999999999999999999999999999999999999").send({"from":currentaccount,"gasLimit": 2500000,"gasPrice": gasPrice});
           }
       } catch (e) {
@@ -3423,7 +3591,7 @@ async function addLiquidity() {
               text: 'Approval failed',
               confirmButtonText: 'Close'
           });
-          modalDialog('Connect', "Approval failed", "danger");
+          //modalDialog('Connect', "Approval failed", "danger");
           hideSpinner();
           return;
       }
@@ -3440,7 +3608,7 @@ async function addLiquidity() {
                   text: 'Authorizing Metamask to Sync AMM for this pair...',
                   confirmButtonText: 'Close'
               });
-              modalDialog('Connect', "Syncing AMM...", "warning");
+              //modalDialog('Connect', "Syncing AMM...", "warning");
               try {
                   await liquiditypool.methods.syncAMM(mypair).send({"from":currentaccount,"gasLimit": 2500000,"gasPrice": gasPrice});
               } catch (e) {
@@ -3451,7 +3619,7 @@ async function addLiquidity() {
                       text: 'Syncing failed',
                       confirmButtonText: 'Close'
                   });
-                  modalDialog('Connect', "Syncing failed", "danger");
+                  //modalDialog('Connect', "Syncing failed", "danger");
                   hideSpinner();
                   return;
               }
@@ -3469,7 +3637,7 @@ async function addLiquidity() {
               text: 'This pair is now in sync. Please recalculate your deposit.',
               confirmButtonText: 'Close'
           });
-          modalDialog('Connect', "This pair is now in sync. Please recalculate your deposit.", "success");
+          //modalDialog('Connect', "This pair is now in sync. Please recalculate your deposit.", "success");
           hideSpinner();
           return;
       }
@@ -3481,7 +3649,7 @@ async function addLiquidity() {
               text: 'Amount can not be zero',
               confirmButtonText: 'Close'
           });
-          modalDialog('Connect', "Amount can not be zero", "warning");
+          //modalDialog('Connect', "Amount can not be zero", "warning");
           hideSpinner();
           return;
       }
@@ -3492,7 +3660,7 @@ async function addLiquidity() {
               text: 'Amount can not be zero',
               confirmButtonText: 'Close'
           });
-          modalDialog('Connect', "Amount can not be zero", "warning");
+          //modalDialog('Connect', "Amount can not be zero", "warning");
           hideSpinner();
           return;
       }
@@ -3536,7 +3704,7 @@ async function addLiquidity() {
                   text: 'Not enough liquid funds for deposit',
                   confirmButtonText: 'Close'
               });
-              modalDialog('Connect', "Not enough liquid funds for deposit", "danger");
+              //modalDialog('Connect', "Not enough liquid funds for deposit", "danger");
               returnthis = 1;
           }
       });
@@ -3548,7 +3716,7 @@ async function addLiquidity() {
                   text: 'Not enough reserve funds for deposit',
                   confirmButtonText: 'Close'
               });
-              modalDialog('Connect', "Not enough reserve funds for deposit", "danger");
+              //modalDialog('Connect', "Not enough reserve funds for deposit", "danger");
               returnthis = 1;
           }
       });
@@ -3561,7 +3729,7 @@ async function addLiquidity() {
                       text: 'Not enough coins for deposit',
                       confirmButtonText: 'Close'
                   });
-                  modalDialog('Connect', "Not enough coins for deposit", "danger");
+                  //modalDialog('Connect', "Not enough coins for deposit", "danger");
                   returnthis = 1;
               }
           });
@@ -3574,7 +3742,7 @@ async function addLiquidity() {
                       text: 'Not enough coins for deposit',
                       confirmButtonText: 'Close'
                   });
-                  modalDialog('Connect', "Not enough coins for deposit", "danger");
+                  //modalDialog('Connect', "Not enough coins for deposit", "danger");
                   returnthis = 1;
               }
           });
@@ -3602,7 +3770,7 @@ async function addLiquidity() {
           text: 'Attempting to add liquidity, please approve the transaction...',
           confirmButtonText: 'Close'
       });
-      modalDialog('Connect', "Attempting to add liquidity, please approve the transaction...", "warning");
+      //modalDialog('Connect', "Attempting to add liquidity, please approve the transaction...", "warning");
       try {
           if(weth) {
               await routercontract.methods.addLiquidityETH(bayaddy,totalval,otherval,amount2min,amount1min,currentaccount,deadline,exchange).send({"from":currentaccount,"value":coin1val,"gasLimit": 9000000,"gasPrice": gasPrice});
@@ -3624,7 +3792,7 @@ async function addLiquidity() {
           return;
       }
       //document.getElementById("addliquidtext").innerHTML = 'Success!';
-      modalDialog('Connect', "Success", "success");
+      //modalDialog('Connect', "Success", "success");
       document.getElementById("Coin1amount").value = '';
       document.getElementById("Coin2amount").value = '';
       checkbalances();
@@ -3674,7 +3842,14 @@ async function Swap() {
     var coin1 = document.getElementById("SwapCoin2").value;
     var weth = false;
     if(coin1 == 0) {
+      if (currentChainId != "137") {
         weth = true;
+      }
+    }
+    if(coin1 == 2) {
+      if (currentChainId == "137") {
+        weth = true;
+      }
     }
     var mycoin1 = coin1;
     coin1 = Object.values(pairs[coin1])[0];
@@ -3682,7 +3857,13 @@ async function Swap() {
     exchange = Object.values(exchanges[exchange])[0];
     var myrouter = Object.values(routers[0])[0];
     var coin1contract = new web3.eth.Contract(ERC20ABI, coin1);
-    var routercontract = new web3.eth.Contract(RouterABI, myrouter);
+    var routercontract = "";
+    if (currentChainId != "137" || exchange != "0") {
+        routercontract = new web3.eth.Contract(RouterABI, myrouter);
+    } else {
+        myrouter = "0xedf6066a2b290C185783862C7F4776A2C8077AD1";
+        routercontract = new web3.eth.Contract(origUniswapABI, "0xedf6066a2b290C185783862C7F4776A2C8077AD1");
+    }
     var exchangecontract = new web3.eth.Contract(FactoryABI, exchange);
     var bayselect = document.getElementById("SwapCoin").value;
     var bayaddy = '';
@@ -3750,7 +3931,7 @@ async function Swap() {
       } catch (e) {
           console.log(e);
           //document.getElementById("addliquidtext").innerHTML = 'Approval failed';
-          modalDialog('Connect', "Approval failed", "danger");
+          //modalDialog('Connect', "Approval failed", "danger");
           Swal.fire({
               icon: 'error',
               text: 'Approval failed',
@@ -3902,6 +4083,7 @@ async function Swap() {
       }
       swapval = swapval.toString();
       lastMinMax2 = lastMinMax.toString();
+      console.log(mypair);
       console.log(swapval);
       console.log(lastMinMax2);
       console.log(chosenaccount);
@@ -3921,14 +4103,22 @@ async function Swap() {
               if(lastSelect == "SwapAmount") { //Maximum coins paid
                   if(weth) {
                       await routercontract.methods.swapETHForExactTokens(swapval,[coin1,bayaddy],chosenaccount,deadline,exchange).send({"from":chosenaccount,"value":lastMinMax2,"gasLimit": 5000000,"gasPrice": gasPrice});
-                  } else {
-                      await routercontract.methods.swapTokensForExactTokens(swapval,lastMinMax2,[coin1,bayaddy],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
+                  } else {//Altered to trade directly at router
+                      if (currentChainId == "137" && myrouter == "0xedf6066a2b290C185783862C7F4776A2C8077AD1") {
+                          await routercontract.methods.swapTokensForExactTokens(swapval,lastMinMax2,[coin1,bayaddy],chosenaccount,deadline).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
+                      } else {
+                          await routercontract.methods.swapTokensForExactTokens(swapval,lastMinMax2,[coin1,bayaddy],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
+                      }
                   }
               } else { //Minimum BAY received
                   if(weth) {
                       await routercontract.methods.swapExactETHForTokens(lastMinMax2,[coin1,bayaddy],chosenaccount,deadline,exchange).send({"from":chosenaccount,"value":swapval,"gasLimit": 5000000,"gasPrice": gasPrice});
-                  } else {
-                      await routercontract.methods.swapExactTokensForTokens(swapval,lastMinMax2,[coin1,bayaddy],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
+                  } else {//Altered to trade directly at router
+                      if (currentChainId == "137" && myrouter == "0xedf6066a2b290C185783862C7F4776A2C8077AD1") {
+                          await routercontract.methods.swapExactTokensForTokens(swapval,lastMinMax2,[coin1,bayaddy],chosenaccount,deadline).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
+                      } else {
+                          await routercontract.methods.swapExactTokensForTokens(swapval,lastMinMax2,[coin1,bayaddy],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
+                      }
                   }
               }
           }
@@ -3937,14 +4127,22 @@ async function Swap() {
               if(lastSelect == "SwapAmount") { //Maximum coins paid
                   if(weth) {
                       await routercontract.methods.swapETHForExactTokens(swapval,[coin1,bayaddy],chosenaccount,deadline,exchange).send({"from":chosenaccount,"value":lastMinMax2,"gasLimit": 5000000,"gasPrice": gasPrice});
-                  } else {
-                      await routercontract.methods.swapTokensForExactTokens(swapval,lastMinMax2,[coin1,bayaddy],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
+                  } else {//Altered to trade directly at router
+                      if (currentChainId == "137" && myrouter == "0xedf6066a2b290C185783862C7F4776A2C8077AD1") {
+                          await routercontract.methods.swapTokensForExactTokens(swapval,lastMinMax2,[coin1,bayaddy],chosenaccount,deadline).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
+                      } else {
+                          await routercontract.methods.swapTokensForExactTokens(swapval,lastMinMax2,[coin1,bayaddy],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
+                      }
                   }
               } else { //Minimum BAY received
                   if(weth) {
                       await routercontract.methods.swapExactETHForTokens(lastMinMax2,[coin1,bayaddy],chosenaccount,deadline,exchange).send({"from":chosenaccount,"value":swapval,"gasLimit": 5000000,"gasPrice": gasPrice});
-                  } else {
-                      await routercontract.methods.swapExactTokensForTokens(swapval,lastMinMax2,[coin1,bayaddy],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
+                  } else {//Altered to trade directly at router
+                      if (currentChainId == "137" && myrouter == "0xedf6066a2b290C185783862C7F4776A2C8077AD1") {
+                          await routercontract.methods.swapExactTokensForTokens(swapval,lastMinMax2,[coin1,bayaddy],chosenaccount,deadline).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
+                      } else {
+                          await routercontract.methods.swapExactTokensForTokens(swapval,lastMinMax2,[coin1,bayaddy],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
+                      }
                   }
               }
           }
@@ -3953,14 +4151,22 @@ async function Swap() {
               if(lastSelect == "SwapAmount") { //Minimum coins received
                   if(weth) {
                       await routercontract.methods.swapExactTokensForETH(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
-                  } else {
-                      await routercontract.methods.swapExactTokensForTokens(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
+                  } else {//Altered to trade directly at router
+                      if (currentChainId == "137" && myrouter == "0xedf6066a2b290C185783862C7F4776A2C8077AD1") {
+                          await routercontract.methods.swapExactTokensForTokens(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
+                      } else {
+                          await routercontract.methods.swapExactTokensForTokens(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
+                      }
                   }
               } else { //Maximum BAY paid
                   if(weth) {
                       await routercontract.methods.swapTokensForExactETH(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
-                  } else {
-                      await routercontract.methods.swapTokensForExactTokens(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
+                  } else {//Altered to trade directly at router
+                      if (currentChainId == "137" && myrouter == "0xedf6066a2b290C185783862C7F4776A2C8077AD1") {
+                          await routercontract.methods.swapTokensForExactTokens(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
+                      } else {
+                          await routercontract.methods.swapTokensForExactTokens(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
+                      }
                   }
               }
           }
@@ -3969,14 +4175,22 @@ async function Swap() {
               if(lastSelect == "SwapAmount") { //Minimum coins received
                   if(weth) {
                       await routercontract.methods.swapExactTokensForETH(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
-                  } else {
-                      await routercontract.methods.swapExactTokensForTokens(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
+                  } else {//Altered to trade directly at router
+                      if (currentChainId == "137" && myrouter == "0xedf6066a2b290C185783862C7F4776A2C8077AD1") {
+                          await routercontract.methods.swapExactTokensForTokens(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
+                      } else {
+                          await routercontract.methods.swapExactTokensForTokens(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
+                      }
                   }
               } else { //Maximum BAY paid
                   if(weth) {
                       await routercontract.methods.swapTokensForExactETH(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
-                  } else {
-                      await routercontract.methods.swapTokensForExactTokens(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
+                  } else {//Altered to trade directly at router
+                      if (currentChainId == "137" && myrouter == "0xedf6066a2b290C185783862C7F4776A2C8077AD1") {
+                          await routercontract.methods.swapTokensForExactTokens(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
+                      } else {
+                          await routercontract.methods.swapTokensForExactTokens(swapval,lastMinMax2,[bayaddy,coin1],chosenaccount,deadline,exchange).send({"from":chosenaccount,"gasLimit": 5000000,"gasPrice": gasPrice});
+                      }
                   }
               }
           }
@@ -4021,7 +4235,14 @@ async function withdrawLP() {
     var coin1 = document.getElementById("Coin1").value;
     var weth = false;
     if(coin1 == 0) {
+      if (currentChainId != "137") {
         weth = true;
+      }
+    }
+    if(coin1 == 2) {
+      if (currentChainId == "137") {
+        weth = true;
+      }
     }
     coin1 = Object.values(pairs[coin1])[0];
     var exchange = document.getElementById("exchangeSelect").value;
