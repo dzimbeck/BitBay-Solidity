@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Solidity Compiler with JS Code Vars</title>
+    <script src="./web3.min.js"></script>
+    <script src="./contracts.js"></script>
+</head>
+<body>
+    <h2>Frontend Solidity Compiler (JS Variable Source)</h2>
+    <label>Private Key:
+        <input type="password" id="privkeyInput" placeholder="Enter your private key" onchange="setPrivKey(this.value)">
+    </label>
+    <br><br>
+    <label>Load Contracts:
+        <input type="file" id="contractLoader" accept=".sol" multiple onchange="loadContracts(this.files)">
+    </label>
+    <br><br>
+    <button onclick="saveContracts()">Save Deployed Contracts</button><br><br>
+    <button onclick="loadContractsFromJSON()">Load Contracts from JSON</button><br><br>
+    <input type="file" id="jsonLoader" accept=".json" style="display: none;" onchange="readContractsJSON(this.files[0])">
+    <button onclick="start()" disabled>Compile & Deploy</button><br>
+    <pre id="output"></pre>
+<script>
+let contractsDict = {};
+const outputEl = document.getElementById('output');
+const defaultRPC = "https://polygon-rpc.com";
+let gasPrice;
+var web3;
+var account;
+var addr;
+const deployArgs = {
+    _factory: "0x9e5A52f57b3038F1B8EeE45F28b3C1967e22799C",
+    _WETH: "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270",
+    _minter: "0xC70F0Ec950c51BB4E410A94c21468247bFDdF29c",
+    init: "0x96e8ac4277198ff8b6f785478aa9a39f403cb768dd02cbee326c3e7da348845f",
+    mynumerator: 997,
+    fnum: 1,
+    fden: 5
+};
+
+const uniswapFactories = [
+    "0x9e5A52f57b3038F1B8EeE45F28b3C1967e22799C", // Uniswap v2 factory
+    "0x5757371414417b8C6CAad45bAeF941aBc7d3Ab32"  // Quickswap v2 factory
+];
+const uniswapAddresses = [
+    "0xedf6066a2b290C185783862C7F4776A2C8077AD1", // Uniswap v2 router (swap only) original
+    "0x1095692A6237d83C6a72F3F5eFEdb9A670C49223", // Uniswap v3 universal router
+    "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45", // Uniswap v3 swap router 2 (newer router type)
+    "0x000000000022D473030F116dDEE9F6B43aC78BA3", // Uniswap v3 Permit2
+    "0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff"  // Quickswap v2 router (same init hash)
+];
+
+const pairTokens = [
+    ["BAYL", "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619"], //Polygon WETH
+    ["BAYR", "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619"], //Polygon WETH
+    ["BAYL", "0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063"], //Polygon WDAI
+    ["BAYR", "0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063"]  //Polygon WDAI
+];
+
+//Anticipated names of contracts based on Solidity code
+const names = ["BAYL", "BAYR", "BAYF", "BITBAY", "Administration", "Pool", "Validator", "UniswapV2Router02"];
+
+//Dictionary will have contracts as their identical contract name in the solidity file.
+var BAYL;
+var BAYR;
+var BAYF;
+var BitBay;
+var Admin;
+var LiquidityPool;
+var Validator;
+var Router;
+
+// Store worker instances
+const solcWorkers = {}; // Key: solc version URL, Value: Worker instance
+const workerPromises = {}; // Key: solc version URL, Value: Promise that resolves when worker is ready
+
+function saveContracts() {
+    const dataStr = JSON.stringify(contractsDict, null, 2);
+    const blob = new Blob([dataStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "contracts.json";
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function loadContractsFromJSON() {
+    document.getElementById("jsonLoader").click();
+}
+
+function readContractsJSON(file) {
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        try {
+            contractsDict = JSON.parse(e.target.result);
+            alert("Contracts loaded from JSON.");
+            try {
+                const privKey = window.privkey;
+                web3 = new Web3(defaultRPC);
+                account = web3.eth.accounts.privateKeyToAccount(privKey);
+                web3.eth.accounts.wallet.add(account);
+                web3.eth.defaultAccount = account.address;
+                addr = names.map(name => contractsDict[name]?.address);
+                BAYL = new web3.eth.Contract(contractsDict.BAYL.abi, addr[0]);
+                BAYR = new web3.eth.Contract(contractsDict.BAYR.abi, addr[1]);
+                BAYF = new web3.eth.Contract(contractsDict.BAYF.abi, addr[2]);
+                BitBay = new web3.eth.Contract(contractsDict.BITBAY.abi, addr[3]);
+                Admin = new web3.eth.Contract(contractsDict.Administration.abi, addr[4]);
+                LiquidityPool = new web3.eth.Contract(contractsDict.Pool.abi, addr[5]);
+                Validator = new web3.eth.Contract(contractsDict.Validator.abi, addr[6]);
+                Router = new web3.eth.Contract(contractsDict.UniswapV2Router02.abi, addr[7]);
+                print("🔐 Using account: " + account.address);
+            } catch (err) {
+                print("❌ Contracts loaded but account loading failed.");
+                console.log(err);
+            }
+        } catch (err) {
+            alert("Failed to load JSON: " + err.message);
+        }
+    };
+    reader.readAsText(file);
+}
+
+function setPrivKey(key) {
+    if (key && key.length >= 64) {
+        window.privkey = key.startsWith('0x') ? key : '0x' + key;
+        print("🔐 Private key set via input.");
+    } else {
+        alert("❌ Invalid private key. It must be at least 64 hex characters.");
+    }
+}
+
+function loadContracts(fileList) {
+    if (!Array.isArray(window.fileNameList) || !window.fileNameList.length) {
+        alert("❌ window.fileNameList is not defined or empty. Load all files at once please.");
+        return;
+    }
+
+    const expectedSet = new Set(window.fileNameList.map(name => name + ".sol"));
+    const readerPromises = [];
+
+    for (const file of fileList) {
+        if (!expectedSet.has(file.name)) {
+            print(`❌ Incorrect filename: ${file.name}. It is not in fileNameList.`);
+            continue;
+        }
+
+        const reader = new FileReader();
+        const promise = new Promise((resolve, reject) => {
+            reader.onload = (e) => {
+                const contractCode = e.target.result;
+                const keyName = file.name.replace(".sol", "");
+                window[keyName] = contractCode;
+                print(`📥 Loaded contract: ${file.name}`);
+                resolve();
+            };
+            reader.onerror = () => reject(reader.error);
+        });
+
+        reader.readAsText(file);
+        readerPromises.push(promise);
+    }
+
+    Promise.all(readerPromises)
+        .then(() => print("✅ All contracts loaded successfully."))
+        .catch(err => print(`❌ Error loading contracts: ${err.message}`));
+}
+
+// Helper to wait for TX
+async function sendTx(contract, method, args = []) {
+    const receipt = await contract.methods[method](...args).send({ from: account.address, gasLimit: 7000000, gasPrice });
+    print(`✅ ${method}(${args.join(", ")}) confirmed in ${receipt.transactionHash}`);
+    return receipt;
+}
+
+function print(msg) {
+    outputEl.textContent += msg + '\n';
+    outputEl.scrollTop = outputEl.scrollHeight;
+}
+
+/**
+ * Initializes and returns a Web Worker for a specific Solidity version.
+ * This function ensures that each worker is set up only once.
+ *
+ * @param {string} workerScriptUrl - The URL to the worker script (e.g., './solc-worker-084.js').
+ * @param {string} solcVersionDisplay - For display purposes (e.g., "0.8.4").
+ * @returns {Promise<Worker>} A promise that resolves with the initialized Worker instance.
+ */
+async function getSolcWorker(workerScriptUrl, solcVersionDisplay) {
+    if (workerPromises[workerScriptUrl]) {
+        return workerPromises[workerScriptUrl]; // Return existing promise if worker is already being set up
+    }
+    
+    // Create a new promise for this worker initialization
+    workerPromises[workerScriptUrl] = new Promise((resolve, reject) => {
+        print(`⏳ Initializing Solc Worker for v${solcVersionDisplay} from ${workerScriptUrl}...`);
+        const worker = new Worker(workerScriptUrl);
+        solcWorkers[workerScriptUrl] = worker; // Store the worker instance
+
+        let isReady = false; // Flag to ensure we only resolve once
+
+        const messageHandler = (e) => {
+            if (e.data.type === 'ready' && !isReady) {
+                isReady = true;
+                print(`✅ Solc Worker for v${solcVersionDisplay} ready!`);
+                resolve(worker);
+            } else if (e.data.type === 'error') {
+                console.error(`Error from worker ${workerScriptUrl}:`, e.data.error);
+                print(`❌ Error from worker v${solcVersionDisplay}: ${e.data.error}`);
+                worker.terminate(); // Terminate worker on initialization error
+                delete solcWorkers[workerScriptUrl];
+                delete workerPromises[workerScriptUrl];
+                reject(new Error(`Worker initialization failed for ${solcVersionDisplay}: ${e.data.error}`));
+            }
+        };
+
+        worker.addEventListener('message', messageHandler);
+
+        // Handle worker errors
+        worker.addEventListener('error', (error) => {
+            console.error(`Unhandled error in worker ${workerScriptUrl}:`, error);
+            print(`❌ Unhandled error in worker v${solcVersionDisplay}: ${error.message}`);
+            worker.terminate();
+            delete solcWorkers[workerScriptUrl];
+            delete workerPromises[workerScriptUrl];
+            reject(new Error(`Worker error for ${solcVersionDisplay}: ${error.message}`));
+        });
+        
+        // Signal the worker to load its compiler and report readiness
+        worker.postMessage({ command: 'init' });
+    });
+
+    return workerPromises[workerScriptUrl];
+}
+
+
+/**
+ * Sends compilation request to a worker and returns a Promise for the result.
+ * @param {Worker} worker - The worker instance.
+ * @param {object} input - The solc compilation input object.
+ * @returns {Promise<object>} A promise that resolves with the parsed compilation output.
+ */
+async function compileWithWorker(worker, input) {
+    return new Promise((resolve, reject) => {
+        // Generate a unique ID for this request to match the response
+        const requestId = Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+
+        const messageHandler = (e) => {
+            if (e.data.requestId === requestId) {
+                worker.removeEventListener('message', messageHandler); // Clean up listener
+                if (e.data.type === 'compilationResult') {
+                    resolve(JSON.parse(e.data.output));
+                } else if (e.data.type === 'compilationError') {
+                    reject(new Error(e.data.error));
+                }
+            }
+        };
+
+        worker.addEventListener('message', messageHandler);
+
+        worker.postMessage({
+            command: 'compile',
+            input: JSON.stringify(input),
+            requestId: requestId
+        });
+    });
+}
+
+function linkLibrary(bytecode, libName, libAddress) {
+    const placeholder = '__' + libName + '_'.repeat(40 - 2 - libName.length);
+    const address = libAddress.replace('0x', '');
+    if (placeholder.length !== 40) {
+        console.warn(`Library placeholder for ${libName} is not 40 characters long: "${placeholder}"`);
+    }
+    return bytecode.split(placeholder).join(address);
+}
+glob=''
+async function start() {
+    print("🚀 Starting compilation process...");
+
+    const privKey = window.privkey;
+    const varList = window.fileNameList;
+
+    if (!privKey || !Array.isArray(varList) || !varList.length) {
+        alert("Global `privkey` and `fileNameList` must be defined in contracts.js.");
+        return;
+    }
+
+    web3 = new Web3(defaultRPC);
+    account = web3.eth.accounts.privateKeyToAccount(privKey);
+    web3.eth.accounts.wallet.add(account);
+    web3.eth.defaultAccount = account.address;
+    print("🔐 Using account: " + account.address);
+    try {
+        const currentGasPrice = await web3.eth.getGasPrice();
+        gasPrice = web3.utils.toWei(Math.floor(parseInt(currentGasPrice) * 1.5).toString(), 'wei');
+
+        if (parseInt(gasPrice) > 2500000000000) {
+            gasPrice = "2500000000000";
+        }
+        if (parseInt(gasPrice) < 2500000000) {
+            gasPrice = "2500000000";
+        }
+        print(`Current Gas Price: ${web3.utils.fromWei(gasPrice, 'gwei')} Gwei`);
+    } catch (gasPriceError) {
+        print(`❌ Error getting gas price: ${gasPriceError.message}`);
+    }
+    for (let i = 0; i < varList.length; i++) {
+        const varName = varList[i];
+        var code = window[varName];
+        const isLast = i === varList.length - 1;
+
+        if (typeof code !== "string") {
+            print(`❌ Variable ${varName} not found or not a string. Skipping.`);
+            continue;
+        }
+
+        let workerUrl;
+        let solcVersionDisplay;
+
+        if (isLast) {
+            workerUrl = "./solc-worker-070.js";
+            solcVersionDisplay = "0.7.0+commit.9e61f92b";
+        } else {
+            workerUrl = "./solc-worker-084.js";
+            solcVersionDisplay = "0.8.4+commit.c7e474f2";
+        }
+
+        let compilerWorker;
+        try {
+            // Get or initialize the worker for the required Solidity version
+            compilerWorker = await getSolcWorker(workerUrl, solcVersionDisplay);
+        } catch (error) {
+            print(`❌ Could not get compiler worker for v${solcVersionDisplay}: ${error.message}`);
+            continue;
+        }
+        
+        var contractName = varName+'.sol'; //Get this
+        if (!/\r\n/.test(code) && /\n/.test(code)) {
+            code = code.replace(/\r?\n/g, '\r\n');
+        }
+        var input = {
+            "language": "Solidity",
+            "sources": {
+                [contractName]: {
+                    "content": code
+                }
+            },
+            "settings": {
+                "optimizer": {
+                    "enabled": true,
+                    "runs": 200
+                },
+                "outputSelection": {
+                    "*": {
+                        "": ["ast"], // Additional empty-string key for AST
+                        "*": [
+                            "abi",
+                            "metadata",
+                            "devdoc",
+                            "userdoc",
+                            "storageLayout",
+                            "evm.legacyAssembly",
+                            "evm.bytecode",
+                            "evm.deployedBytecode",
+                            "evm.methodIdentifiers",
+                            "evm.gasEstimates",
+                            "evm.assembly"
+                        ]
+                    }
+                },
+                "remappings": [], // This field is present in Remix's input
+                "evmVersion": "berlin"
+            }
+        };
+        //console.log(JSON.stringify(input))
+        if (contractName=="BitBay.sol") {
+            glob = input//glob = code
+        }
+        print(`Compiling: ${varName}.sol using Solidity v${solcVersionDisplay}...`);
+        let output;
+        try {
+            output = await compileWithWorker(compilerWorker, input);
+            print(`✅ Compilation for ${varName}.sol complete.`);
+        } catch (compileError) {
+            print(`❌ Compilation failed for ${varName}.sol: ${compileError.message}`);
+            continue;
+        }
+
+        if (output.errors) {
+            for (const err of output.errors) {
+                const prefix = err.severity === "error" ? "❌" : "⚠️";
+                print(`${prefix} ${err.formattedMessage}`);
+                if (err.severity === "error") {
+                    print(`Stopping due to compilation error in ${varName}.sol.`);
+                    return;
+                }
+            }
+        }
+        const fileContracts = output.contracts[contractName];
+        if (!fileContracts) {
+            print(`⚠️ No contracts found in output for ${varName}.sol.`);
+            continue;
+        }
+        const compiledNames = Object.keys(fileContracts);
+
+        for (const name of compiledNames) {
+            const contract = fileContracts[name];
+            contractsDict[name] = {
+                name: name, // Contract name
+                abi: contract.abi, // ABI
+                // Raw bytecode (contains placeholders for unlinked libraries)
+                bytecode: contract.evm.bytecode.object,
+                // Runtime bytecode (what's on chain after deployment, includes linked libraries)
+                deployedBytecode: contract.evm.deployedBytecode.object,
+                // Optional: Include the compiler version and settings used for verification
+                compilerVersion: solcVersionDisplay,
+                optimizerEnabled: input.settings.optimizer.enabled,
+                optimizerRuns: input.settings.optimizer.runs,
+                evmVersion: input.settings.evmVersion,
+                deployed: false, // Deployment status
+                address: null   // Deployed address
+            };
+            print(`📝 Stored compiled contract: ${name}`);
+        }
+
+        // --- DEPLOYMENT LOGIC (UNCHANGED, SKIPPED WITH `continue`) ---
+        //print(`🚧 Deployment for ${varName}.sol skipped as requested.`);
+        //continue; // This will jump to the next iteration of the for loop, effectively skipping deployment.
+
+        // Everything below this `continue` will only execute if you remove or change the `continue` above.
+        if (!isLast) {
+            for (const name of compiledNames) {
+                const c = contractsDict[name];
+                if (!c.bytecode || c.bytecode === '0x') {
+                    print(`Skipping deployment of ${name}: No bytecode (likely an interface or abstract contract).`);
+                    continue; // Skip to the next contract
+                }
+                if (c.abi.find(fn => fn.type === 'constructor' && fn.inputs.length > 0)) continue; // skip if constructor needs args
+
+                print(`Attempting to deploy ${name} with empty constructor...`);
+                try {
+                    const inst = await new web3.eth.Contract(c.abi)
+                        .deploy({ data: '0x' + c.bytecode })
+                        .send({ from: account.address, gasLimit: 12000000, gasPrice });
+                    c.address = inst.options.address;
+                    c.deployed = true;
+                    print(`✅ Deployed: ${name} at ${c.address}`);
+                } catch (deployErr) {
+                    print(`❌ Failed to deploy ${name}: ${deployErr.message}`);
+                }
+            }
+        } else {
+            // Last contract (router) assumed to need constructor args but no linking
+            const lastName = "UniswapV2Router02"; //Must be the name of the contract in the sol file.
+            const router = contractsDict[lastName];
+
+            if (!router) {
+                print(`❌ Could not find last contract for deployment.`);
+                return;
+            }
+
+            print(`Attempting to deploy Router: ${lastName} with constructor args...`);
+            try {
+                const routerInstance = await new web3.eth.Contract(router.abi)
+                    .deploy({
+                        data: '0x' + router.bytecode,
+                        arguments: [
+                            deployArgs._factory,
+                            deployArgs._WETH,
+                            deployArgs._minter,
+                            deployArgs.init,
+                            deployArgs.mynumerator,
+                            deployArgs.fnum,
+                            deployArgs.fden
+                        ]
+                    })
+                    .send({ from: account.address, gasLimit: 12000000, gasPrice });
+
+                router.address = routerInstance.options.address;
+                router.deployed = true;
+                print(`🚀 Deployed Router: ${lastName} at ${router.address}`);
+            } catch (deployErr) {
+                print(`❌ Failed to deploy Router ${lastName}: ${deployErr.message}`);
+            }
+        }
+    }
+    console.log("📦 All compiled contracts:", contractsDict);
+    print("📦 All compiled contracts:");
+    for (const [name, contract] of Object.entries(contractsDict)) {
+        print(`🔹 ${name}: ${contract.address || 'No address found'}`);
+    }
+    print("✨ All compilation tasks finished!");
+    await wireContracts();
+}
+
+function getPairAddress(UNISWAP_V2_FACTORY_ADDRESS, tokenA, tokenB, UNISWAP_V2_INIT_CODE_HASH) {
+    const validatedTokenA = web3.utils.toChecksumAddress(tokenA);
+    const validatedTokenB = web3.utils.toChecksumAddress(tokenB);
+
+    const [token0, token1] = validatedTokenA.toLowerCase() < validatedTokenB.toLowerCase()
+        ? [validatedTokenA, validatedTokenB]
+        : [validatedTokenB, validatedTokenA];
+
+    // Calculate the salt: keccak256(abi.encodePacked(token0, token1))
+    // This is the robust way to simulate abi.encodePacked for addresses in web3.js
+    // Concatenate the two 20-byte (40-character) address hex strings,
+    // removing the '0x' prefix from the second one before concatenating.
+    const packedEncodedTokens = token0 + token1.substring(2); // Concatenate raw hex strings
+    const salt = web3.utils.keccak256(packedEncodedTokens);
+
+    // Construct the data for the CREATE2 hash: 0xff + deployerAddress + salt + initCodeHash
+    const buffer = new Uint8Array(1 + 20 + 32 + 32);
+    buffer[0] = 0xff;
+
+    buffer.set(web3.utils.hexToBytes(UNISWAP_V2_FACTORY_ADDRESS), 1);
+    buffer.set(web3.utils.hexToBytes(salt), 1 + 20);
+    buffer.set(web3.utils.hexToBytes(UNISWAP_V2_INIT_CODE_HASH), 1 + 20 + 32);
+
+    const create2Hash = web3.utils.keccak256(buffer);
+
+    const pairAddress = "0x" + create2Hash.slice(-40);
+    return web3.utils.toChecksumAddress(pairAddress);
+}
+
+async function wireContracts() {
+    print("🔧 Wiring deployed contracts...");
+    addr = names.map(name => contractsDict[name]?.address);
+    if (addr.includes(undefined)) {
+        print("❌ One or more contracts missing from compiled list. Aborting wiring.");
+        return;
+    }
+
+    //Dictionary will have contracts as their identical contract name in the solidity file.
+    BAYL = new web3.eth.Contract(contractsDict.BAYL.abi, addr[0]);
+    BAYR = new web3.eth.Contract(contractsDict.BAYR.abi, addr[1]);
+    BAYF = new web3.eth.Contract(contractsDict.BAYF.abi, addr[2]);
+    BitBay = new web3.eth.Contract(contractsDict.BITBAY.abi, addr[3]);
+    Admin = new web3.eth.Contract(contractsDict.Administration.abi, addr[4]);
+    LiquidityPool = new web3.eth.Contract(contractsDict.Pool.abi, addr[5]);
+    Validator = new web3.eth.Contract(contractsDict.Validator.abi, addr[6]);
+    Router = new web3.eth.Contract(contractsDict.UniswapV2Router02.abi, addr[7]);
+
+    // BAYL & BAYR setup
+    for (const token of [BAYL, BAYR]) {
+        await sendTx(token, "setProxy", [addr[3]]);
+        await sendTx(token, "setLiquidityPool", [addr[5]]);
+        await sendTx(token, "setValidator", [addr[6]]);
+    }
+    await sendTx(BAYF, "setProxy", [addr[3]]);
+
+    // BitBay configuration
+    await sendTx(BitBay, "changeLiquidityPool", [addr[5]]);
+    await sendTx(BitBay, "changeRouter", [addr[7], true]);
+    for (const uni of uniswapAddresses.concat(uniswapFactories)) {
+        await sendTx(BitBay, "changeRouter", [uni, true]);
+    }
+    for (const proxy of [addr[0], addr[1], addr[2]]) {
+        await sendTx(BitBay, "changeProxy", [proxy, true]);
+    }
+
+    // Admin configuration
+    await sendTx(Admin, "changeLiquidityPool", [addr[5]]);
+    await sendTx(Admin, "setProxy", [addr[3]]);
+
+    for (const factory of uniswapFactories) {
+        for (const [tokenA, tokenB] of pairTokens) {
+            const tokenAddr = contractsDict[tokenA].address;
+            const pair = getPairAddress(factory, tokenAddr, tokenB, "0x96e8ac4277198ff8b6f785478aa9a39f403cb768dd02cbee326c3e7da348845f");
+            print(`Pair found at ${pair} for ${tokenAddr}/${tokenB}`);
+            await sendTx(Admin, "modifySync", [pair, true]);
+        }
+    }
+
+    // LiquidityPool
+    await sendTx(LiquidityPool, "setProxy", [addr[3]]);
+    await sendTx(LiquidityPool, "setProxies", [addr[0], addr[1]]);
+
+    // UniversalRouter
+    await sendTx(Router, "changeProxy", [addr[0], addr[1], addr[5], addr[3]]);
+    await sendTx(Router, "changeFactory", [
+        uniswapFactories[1],
+        "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270",
+        "0x96e8ac4277198ff8b6f785478aa9a39f403cb768dd02cbee326c3e7da348845f",
+        997, 1, 5
+    ]);
+
+    // BitBay -> Administration
+    // await sendTx(BitBay, "changeMinter", [addr[4]]);
+
+    // Mint test
+    // await sendTx(Admin, "mintNew", ["0xC70F0Ec950c51BB4E410A94c21468247bFDdF29c", "100000000000000"]);
+
+    print("🎯 All contracts wired successfully!");
+}
+
+
+</script>
+</body>
+</html>

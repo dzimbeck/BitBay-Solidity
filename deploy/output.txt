@@ -1,0 +1,154 @@
+🔐 Private key set via input.
+❌ Incorrect filename: Halo.sol. It is not in fileNameList.
+❌ Incorrect filename: UniswapFactory.sol. It is not in fileNameList.
+📥 Loaded contract: Administration.sol
+📥 Loaded contract: BAYF.sol
+📥 Loaded contract: BAYL.sol
+📥 Loaded contract: BAYR.sol
+📥 Loaded contract: BitBay.sol
+📥 Loaded contract: LiquidityPool.sol
+📥 Loaded contract: UniversalRouter.sol
+📥 Loaded contract: Validator.sol
+✅ All contracts loaded successfully.
+🚀 Starting compilation process...
+🔐 Using account: 0xC70F0Ec950c51BB4E410A94c21468247bFDdF29c
+❌ Error getting gas price: Invalid JSON RPC response: ""
+⏳ Initializing Solc Worker for v0.8.4+commit.c7e474f2 from ./solc-worker-084.js...
+✅ Solc Worker for v0.8.4+commit.c7e474f2 ready!
+Compiling: BAYL.sol using Solidity v0.8.4+commit.c7e474f2...
+✅ Compilation for BAYL.sol complete.
+📝 Stored compiled contract: BAYL
+📝 Stored compiled contract: IHALO
+Attempting to deploy BAYL with empty constructor...
+✅ Deployed: BAYL at 0x5119E704BCDF8e81229E19d0794C33A12caCc7Ce
+Skipping deployment of IHALO: No bytecode (likely an interface or abstract contract).
+Compiling: BAYR.sol using Solidity v0.8.4+commit.c7e474f2...
+✅ Compilation for BAYR.sol complete.
+📝 Stored compiled contract: BAYR
+📝 Stored compiled contract: IHALO
+Attempting to deploy BAYR with empty constructor...
+✅ Deployed: BAYR at 0xA177cB6ae813230618Af26F059d9370af9f4AEE9
+Skipping deployment of IHALO: No bytecode (likely an interface or abstract contract).
+Compiling: BAYF.sol using Solidity v0.8.4+commit.c7e474f2...
+✅ Compilation for BAYF.sol complete.
+📝 Stored compiled contract: BAYF
+📝 Stored compiled contract: IHALO
+Attempting to deploy BAYF with empty constructor...
+✅ Deployed: BAYF at 0xD89d3c4F439e0AE502B0F3Ca914f82Cb4618e5fB
+Skipping deployment of IHALO: No bytecode (likely an interface or abstract contract).
+Compiling: BitBay.sol using Solidity v0.8.4+commit.c7e474f2...
+✅ Compilation for BitBay.sol complete.
+📝 Stored compiled contract: BITBAY
+📝 Stored compiled contract: ILiquidityPool
+📝 Stored compiled contract: IMinter
+Attempting to deploy BITBAY with empty constructor...
+✅ Deployed: BITBAY at 0x32f31298e27cd9D263CA5aCdf33548717df97BB2
+Skipping deployment of ILiquidityPool: No bytecode (likely an interface or abstract contract).
+Skipping deployment of IMinter: No bytecode (likely an interface or abstract contract).
+Compiling: Administration.sol using Solidity v0.8.4+commit.c7e474f2...
+✅ Compilation for Administration.sol complete.
+📝 Stored compiled contract: Administration
+📝 Stored compiled contract: IAdministration
+Attempting to deploy Administration with empty constructor...
+✅ Deployed: Administration at 0xF43a9d2C78bCc22C520Ed5854D7000d7505cf6e7
+Skipping deployment of IAdministration: No bytecode (likely an interface or abstract contract).
+Compiling: LiquidityPool.sol using Solidity v0.8.4+commit.c7e474f2...
+✅ Compilation for LiquidityPool.sol complete.
+📝 Stored compiled contract: ILiquidityPool
+📝 Stored compiled contract: Pool
+Skipping deployment of ILiquidityPool: No bytecode (likely an interface or abstract contract).
+Attempting to deploy Pool with empty constructor...
+Current Gas Price: 37.500000052 Gwei
+✅ Deployed: Pool at 0x8c412AE83c219db1654b0913035c9eb7424d9b50
+Compiling: Validator.sol using Solidity v0.8.4+commit.c7e474f2...
+✅ Compilation for Validator.sol complete.
+📝 Stored compiled contract: Validator
+Attempting to deploy Validator with empty constructor...
+✅ Deployed: Validator at 0xF1FA8Bc72CD66463a67e8dE2bC104db1a6CBBEc5
+⏳ Initializing Solc Worker for v0.7.0+commit.9e61f92b from ./solc-worker-070.js...
+✅ Solc Worker for v0.7.0+commit.9e61f92b ready!
+Compiling: UniversalRouter.sol using Solidity v0.7.0+commit.9e61f92b...
+✅ Compilation for UniversalRouter.sol complete.
+📝 Stored compiled contract: IBitBay
+📝 Stored compiled contract: IERC20
+📝 Stored compiled contract: ILiquidityPool
+📝 Stored compiled contract: IUniswapV2Factory
+📝 Stored compiled contract: IUniswapV2Pair
+📝 Stored compiled contract: IUniswapV2Router01
+📝 Stored compiled contract: IWETH
+📝 Stored compiled contract: Math
+📝 Stored compiled contract: SafeMath
+📝 Stored compiled contract: TransferHelper
+📝 Stored compiled contract: UniswapV2Library
+📝 Stored compiled contract: UniswapV2Router02
+📝 Stored compiled contract: mintLib
+Attempting to deploy Router: UniswapV2Router02 with constructor args...
+🚀 Deployed Router: UniswapV2Router02 at 0x1333FA7A9A4d14D7807186Fb9B518b019108BA5b
+📦 All compiled contracts:
+🔹 BAYL: 0x5119E704BCDF8e81229E19d0794C33A12caCc7Ce
+🔹 IHALO: No address found
+🔹 BAYR: 0xA177cB6ae813230618Af26F059d9370af9f4AEE9
+🔹 BAYF: 0xD89d3c4F439e0AE502B0F3Ca914f82Cb4618e5fB
+🔹 BITBAY: 0x32f31298e27cd9D263CA5aCdf33548717df97BB2
+🔹 ILiquidityPool: No address found
+🔹 IMinter: No address found
+🔹 Administration: 0xF43a9d2C78bCc22C520Ed5854D7000d7505cf6e7
+🔹 IAdministration: No address found
+🔹 Pool: 0x8c412AE83c219db1654b0913035c9eb7424d9b50
+🔹 Validator: 0xF1FA8Bc72CD66463a67e8dE2bC104db1a6CBBEc5
+🔹 IBitBay: No address found
+🔹 IERC20: No address found
+🔹 IUniswapV2Factory: No address found
+🔹 IUniswapV2Pair: No address found
+🔹 IUniswapV2Router01: No address found
+🔹 IWETH: No address found
+🔹 Math: No address found
+🔹 SafeMath: No address found
+🔹 TransferHelper: No address found
+🔹 UniswapV2Library: No address found
+🔹 UniswapV2Router02: 0x1333FA7A9A4d14D7807186Fb9B518b019108BA5b
+🔹 mintLib: No address found
+✨ All compilation tasks finished!
+🔧 Wiring deployed contracts...
+✅ setProxy(0x32f31298e27cd9D263CA5aCdf33548717df97BB2) confirmed in 0x05a9f336a1d143eebc85aba4b8bf625e157afd1bd88e06a9b3ac0f2f3317fb11
+✅ setLiquidityPool(0x8c412AE83c219db1654b0913035c9eb7424d9b50) confirmed in 0x6e9cde21b0795a908cffc582e76b684ca272f5209a45b6a2d3600745e7830f03
+✅ setValidator(0xF1FA8Bc72CD66463a67e8dE2bC104db1a6CBBEc5) confirmed in 0xe09932275d20b9418b6a261130e0339a52479d18af2aace949c16eb1548f3748
+✅ setProxy(0x32f31298e27cd9D263CA5aCdf33548717df97BB2) confirmed in 0xd147f325d8df2ff272ac2057b70debea199956e236e6d45adf4dba9df4f29040
+✅ setLiquidityPool(0x8c412AE83c219db1654b0913035c9eb7424d9b50) confirmed in 0x00693f641109d964087ac1149eb5fa0c71e4f4082ef621c54c32471ef0664bc8
+✅ setValidator(0xF1FA8Bc72CD66463a67e8dE2bC104db1a6CBBEc5) confirmed in 0x5c19e25f620bd7153f61be230d7c3a7f0d4049a32dc203fef745bbc36c49428b
+✅ setProxy(0x32f31298e27cd9D263CA5aCdf33548717df97BB2) confirmed in 0xbce62a2d1b2174eb571883d0fcf2e86566057343eb5d8217b49b834e19de344b
+✅ changeLiquidityPool(0x8c412AE83c219db1654b0913035c9eb7424d9b50) confirmed in 0x75e373af5719257b82626a41a661352ece05842877729505435a07f83c4546c1
+✅ changeRouter(0x1333FA7A9A4d14D7807186Fb9B518b019108BA5b, true) confirmed in 0xb590ea3af22be2fce6cf588ff777ef37460ba5e58f50a71b0aa9f74fb77c68d9
+✅ changeRouter(0xedf6066a2b290C185783862C7F4776A2C8077AD1, true) confirmed in 0x6dfb197514b796fb68a1e1be688bef8e4df0ca314d06b9c6f7736ef834a27cf9
+✅ changeRouter(0x1095692A6237d83C6a72F3F5eFEdb9A670C49223, true) confirmed in 0x78172a3a637c345def3b1e830af71b1440b24b27173ccce8be2349e36da0b09e
+✅ changeRouter(0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45, true) confirmed in 0xaf47df83208c5d232ae8016833371327f157bfb23f1335bec1bec287c92a2034
+✅ changeRouter(0x000000000022D473030F116dDEE9F6B43aC78BA3, true) confirmed in 0x23234ef2916821720d7818bdcbddfbeb5a08f18e55c9d4b75c89f4a0f05ebe11
+✅ changeRouter(0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff, true) confirmed in 0x69bd45c34766ae773ec64d3f6d471f2fe5db17c07a236a95688de4ffeeebd694
+✅ changeRouter(0x9e5A52f57b3038F1B8EeE45F28b3C1967e22799C, true) confirmed in 0xf3ab6fb17d9bfe94ff02353c36040fe6a0e14aab288a558c065718b2fee4b8fd
+✅ changeRouter(0x5757371414417b8C6CAad45bAeF941aBc7d3Ab32, true) confirmed in 0x43348dbcc20242eb8633d250c7ead0278d1655389cf436da8e5e8066f72580ef
+✅ changeProxy(0x5119E704BCDF8e81229E19d0794C33A12caCc7Ce, true) confirmed in 0x801b4c2d118e23b28f81e3c4fb4e3688f99d97e9119c75dd1eedfb90a7bd8b67
+✅ changeProxy(0xA177cB6ae813230618Af26F059d9370af9f4AEE9, true) confirmed in 0x847b9de1e0195c3b52c8d6369cd2f93e9865e63d9a719209c02d087b27d53994
+✅ changeProxy(0xD89d3c4F439e0AE502B0F3Ca914f82Cb4618e5fB, true) confirmed in 0x39ccab026ac4cdaee3fca3ac3b96472e34ef4a19433634d68d86d57476785709
+✅ changeLiquidityPool(0x8c412AE83c219db1654b0913035c9eb7424d9b50) confirmed in 0x288ac5c6fea64f00e6ead7ac6c1ca29af3e47630a46bf0678c8f350c04c9e7ec
+✅ setProxy(0x32f31298e27cd9D263CA5aCdf33548717df97BB2) confirmed in 0x601b8da94c8858d23288c7edb8872703a48424c519b1a7f1179c0801885c609d
+Pair found at 0x23b6F5b3F813d80B39C722C19A23b99F860AFA47 for 0x5119E704BCDF8e81229E19d0794C33A12caCc7Ce/0x7ceb23fd6bc0add59e62ac25578270cff1b9f619
+✅ modifySync(0x23b6F5b3F813d80B39C722C19A23b99F860AFA47, true) confirmed in 0xad0075c2a0c253048985833f8f60a0ee6193fe8218aaeff4e1fad474027814d4
+Pair found at 0xb833DD3E4618fB27BB0db822B4c4A60E4D961e62 for 0xA177cB6ae813230618Af26F059d9370af9f4AEE9/0x7ceb23fd6bc0add59e62ac25578270cff1b9f619
+✅ modifySync(0xb833DD3E4618fB27BB0db822B4c4A60E4D961e62, true) confirmed in 0x957bcaf9990c4afda3e5b8aab0974f674992ef369e1a8d3b52f299456c08f40f
+Pair found at 0x37f75363c6552D47106Afb9CFdA8964610207938 for 0x5119E704BCDF8e81229E19d0794C33A12caCc7Ce/0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063
+✅ modifySync(0x37f75363c6552D47106Afb9CFdA8964610207938, true) confirmed in 0x345c4c780644bbeb33f631a4c4dc06fdb9de9d7eb06f7df541844c5a97fe8bb6
+Pair found at 0x63Ff2f545E4CbCfeBBdeE27bB5dA56fdEE076524 for 0xA177cB6ae813230618Af26F059d9370af9f4AEE9/0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063
+✅ modifySync(0x63Ff2f545E4CbCfeBBdeE27bB5dA56fdEE076524, true) confirmed in 0x6fde33c202a07321b82b912d73e60d41be9f112b33b4fd086a760187ae376730
+Pair found at 0x1Ed1A95B6a0e0E8887B4Fe9C5eE657e8DFCDFae8 for 0x5119E704BCDF8e81229E19d0794C33A12caCc7Ce/0x7ceb23fd6bc0add59e62ac25578270cff1b9f619
+✅ modifySync(0x1Ed1A95B6a0e0E8887B4Fe9C5eE657e8DFCDFae8, true) confirmed in 0x4dc93984f2ed90a3718ed8a3d27696f444874dee754e8a3dc59a25b6e12e0f3a
+Pair found at 0xC27b8AA7265B531cC07366f96173CdC575EBCEfA for 0xA177cB6ae813230618Af26F059d9370af9f4AEE9/0x7ceb23fd6bc0add59e62ac25578270cff1b9f619
+✅ modifySync(0xC27b8AA7265B531cC07366f96173CdC575EBCEfA, true) confirmed in 0x5082d8cf71640e1d94f9b53d4f44b729beda5818321d83ef9ee1f79c4de95f1c
+Pair found at 0x9A3Ec2E1F99cd32E867701ee0031A91e2f139640 for 0x5119E704BCDF8e81229E19d0794C33A12caCc7Ce/0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063
+✅ modifySync(0x9A3Ec2E1F99cd32E867701ee0031A91e2f139640, true) confirmed in 0xefd142d488990ea5aa015c8f36c8d58307b562a22c3befc755140f2b7ff9086b
+Pair found at 0x353C49C5bE1bBf834C35Cd8b1A876b5fa0e4e7CE for 0xA177cB6ae813230618Af26F059d9370af9f4AEE9/0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063
+✅ modifySync(0x353C49C5bE1bBf834C35Cd8b1A876b5fa0e4e7CE, true) confirmed in 0xf6601a72f9af5fb0feb041866a7357620a660f669b41d8740ba953dd348b7493
+✅ setProxy(0x32f31298e27cd9D263CA5aCdf33548717df97BB2) confirmed in 0x02d38bbe59ab0d50ce7e5740b93cbbfe4c5acc8fccc8eb8cf619295784d438e9
+✅ setProxies(0x5119E704BCDF8e81229E19d0794C33A12caCc7Ce, 0xA177cB6ae813230618Af26F059d9370af9f4AEE9) confirmed in 0xd8fa7e805cdbe1c94b8d24216054c819e7aa805b68693570fab8e2b1d8be90f8
+✅ changeProxy(0x5119E704BCDF8e81229E19d0794C33A12caCc7Ce, 0xA177cB6ae813230618Af26F059d9370af9f4AEE9, 0x8c412AE83c219db1654b0913035c9eb7424d9b50, 0x32f31298e27cd9D263CA5aCdf33548717df97BB2) confirmed in 0x83cd738330bbff23c23b829f07c0f642976b038a0636a6d00c4d653b6ee3959e
+✅ changeFactory(0x5757371414417b8C6CAad45bAeF941aBc7d3Ab32, 0x0000000000000000000000000000000000001010, 0x96e8ac4277198ff8b6f785478aa9a39f403cb768dd02cbee326c3e7da348845f, 997, 1, 5) confirmed in 0x6196c8594862dba093aaca1e55b205552b86ad7031ceeb7f7711f78898eb83de
+🎯 All contracts wired successfully!
