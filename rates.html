@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>BAYL/DAI Price Floor Monitor</title>
+  <script src="./assets/js/bridge-tools/web3.min.js"></script>
+</head>
+<body>
+  <h2>BAY/DAI Price Floor Algorithm</h2>
+  <pre id="output">Loading...</pre>
+
+  <script>
+    const web3 = new Web3("https://polygon-rpc.com");
+    const outputEl = document.getElementById("output");
+
+    const DAI_BAYL_PAIRS = ["0x37f75363c6552D47106Afb9CFdA8964610207938", "0x9A3Ec2E1F99cd32E867701ee0031A91e2f139640"];
+    const BAYL = "0x5119E704BCDF8e81229E19d0794C33A12caCc7Ce";
+    const DAI = "0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063";
+
+    const VolumeList = [
+      web3.utils.toBN(web3.utils.toWei("1000")),
+      web3.utils.toBN(web3.utils.toWei("2500")),
+      web3.utils.toBN(web3.utils.toWei("5000")),
+      web3.utils.toBN(web3.utils.toWei("10000")),
+      web3.utils.toBN(web3.utils.toWei("25000")) //An extra entry is added in case it ever goes beyond target
+    ];
+
+    const STARTING_PRICE = web3.utils.toBN(web3.utils.toWei("0.10"));
+    const MAX_PRICE = web3.utils.toBN(web3.utils.toWei("1.10"));
+    const FLOOR_STEP = web3.utils.toBN(web3.utils.toWei("0.25"));
+    const TOLERANCE_PERCENT = web3.utils.toBN(web3.utils.toWei("0.05"));
+    const INCREMENT = web3.utils.toBN(web3.utils.toWei("0.01"));
+    const newFloorFrequency = 86400;
+
+    var lastCheck = localStorage.getItem("lastFloorCheck") || (Date.now()/1000).toFixed(0);
+    var priceFloor = localStorage.getItem("priceFloor") || STARTING_PRICE;
+    priceFloor = web3.utils.toBN(priceFloor);
+
+    const UNISWAP_PAIR_ABI = [
+      {
+        "anonymous": false,
+        "inputs": [
+          { "indexed": true, "name": "sender", "type": "address" },
+          { "indexed": false, "name": "amount0In", "type": "uint256" },
+          { "indexed": false, "name": "amount1In", "type": "uint256" },
+          { "indexed": false, "name": "amount0Out", "type": "uint256" },
+          { "indexed": false, "name": "amount1Out", "type": "uint256" },
+          { "indexed": true, "name": "to", "type": "address" }
+        ],
+        "name": "Swap",
+        "type": "event"
+      },
+      {
+        "constant": true,
+        "inputs": [],
+        "name": "token0",
+        "outputs": [{ "name": "", "type": "address" }],
+        "type": "function"
+      },
+      {
+        "constant": true,
+        "inputs": [],
+        "name": "token1",
+        "outputs": [{ "name": "", "type": "address" }],
+        "type": "function"
+      },
+      {
+        "constant": true,
+        "inputs": [],
+        "name": "getReserves",
+        "outputs": [
+          { "internalType": "uint112", "name": "_reserve0", "type": "uint112" },
+          { "internalType": "uint112", "name": "_reserve1", "type": "uint112" },
+          { "internalType": "uint32",  "name": "_blockTimestampLast", "type": "uint32" }
+        ],
+        "type": "function"
+      }
+    ];
+
+    async function fetchAveragePriceFor3Days(symbolA, symbolB, intervalSec = 300) {
+      try {
+        const url = `https://my-api.nighttrader.exchange/u/chart/${symbolA}-${symbolB}/${intervalSec}`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`Failed to fetch data: ${res.status}`);
+        const data = await res.json(); // array of bars
+
+        const MS_IN_3_DAYS = 3 * 24 * 60 * 60 * 1000;
+        const now = Date.now();
+        const cutoff = now - MS_IN_3_DAYS;
+
+        let totalVolumeA = 0;
+        let totalVolumeB = 0;
+        let totalBars = 0;
+
+        for (let i = data.length - 1; i >= 0; i--) {
+          const bar = data[i];
+          const ts = new Date(bar.t).getTime();
+          if (ts < cutoff) break;
+
+          totalVolumeA += bar.v;
+          totalVolumeB += bar.vb;
+          if(parseFloat(bar.vb) > 0) {
+            totalBars += 1;
+          }
+        }
+
+        if (symbolB === "BTC") {
+          try {
+            const btcRes = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT');
+            if (!btcRes.ok) throw new Error("Binance fetch failed");
+            const btcPrice = parseFloat((await btcRes.json()).price);
+            totalVolumeB *= btcPrice;
+          } catch (e) {
+            console.warn("Failed to fetch BTC price:", e.message);
+            return { totalVolumeB: 0, totalVolumeA: 0, totalBars: 0 };
+          }
+        }
+
+        return { totalVolumeB, totalVolumeA, totalBars };
+      } catch (e) {
+        console.log(e);
+        return { totalVolumeB: 0, totalVolumeA: 0, totalBars: 0 };
+      }
+    }
+
+    async function algorithm() {
+      const pairs = DAI_BAYL_PAIRS.map(addr => new web3.eth.Contract(UNISWAP_PAIR_ABI, addr));
+
+      const currentBlock = await web3.eth.getBlockNumber();
+
+      var events = [];
+
+      const blocksPerDay = Math.floor((86400 / 2.1));
+      var success = false;
+      console.log("Getting events...")
+      for (let p = 0; p < pairs.length; p++) {
+        var token0;        
+        const code = await web3.eth.getCode(DAI_BAYL_PAIRS[p]);
+        if (code == "0x" || code == "0x0") {
+          console.log(`Pair ${DAI_BAYL_PAIRS[p]} not deployed yet, skipping.`);
+          continue;
+        }
+        try {
+          token0 = (await pairs[p].methods.token0().call()).toLowerCase();
+        } catch (e) {
+          continue;
+        }
+        success = true;
+        const token1 = (await pairs[p].methods.token1().call()).toLowerCase();
+        const DAI_IS_TOKEN0 = token0 === DAI.toLowerCase();        
+        for (let i = 0; i < 3; i++) {
+          const start = currentBlock - blocksPerDay * (i + 1);
+          const end = currentBlock - blocksPerDay * i - 1;
+
+          try {
+            const chunk = await pairs[p].getPastEvents("Swap", {
+              fromBlock: start,
+              toBlock: end
+            });
+
+            // Add DAI_IS_TOKEN0 as metadata to each event
+            chunk.forEach(ev => ev._DAI_IS_TOKEN0 = DAI_IS_TOKEN0);
+
+            events.push(...chunk);
+          } catch (e) {
+            outputEl.textContent = `Error fetching events from pair ${p} day ${i + 1}: ${e.message}`;
+            return "nochange";
+          }
+        }
+      }
+      console.log("Processing data...")
+      if(!success) {
+        console.log("Please check that pairs exist.")
+        return "nochange";
+      }
+
+      let totalDAI = web3.utils.toBN("0");
+      let totalBAY = web3.utils.toBN("0");
+      let priceSum = web3.utils.toBN("0");
+      let tradeCount = 0;
+
+      for (let ev of events) {
+        const a = ev.returnValues;
+
+        let daiAmount = web3.utils.toBN("0");
+        let baylAmount = web3.utils.toBN("0");
+
+        if (ev._DAI_IS_TOKEN0) {
+          daiAmount = web3.utils.toBN(a.amount0In).add(web3.utils.toBN(a.amount0Out));
+          baylAmount = web3.utils.toBN(a.amount1In).add(web3.utils.toBN(a.amount1Out));
+        } else {
+          daiAmount = web3.utils.toBN(a.amount1In).add(web3.utils.toBN(a.amount1Out));
+          baylAmount = web3.utils.toBN(a.amount0In).add(web3.utils.toBN(a.amount0Out));
+        }
+
+        if (daiAmount.isZero() || baylAmount.isZero()) continue;        
+        const baylNormalized = baylAmount.mul(web3.utils.toBN("10000000000"));
+        //console.log(web3.utils.fromWei(baylNormalized));
+        const tradePrice = daiAmount.mul(web3.utils.toBN(web3.utils.toWei("1"))).div(baylNormalized);
+
+        totalDAI = totalDAI.add(daiAmount);
+        totalBAY = totalBAY.add(baylNormalized);
+        priceSum = priceSum.add(tradePrice);
+        tradeCount++;
+      }
+      var volDAI = 0;
+      var volBAY = 0;
+      var barCount = 0;
+      try {
+        var { totalVolumeB, totalVolumeA, totalBars } = await fetchAveragePriceFor3Days("BAY", "BTC");
+        volDAI += totalVolumeB;
+        volBAY += totalVolumeA;
+        barCount += totalBars;
+
+        ({ totalVolumeB, totalVolumeA, totalBars } = await fetchAveragePriceFor3Days("BAY", "DAI"));
+        volDAI += totalVolumeB;
+        volBAY += totalVolumeA;
+        barCount += totalBars;
+        // Add volDAI to totalDAI as BN
+        totalDAI = totalDAI.add(web3.utils.toBN(web3.utils.toWei(volDAI.toString())));
+        totalBAY = totalBAY.add(web3.utils.toBN(web3.utils.toWei(volBAY.toString())));
+      } catch (err) {
+        console.error(err);
+      }
+
+      let output = `AMM Trades analyzed: ${tradeCount}\n`;
+      output += `NT candles analyzed: ${barCount}\n`;
+      output += `Total 3-day DAI Volume: ${web3.utils.fromWei(totalDAI)} DAI\n`;
+
+      let avgPrice;
+      if (tradeCount === 0 && barCount === 0) {
+        output += "No valid trades.\n";
+        outputEl.textContent = output;
+        return "nochange";
+      } else {
+        if (totalBAY.isZero()) {
+          output += "No BAYL volume found.\n";
+          outputEl.textContent = output;
+          return "nochange";
+        }
+        const SCALE = web3.utils.toBN(web3.utils.toWei("1")); // 1e18
+        avgPrice = totalDAI.mul(SCALE).div(totalBAY);
+        //avgPrice = totalDAI.div(totalBAY);
+        //avgPrice = priceSum.div(web3.utils.toBN(tradeCount));
+        output += `Average Price: $${web3.utils.fromWei(avgPrice)}\n`;
+      }
+
+      // Determine if volume is beyond target
+      var beyondTarget = false;
+      for (let i = 0; i < VolumeList.length; i++) {
+        if (priceFloor.gt(STARTING_PRICE.add(FLOOR_STEP.mul(web3.utils.toBN(i + 1))))) {
+          continue;
+        }
+        if (totalDAI.gte(VolumeList[i])) {
+          beyondTarget = true;
+          console.log("Volume beyond target")
+          break;
+        } else {
+          break;
+        }
+      }
+      // Tolerance range
+      const PRECISION = web3.utils.toBN(web3.utils.toWei("1"));
+      const upper = priceFloor.add(priceFloor.mul(TOLERANCE_PERCENT).div(PRECISION));
+      const upper2x = upper.add(priceFloor.mul(TOLERANCE_PERCENT).div(PRECISION));
+      const lower = priceFloor.sub(priceFloor.mul(TOLERANCE_PERCENT).div(PRECISION));
+      if (priceFloor.gte(MAX_PRICE)) {
+        localStorage.setItem("lastFloorCheck", parseInt((Date.now()/1000).toFixed(0)) + newFloorFrequency);
+      } else {
+        if (avgPrice.gt(upper) && beyondTarget) {
+          if(parseInt(lastCheck) < (Date.now()/1000).toFixed(0)) {
+            var INCREMENT2 = INCREMENT;
+            if (avgPrice.gt(upper2x)) {
+              INCREMENT2 = INCREMENT2.mul(web3.utils.toBN("2"));
+            }
+            output += "New price floor has increased: +" + web3.utils.fromWei(INCREMENT2).toString() + "\n";
+            priceFloor = priceFloor.add(INCREMENT2);
+            localStorage.setItem("priceFloor", priceFloor.toString());
+            localStorage.setItem("lastFloorCheck", parseInt((Date.now()/1000).toFixed(0)) + newFloorFrequency);
+          }
+        }
+      }
+      output += `Target Price Floor: $${web3.utils.fromWei(priceFloor)}\n`;
+      const pair = new web3.eth.Contract(UNISWAP_PAIR_ABI, DAI_BAYL_PAIRS[0]);
+      const { _reserve0, _reserve1 } = await pair.methods.getReserves().call();
+      token0 = await pair.methods.token0().call();
+
+      let reserveDAI, reserveBAYL;
+      if (token0.toLowerCase() === DAI.toLowerCase()) {
+        reserveDAI = web3.utils.toBN(_reserve0);   // 18 decimals
+        reserveBAYL = web3.utils.toBN(_reserve1);  // 8 decimals
+      } else {
+        reserveDAI = web3.utils.toBN(_reserve1);
+        reserveBAYL = web3.utils.toBN(_reserve0);
+      }
+
+      // Adjust BAYL to 18 decimals (multiply by 1e10)
+      const baylAdjusted = reserveBAYL.mul(web3.utils.toBN("10000000000")); // 1e10
+
+      // Now compute DAI/BAYL price
+      const SCALE2 = web3.utils.toBN(web3.utils.toWei("1")); // 1e18
+      const currentPrice = reserveDAI.mul(SCALE2).div(baylAdjusted);
+
+      // Display
+      output += ("Current BAY/DAI Price: " + web3.utils.fromWei(currentPrice) + "\n");
+      let result;
+      if (currentPrice.gt(upper)) {
+        result = "inflate";
+      } else if (currentPrice.lt(lower)) {
+        result = "deflate";
+      } else {
+        result = "nochange";
+      }
+
+      output += `Decision: ${result}`;
+      outputEl.textContent = output;
+      return result;
+    }
+
+    algorithm();
+    //setInterval(algorithm, 3600000);
+  </script>
+</body>
+</html>
