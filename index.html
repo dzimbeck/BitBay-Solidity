@@ -217,7 +217,7 @@
       <div class="swapFields">
         <br>
         <div class="boxTitle">
-          💸 Send Funds
+          <span class="no-invert">💸</span> Send Funds
         </div>
 
         <div class="swapField">
@@ -260,11 +260,11 @@
     
         <br>
         <div class="boxTitle ">
-          📊 Show Liquid/Reserve Chart
+          <span class="no-invert">📊</span> Show Liquid/Reserve Chart
         </div>
         <div class="swapField info_chart">
           
-          <span class="btn swapSelector" onclick="showPegChart()" id="showPegChart">Show Liquid/Reserve Chart 📊</span><br>
+          <span class="btn swapSelector" onclick="showPegChart()" id="showPegChart">Show Liquid/Reserve Chart <span class="no-invert">📊</span></span><br>
             <div class="chart_inputs  hidden" id="chartContainerInputs">
               <div class="chart-slider-container">
                 <div class="style-2 wrapper m-b-50 p-l-r">
@@ -442,7 +442,7 @@
 
           <div class="swapFlexColumn">
             
-            <div class="swapSelector swapFlexRow center btn" onclick="withdrawLP()">💸 Withdraw LP tokens/coins</div>
+            <div class="swapSelector swapFlexRow center btn" onclick="withdrawLP()"><span class="no-invert">💸</span> Withdraw LP tokens/coins</div>
           </div>
 
           <div class="swapFlexColumn">
@@ -463,11 +463,11 @@
             <div class="swapBody">
             <div class="swapFields">
               <div class="boxTitle ">
-                📊 Show Liquid/Reserve Chart
+                <span class="no-invert">📊</span> Show Liquid/Reserve Chart
               </div>
             </div>
             <div class="swapField info_chart">          
-              <span class="btn swapSelector" onclick="showPegChart(9)" id="showPegChartLiquidity">Show Liquid/Reserve Chart 📊</span>
+              <span class="btn swapSelector" onclick="showPegChart(9)" id="showPegChartLiquidity">Show Liquid/Reserve Chart <span class="no-invert">📊</span></span>
               <br>
               <div class="chart_inputs hidden" id="chartContainer2Inputs">
                 <div class="chart-slider-container">
@@ -513,7 +513,7 @@
         </div>
         <div class="swapField">
           <div class="swapSecondCoin swapSelector btn" onclick="registerBitBay(document.getElementById('myBAYaddy').value)">
-            👨
+            <span class="no-invert">👨</span>
             <div class="swapSelectorText">Register</div>
 
           </div>
@@ -562,7 +562,7 @@
           <div class="input-group">
                 
                 <div id="merkleintro" class="swapSelector btn btn btn-inside btn-inside-start" onclick="showNonces()">→ Show next receipt</div>
-                <button type="button" class="swapSelector btn btn-inside" onclick="copyNonce()">📄 Copy</button>
+                <button type="button" class="swapSelector btn btn-inside" onclick="copyNonce()"><span class="no-invert">📄</span> Copy</button>
             </div>
             <div id="merkletext" class="swapField-child callout hidden">
             </div>
@@ -1247,29 +1247,70 @@ Swal = Swal.mixin({
     }
 });
 
-function darkTheme(toggle=true) {
-  if(toggle) {
+function darkTheme(toggle = true) {
+  if (toggle) {
     isDarkTheme = !isDarkTheme;
     localStorage.setItem("darkTheme", isDarkTheme);
-  }
-  if (isDarkTheme) {
-    document.documentElement.style.filter = 'invert(1) hue-rotate(180deg)';
-
-    // Re-invert media elements to look normal
-    const media = document.querySelectorAll('img, video, iframe, canvas, picture, svg');
-    media.forEach(el => {
-      el.style.filter = 'invert(1) hue-rotate(180deg)';
-    });
   } else {
-    // Remove filter
-    document.documentElement.style.filter = '';
+    isDarkTheme = localStorage.getItem("darkTheme") === "true";
+  }
 
-    const media = document.querySelectorAll('img, video, iframe, canvas, picture, svg');
+  // Clear all filters first
+  document.documentElement.style.filter = "";
+  const allFiltered = document.querySelectorAll(
+    'img, video, iframe, canvas, picture, svg, .no-invert'
+  );
+  allFiltered.forEach(el => {
+    el.style.filter = "";
+  });
+
+  if (isDarkTheme) {
+    // Invert the root
+    document.documentElement.style.filter = "invert(1) hue-rotate(180deg)";
+
+    // Re-invert media
+    const media = document.querySelectorAll("img, video, iframe, canvas, picture, svg");
     media.forEach(el => {
-      el.style.filter = '';
+      el.style.filter = "invert(1) hue-rotate(180deg)";
+    });
+
+    // Re-invert elements with class 'no-invert'
+    const noInvert = document.querySelectorAll(".no-invert");
+    noInvert.forEach(el => {
+      el.style.filter = "invert(1) hue-rotate(180deg)";
     });
   }
 }
+
+function observeNoInvertElements() {
+  const observer = new MutationObserver(mutations => {
+    mutations.forEach(mutation => {
+      mutation.addedNodes.forEach(node => {
+        if (node.nodeType !== 1) return;
+
+        // If the added node is .no-invert
+        if (node.classList?.contains("no-invert") && isDarkTheme) {
+          node.style.filter = "invert(1) hue-rotate(180deg)";
+        }
+
+        // Or if it contains .no-invert children
+        const children = node.querySelectorAll?.(".no-invert");
+        if (children?.length && isDarkTheme) {
+          children.forEach(el => {
+            el.style.filter = "invert(1) hue-rotate(180deg)";
+          });
+        }
+      });
+    });
+  });
+
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true
+  });
+}
+
+observeNoInvertElements();
 
 var isDarkTheme = (localStorage.getItem("darkTheme") || false);
 if(isDarkTheme == "false" || isDarkTheme == false) {
@@ -1895,7 +1936,7 @@ async function checkbalances() {
                   'BAY Frozen: ' + BAYFBal +
                 '</div>' +
                 // RGB accent line
-                '<div style="margin-top: 16px; height: 4px; display: flex;">' +
+                '<div class="no-invert" style="margin-top: 16px; height: 4px; display: flex;">' +
                   '<div style="flex: 1; background-color: purple;"></div>' +
                   '<div style="flex: 1; background-color: #3b00b2;"></div>' +
                   '<div style="flex: 1; background-color: blue;"></div>' +
@@ -1956,7 +1997,7 @@ async function checkbalances() {
               address +
             '</div>' +
             '<div style="cursor: pointer; font-size: 16px; user-select: none;" onclick="copyAddress(\'' + address + '\')" title="Copy address">' +
-              '📋' +
+              '<span class="no-invert">📋</span>' +
             '</div>' +
           '</div>' +
         '</div>'
