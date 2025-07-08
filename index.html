@@ -30,6 +30,7 @@
 </head>
 
 <body>
+  <div id="background-image"></div>
   <div class="wrap" id="wrap">
   <!-- top menu -->
    
@@ -115,6 +116,7 @@
               font-size: 24px;
               cursor: pointer;
               z-index: 9999;
+              padding-right: 10px;
             ">
               ☀ 
             </button>
@@ -122,7 +124,7 @@
         <div class="sec-center">  
               <!-- <button>?</button> !-->
               <input class="dropdown" type="checkbox" id="dropdown" name="dropdown"/>
-              <label class="for-dropdown" for="dropdown">Menu <img class="icon uil uil-arrow-down" src="./assets/images/arrow-down.svg"></label>
+              <label class="for-dropdown" for="dropdown" style="padding-left: 10px;">Menu <img class="icon uil uil-arrow-down" src="./assets/images/arrow-down.svg"></label>
             <div class="section-dropdown">
               <br>
               <a href="./information.html">FAQ about the Bridge</a>
@@ -1202,12 +1204,19 @@
     max-height: 80vh; /* Prevents the modal from overflowing vertically */
     overflow-y: auto; /* Enables scrolling within the modal */
   }
-  body {
+  #background-image {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: -1;
     background-image: url('bk.png');
     background-repeat: no-repeat;
     background-position: center center;
     background-attachment: fixed;
-    background-size: cover; /* Maintains aspect ratio */
+    background-size: cover;
+    pointer-events: none; /* ensures it doesn't interfere with clicks */
   }
 </style>
 
@@ -3526,7 +3535,56 @@ async function getExtCodeHash(address) {
     return hash;
 }
 
+async function showDisclaimer() {
+  let readDisclaimer = localStorage.getItem('disclaimer'+myaccounts) || 'false';
+  var scrolledToBottom = false;
+  if(readDisclaimer == 'false') {
+    var returnThis = false;
+    await Swal.fire({
+      title: ('Notice'),
+      html: `<div id="swal-scroll-container" style="max-height: 200px; overflow-y: auto; text-align: left;">
+               ${('Before proceeding to swap or deposit liquidity please read this message. This website is not an exchange and does not take custody of user funds or charge any fees. It is designed to maximize your security by keeping all actions client-side. If you trade or provide liquidity, be aware of the terms and conditions of the decentralized exchanges you interact with. Although Uniswap is generally considered safe, we recommend reviewing the source code of any DEX and understanding the associated risks. This website is open source and has been audited, but for maximum security we encourage users to download the code from GitHub and run it locally. Always double-check the domain you are visiting, verify any addresses you interact with, and if you have questions, join the community for more information.')}
+             </div>`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: ('Yes'),
+      cancelButtonText: ('No'),
+      didOpen: () => {
+        const scrollContainer = document.getElementById('swal-scroll-container');
+        const confirmButton = Swal.getConfirmButton();
+        // Add scroll event listener
+        scrollContainer.addEventListener('scroll', () => {
+          const scrollPercentage = (scrollContainer.scrollTop + scrollContainer.clientHeight) / scrollContainer.scrollHeight;
+          if (scrollPercentage >= 0.8) {
+            // Enable the confirm button when scrolled to the bottom
+            scrolledToBottom = true;
+            confirmButton.style.backgroundColor = 'green';
+          }
+        });
+      },
+      preConfirm: () => {
+        if(!scrolledToBottom) {
+          Swal.showValidationMessage(('Please scroll to read the entire message before proceeding.'));
+          return false;
+        }
+      }
+    }).then((result) => {
+      if (result.isConfirmed) {
+        readDisclaimer = localStorage.setItem('disclaimer'+myaccounts, 'true');
+      } else {
+        returnThis = true;
+        return false;
+      }
+    });
+    if(returnThis) {
+      return false;
+    }
+  }
+  return true;
+}
+
 async function addLiquidity() {
+    await showDisclaimer();
     if(lastrun > (Math.floor(Date.now() / 1000))) {
         return;
     }
@@ -3850,6 +3908,7 @@ async function addLiquidity() {
 }
 
 async function Swap() {
+    await showDisclaimer();
     if(lastrun > (Math.floor(Date.now() / 1000))) {
         return;
     }
