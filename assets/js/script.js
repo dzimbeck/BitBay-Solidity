@@ -492,7 +492,7 @@ swapBuyDialog.forEach(box => {
 
     //set the selected value 
     document.getElementById("SwapCoin").value = radioEl.value;
-
+    document.getElementById('SwapCoin').dispatchEvent(new Event('change'));
     document.getElementById("swapCoin1Text").innerText = swapCoin;
 
     

@@ -705,7 +705,7 @@
 <script type="text/javascript" src="./assets/js/nouislider.min.js"></script>
 <script type="text/javascript" src="./assets/js/kane-modal.js"></script>
 
-<script type="text/javascript" src="./assets/js/script.js"></script>
+<script type="text/javascript" src="./assets/js/script.js?v=1"></script>
 <script type="text/javascript" src="./assets/js/bridge-tools/web3.min.js"></script>
 <script type="text/javascript" src="./assets/js/bridge-tools/bignumber.min.js"></script>
 <script type="text/javascript" src="./assets/js/bridge-tools/merkletree.js"></script>
@@ -3641,7 +3641,7 @@ async function addLiquidity() {
           await coin1contract.methods.allowance(currentaccount, myrouter).call().then(function (liqresult) {
               allowance = DOMPurify.sanitize(liqresult);
           });
-          if(parseInt(allowance) == 0) {
+          if(parseInt(allowance) == 0 || new BN(allowance).lt(new BN("999999999999999999999999999999"))) {
               //document.getElementById("addliquidtext").innerHTML = 'Waiting for router allowance authorization on the blockchain for the first coin...';
               Swal.fire({
                   icon: 'info',
@@ -3656,7 +3656,7 @@ async function addLiquidity() {
           await baydatacontract.methods.allowance(currentaccount, myrouter).call().then(function (liqresult) {
               allowance = DOMPurify.sanitize(liqresult);
           });
-          if(parseInt(allowance) == 0) {
+          if(parseInt(allowance) == 0 || new BN(allowance).lt(new BN("999999999999999999999999999999"))) {
               //document.getElementById("addliquidtext").innerHTML = 'Waiting for router allowance authorization on the blockchain for BAY...';
               Swal.fire({
                   icon: 'info',
@@ -3671,7 +3671,7 @@ async function addLiquidity() {
           await baydatacontract.methods.allowanceReserve(currentaccount, myrouter).call().then(function (liqresult) {
               allowance = DOMPurify.sanitize(liqresult);
           });
-          if(parseInt(allowance) == 0) {
+          if(parseInt(allowance) == 0 || new BN(allowance).lt(new BN("999999999999999999999999999999"))) {
               //document.getElementById("addliquidtext").innerHTML = 'Waiting for router allowance authorization on the blockchain for BAYR...';
               Swal.fire({
                   icon: 'info',
@@ -3990,7 +3990,7 @@ async function Swap() {
           await coin1contract.methods.allowance(chosenaccount, myrouter).call().then(function (swapresult) {
               allowance = DOMPurify.sanitize(swapresult);
           });
-          if(parseInt(allowance) == 0) {
+          if(parseInt(allowance) == 0 || new BN(allowance).lt(new BN("999999999999999999999999999999"))) {
               Swal.fire({
                   icon: 'info',
                   title: 'Allowance',
@@ -4004,7 +4004,7 @@ async function Swap() {
           await baydatacontract.methods.allowance(chosenaccount, myrouter).call().then(function (swapresult) {
               allowance = DOMPurify.sanitize(swapresult);
           });
-          if(parseInt(allowance) == 0) {
+          if(parseInt(allowance) == 0 || new BN(allowance).lt(new BN("999999999999999999999999999999"))) {
               Swal.fire({
                   icon: 'info',
                   title: 'Allowance',
@@ -4018,7 +4018,7 @@ async function Swap() {
           await baydatacontract.methods.allowanceReserve(chosenaccount, myrouter).call().then(function (swapresult) {
               allowance = DOMPurify.sanitize(swapresult);
           });
-          if(parseInt(allowance) == 0) {
+          if(parseInt(allowance) == 0 || new BN(allowance).lt(new BN("999999999999999999999999999999"))) {
               Swal.fire({
                   icon: 'info',
                   title: 'Allowance',
@@ -4373,7 +4373,7 @@ async function withdrawLP() {
           await paircontract.methods.allowance(waccount, myrouter).call().then(function (wresult) {
               allowance = DOMPurify.sanitize(wresult);
           });
-          if(parseInt(allowance) == 0) {
+          if(parseInt(allowance) == 0 || new BN(allowance).lt(new BN("999999999999999999999999999999"))) {
               Swal.fire({
                   icon: 'info',
                   title: 'Allowance',
