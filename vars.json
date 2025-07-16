@@ -1,0 +1,15 @@
+{
+  "VOLUME_LIST": [
+    "1000",
+    "2500",
+    "5000",
+    "10000",
+    "25000"
+  ],
+  "STARTING_PRICE": "0.10",
+  "MAX_PRICE": "1.10",
+  "FLOOR_STEP": "0.25",
+  "TOLERANCE_PERCENT": "0.05",
+  "INCREMENT": "0.01",
+  "NEW_FLOOR_FREQUENCY": 86400
+}
