@@ -3304,7 +3304,13 @@ async function mintFromBitBay(jsondata2="") {
     } catch (e) {
       hideSpinner();
       console.log(e);
-      await Swal.fire({"text":"Error reading the merkle proof. Please make sure it is typed correctly."});
+      const message = 'Transaction failed: ' + e.message;
+      const output = message.length > 250 ? message.slice(0, 250) + '...' : message;
+      await Swal.fire({
+          icon: 'error',
+          text: output,
+          confirmButtonText: 'Close'
+      });
     }
 }
 
@@ -3358,7 +3364,7 @@ async function registerBitBay(regaddy) {
       const output = message.length > 250 ? message.slice(0, 250) + '...' : message;
       await Swal.fire({
           icon: 'error',
-          text: message,
+          text: output,
           confirmButtonText: 'Close'
       });      
     } 
@@ -3887,7 +3893,7 @@ async function addLiquidity() {
               icon: 'error',
               text: output,
               confirmButtonText: 'Close'
-          });          
+          });
           return;
       }
       //document.getElementById("addliquidtext").innerHTML = 'Success!';
