@@ -1,6 +1,6 @@
 # BitBay Bridge
 
-The BitBay decentralized bridge enables BitBay to access liquidity across DeFi protocols and decentralized exchanges. To interact with BitBay using MetaMask, you must add three separate contracts: `BAY`, `BAYR`, and `BAYF`. This coin is unlike any other in the world, so it's highly recommended to read this documentation first.  
+The BitBay decentralized bridge enables BitBay to access liquidity across DeFi protocols and decentralized exchanges. To interact with BitBay using MetaMask, you must add three separate contracts: `BAY`, `BAYR`, and `BAYF`. This coin is unlike any other project, so it's highly recommended to read this documentation first.  
 You can access the bridge at [https://my.bitbay.market](https://my.bitbay.market).
 
 ## Overview
@@ -81,7 +81,7 @@ Stakers vote with redundant security layers. Proposals are encoded as burn trans
 
 Funds are pooled and minted/burned across networks using payouts that attempt to match arrays as closely as possible during conversion.
 
-## Governance Commands
+## Staking Commands
 
 **Change number of votes required for change/approval:**  
 &ast;&ast;N&ast;&ast; list letter and then [x,y,a]  
