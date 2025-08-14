@@ -6,6 +6,7 @@ import time
 from datetime import datetime, timedelta
 import os
 import traceback
+import asyncio
 
 # Initialize Web3
 web3 = Web3(Web3.HTTPProvider("https://polygon-rpc.com"))
@@ -97,6 +98,76 @@ UNISWAP_PAIR_ABI = [
     }
 ]
 
+# Globals (you can move to a class or context if preferred)
+global_event_cache = []
+last_fetched_block = None
+
+BLOCKS_PER_DAY = int(86400 / 2.1)  # ~2.1 sec block time
+THREE_DAYS_BLOCKS = BLOCKS_PER_DAY * 3
+MAX_BLOCK_CHUNK = 50
+
+async def init_block_tracking():
+    global last_fetched_block
+    last_fetched_block = web3.eth.block_number
+
+async def fetch_new_blocks_events():
+    global last_fetched_block, global_event_cache
+    current_block = web3.eth.block_number
+    if last_fetched_block is None:
+        last_fetched_block = current_block
+    
+    from_block = last_fetched_block + 1
+    if from_block > current_block:
+        return  # no new blocks
+    
+    pairs = [web3.eth.contract(address=addr, abi=UNISWAP_PAIR_ABI) for addr in DAI_BAYL_PAIRS]
+    skipThis = []
+    print(str(current_block))
+    while from_block <= current_block:        
+        to_block = min(from_block + MAX_BLOCK_CHUNK - 1, current_block)
+        for p, pair in enumerate(pairs):
+            if(p in skipThis):
+                continue
+            try:
+                code = web3.eth.get_code(Web3.to_checksum_address(DAI_BAYL_PAIRS[p]))
+                if code in [b'', b'0x']:
+                    skipThis.append(p);
+                    print(f"Pair {DAI_BAYL_PAIRS[p]} not deployed yet, skipping.")
+                    continue
+            except Exception as e:
+                print(f"Error checking code for pair {p}: {e}")
+                continue
+            
+            try:
+                token0 = pair.functions.token0().call().lower()
+            except Exception as e:
+                print(f"Error getting token0 for pair {p}: {e}")
+                continue
+            
+            DAI_IS_TOKEN0 = token0 == DAI.lower()
+            
+            try:
+                chunk_events = pair.events.Swap().get_logs(from_block=from_block, to_block=to_block)
+                # Annotate events
+                annotated_events = []
+                for ev in chunk_events:
+                    annotated_events.append({
+                        'event': ev,
+                        'DAI_IS_TOKEN0': DAI_IS_TOKEN0,
+                        'blockNumber': ev.blockNumber  # add block for filtering
+                    })
+                global_event_cache.extend(annotated_events)
+            except Exception as e:
+                print(f"Error fetching events for pair {p} in blocks {from_block}-{to_block}: {e}")
+        
+        from_block = to_block + 1
+    
+    # Filter cache to only keep last 3 days of blocks
+    min_block = current_block - THREE_DAYS_BLOCKS
+    global_event_cache = [ev for ev in global_event_cache if ev['blockNumber'] >= min_block]
+    
+    last_fetched_block = current_block
+
 async def fetch_average_price_for_3_days(symbol_a, symbol_b, interval_sec=300):
     try:
         url = f"https://my-api.nighttrader.exchange/u/chart/{symbol_a}-{symbol_b}/{interval_sec}"
@@ -141,58 +212,11 @@ async def fetch_average_price_for_3_days(symbol_a, symbol_b, interval_sec=300):
         return {"totalVolumeB": 0, "totalVolumeA": 0, "totalBars": 0}
 
 async def algorithm():
-    global last_check, price_floor
-    
+    global last_check, price_floor, global_event_cache
+    print("Processing data...")
     pairs = [web3.eth.contract(address=addr, abi=UNISWAP_PAIR_ABI) for addr in DAI_BAYL_PAIRS]
     current_block = web3.eth.block_number
-    
-    events = []
-    blocks_per_day = int(86400 / 2.1)
-    success = False
-    
-    print("Getting events...")
-    for p, pair in enumerate(pairs):
-        token0 = None
-        code = web3.eth.get_code(Web3.to_checksum_address(DAI_BAYL_PAIRS[p]))
-        if code in [b'', b'0x']:
-            print(f"Pair {DAI_BAYL_PAIRS[p]} not deployed yet, skipping.")
-            continue
-            
-        try:
-            token0 = pair.functions.token0().call().lower()
-        except:
-            continue
-            
-        success = True
-        token1 = pair.functions.token1().call().lower()
-        DAI_IS_TOKEN0 = token0 == DAI.lower()
-        
-        for i in range(3):
-            start = current_block - blocks_per_day * (i + 1)
-            end = current_block - blocks_per_day * i - 1
-            
-            try:
-                chunk = pair.events.Swap().get_logs(from_block=start, to_block=end)
-                
-                # Add DAI_IS_TOKEN0 as metadata to each event
-                events2 = []
-                for ev in chunk:
-                    event_data = {
-                        'event': ev,
-                        'DAI_IS_TOKEN0': DAI_IS_TOKEN0 
-                    }
-                    events2.append(event_data)
-                
-                events.extend(events2)
-            except Exception as e:
-                print(f"Error fetching events from pair {p} day {i + 1}: {str(e)}")
-                return "nochange", price_floor
-    
-    print("Processing data...")
-    if not success:
-        print("Please check that pairs exist.")
-        return "nochange", price_floor
-    
+    events = global_event_cache[:]
     total_DAI = 0
     total_BAY = 0
     price_sum = 0
@@ -359,18 +383,26 @@ def update_vars_from_github():
         print(f"Error parsing remote vars.json: {e}")
         return False
 
-if __name__ == "__main__":
-    import asyncio
+async def main_loop():
+    await init_block_tracking()
     while True:
         try:
             update_vars_from_github()
-            decision, floor = asyncio.run(algorithm())
+            decision, floor = await algorithm()
             json_result = {
                 "vote": decision,
                 "floor": str(floor)
-            }            
+            }
             with open('algo.json', 'w') as f:
                 json.dump(json_result, f)
-        except:
+        except Exception:
             traceback.print_exc()
-        time.sleep(1800)        
+        try:
+            for _ in range(10):
+                await asyncio.sleep(180)
+                await fetch_new_blocks_events()
+        except Exception:
+            traceback.print_exc()
+
+if __name__ == "__main__":
+    asyncio.run(main_loop())
