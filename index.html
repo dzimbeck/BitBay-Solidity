@@ -96,14 +96,19 @@
                 <span class="btn swapSelector"><img class="icon network" src="./assets/images/network.svg"> Network <img class="icon uil uil-arrow-down" src="./assets/images/arrow-down.svg"></span></span>
               <i class="bx bx-chevron-down"></i>
           </div>
- 
-          <ul class="options">
-              <li class="option">
-                  <i class="bx bxl-github" style="color: #171515;"></i>
-                  <span class="option-text" id="current-network">Polygon</span>
-              </li>
-              
-          </ul>
+
+            <ul class="options">
+                <li class="option">
+                    <img style="width: 14px; height: 14px;" src="./assets/images/polygon.svg">
+                    <span class="option-text" id="current-network">&nbsp;Polygon</span>
+                </li>
+                <li class="option logged-in hidden">
+                    <div class="horizontal_line"></div>
+                </li>
+                <li class="option logged-in hidden">
+                    <span class="option-text logged-in hidden" onclick="disconnect()">⏻ Disconnect</span>
+                </li>
+            </ul>
       </div>
 
       </div>
@@ -158,7 +163,7 @@
             <img class="swapSelectorLogo uil uil-link" src="./assets/images/link.svg">
             <div class="swapSelectorText">Connect Wallet</div>
       </div><br>
-      <div class=" swapSelector btn not-logged-in login_btn" onclick="buyBitBay(1)">
+      <div class=" swapSelector btn login_btn" onclick="buyBitBay(1)">
             <img class="swapSelectorLogo uil uil-link" src="./assets/images/buy.png">
             <div class="swapSelectorText">&nbsp&nbsp&nbsp&nbsp&nbspBuy BitBay&nbsp&nbsp&nbsp&nbsp&nbsp</div>
       </div>
@@ -220,6 +225,35 @@
 <hr class="logged-in hidden">
     <div class="swapBody">
       <div class="swapFields">
+          <br>
+          <div class="boxTitle">
+              <span class="no-invert">💲</span> Buy BitBay
+          </div>
+          <div class="swapField" id="buyBitbaySwapField">
+              <div class="swapSelector btn" id="moonpayBtn" onclick="moonpayBtnClicked()">
+                  <div class="swapSelectorText"
+                       style="display: flex; align-items: center; justify-content: center; gap: 8px; line-height: 1;">
+                      <span class="no-invert" style="display: flex; align-items: center; margin-bottom: 6px;">💳</span><span>Moonpay</span>
+                  </div>
+
+              </div>
+
+              <div class="swapSelector btn" id="nightTraderBtn"  onclick="nightTraderBtnClicked()">
+                  <div class="swapSelectorText"
+                       style="display: flex; align-items: center; justify-content: center; gap: 8px; line-height: 1;">
+                      <span class="no-invert" style="display: flex; align-items: center;">🦉</span><span>NightTrader</span>
+                  </div>
+
+              </div>
+
+              <div class="swapSelector btn" id="uniswapBtn" onclick="uniswapBtnClicked()">
+                  <div class="swapSelectorText"
+                       style="display: flex; align-items: center; justify-content: center; gap: 8px; line-height: 1;">
+                      <span class="no-invert" style="display: flex; align-items: center;">🦄</span><span>Uniswap</span>
+                  </div>
+
+              </div>
+          </div>
         <br>
         <div class="boxTitle">
           <span class="no-invert">💸</span> Send Funds
@@ -261,14 +295,6 @@
             <img class="swapSelectorLogo" src="./icon.png">
             <div class="swapSelectorText">Release Frozen Funds</div>
             
-          </div>
-        </div>
-
-        <div style="text-align:center;">
-          <div class="btn swapSelector" onclick="buyBitBay()" 
-               style="display:inline-flex; align-items:center; justify-content:center; gap:8px;">
-            <img class="swapSelectorLogo" src="./assets/images/buy.png" style="height:20px;">
-            <div class="swapSelectorText">&nbsp&nbsp&nbsp&nbsp&nbspBuy BitBay&nbsp&nbsp&nbsp&nbsp&nbsp</div>
           </div>
         </div>
 
@@ -1241,6 +1267,61 @@
 //possibly have a dialog box move into focus when asked for the authorization
 //which lets them specify the amount. Also in the security tab advise users
 //on how to run the page locally.
+var isDisconnecting = false;
+
+function disconnect() {
+    isDisconnecting = true;
+    isConnected = false;
+
+    window.ethereum.request({
+        method: "wallet_revokePermissions",
+        params: [{ eth_accounts: {} }]
+    });
+
+    var notLoggedinElements  = document.querySelectorAll('.not-logged-in');
+    notLoggedinElements.forEach(el => {el.classList.remove('hidden')});
+
+    var authElements = document.querySelectorAll('.logged-in');
+    authElements.forEach(el => {el.classList.add('hidden');});
+
+    //remove elements like overlay on box when logged in
+    var authElementsRemove = document.querySelectorAll('.logged-in-remove');
+    // authElementsRemove.forEach(el => {el.parentNode.removeChild(el);});
+    authElementsRemove.forEach(el => {
+        if (el.classList.contains('tabs_overlay_message')) {
+            el.classList.remove('hidden')
+        } else {
+            el.classList.add('hidden');
+        }
+    });
+
+    // Clear all input fields and text areas
+    document.getElementById("merkletext").innerHTML = '';
+    document.getElementById("addliquidtext").innerHTML = '';
+    document.getElementById("Coin1amount").value = '';
+    document.getElementById("Coin2amount").value = '';
+    document.getElementById("SwapAmount").value = '';
+    document.getElementById("SwapAmount2").value = '';
+    document.getElementById("SwapSummary").innerHTML = '';
+
+    // Reset state variables
+    lastitem = 10000000;
+}
+function moonpayBtnClicked() {
+    buyMoonPay();
+}
+
+function nightTraderBtnClicked() {
+    window.open('https://my.nighttrader.exchange/markets/BAY-DAI', '_blank');
+}
+
+function uniswapBtnClicked() {
+    const swapTab = document.querySelector('.tabs__nav-item:nth-child(2)');
+    if (swapTab) {
+        swapTab.click();
+        swapTab.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+}
 
 function centerPopup() {
     const popup = Swal.getPopup();
@@ -1476,15 +1557,30 @@ window.addEventListener("load", async function() {
     // detect Metamask account change
     window.ethereum.on('accountsChanged', async function (newaccounts) {
       console.log('accountsChanges',newaccounts);
+
+      // Reset isDisconnecting flag when disconnect completes (empty accounts array)
+      if (newaccounts.length === 0) {
+          isDisconnecting = false;
+          return;
+      }
+
+      if (isDisconnecting) {
+          return;
+      }
+
       defaultvars();
       await login();
     });
      // detect Network account change
     window.ethereum.on('chainChanged', async function(thenetworkId){
+      if (isDisconnecting) {
+          return;
+      }
       console.log('chainChanged',thenetworkId);
       defaultvars();
       await login();
     });
+
   }
 });
 
@@ -1625,6 +1721,9 @@ async function login() {
             return;
         }
         myaccounts = DOMPurify.sanitize(myaccounts2[0]);
+
+        // Always prompt for signature - no stored credentials
+        console.log("Requesting signature for", myaccounts);
         mysignature = await window.ethereum.request({
           method: 'personal_sign',
           params: ["This message shall be signed to generate a secondary trading key for my.bitbay.market", window.ethereum.selectedAddress],
@@ -1751,6 +1850,12 @@ async function login() {
               }
 
               const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+])[A-Za-z\d!@#$%^&*()_+]{16,}$/;
+              const unAcceptableCharactersRegex = /[^A-Za-z\d!@#$%^&*()_+]/;
+
+              if (password.match(unAcceptableCharactersRegex)) {
+                  Swal.showValidationMessage(translateThis('Password contains unacceptable characters. Allowed characters are letters, numbers, and the following symbols: ! @ # $ % ^ & * ( ) _'));
+                  return false;
+              }
 
               if (!password.match(passwordRegex)) {
                   Swal.showValidationMessage(translateThis('Password must be 16 characters long and contain at least one lowercase letter, one uppercase letter, one number, and one special character. Some useful methods to remember a long password is to choose an uncommon phrase from a specific page of a book and replace some of the letters with numbers.'));
@@ -1809,7 +1914,7 @@ async function login2() {
 
         //remove elements like overlay on box when logged in
         var authElementsRemove = document.querySelectorAll('.logged-in-remove');
-        authElementsRemove.forEach(el => {el.parentNode.removeChild(el);});
+        authElementsRemove.forEach(el => {el.classList.add('hidden')});
         
         document.getElementById("merkletext").innerHTML = '';
         document.getElementById("addliquidtext").innerHTML = '';
@@ -3128,7 +3233,7 @@ async function buyMoonPay() {
       const updateOutput = () => {
         const usdEntered = parseFloat(input.value);
         if (isNaN(usdEntered) || usdEntered <= 0) {
-          output.textContent = 'POL amount: null';
+          output.textContent = 'POL amount: 0';
           bayUSD = null;
           return;
         }

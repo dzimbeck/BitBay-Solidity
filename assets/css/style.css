@@ -719,6 +719,13 @@ transform: rotate(-180deg);
   transition: transform 200ms linear;
 }
 
+.horizontal_line {
+    width: 100%;
+    border-top: 1px solid black;
+    height: 1px;
+    line-height: 10%;
+}
+
 .section-dropdown {
   position: absolute;
   padding: 5px;
@@ -990,7 +997,7 @@ transform: rotate(-180deg);
   border: 2px solid var(--_border);
   box-shadow: var(--_shadow-2), var(--_shadow-depth),
     0 0 0 var(--_highlight-size) var(--_highlight);
-  text-shadow: var(--_ink-shadow);
+  /*text-shadow: var(--_ink-shadow);*/
   transition: var(--_transition);
   display: inline-flex;
   justify-content: center;
@@ -1220,7 +1227,8 @@ section {
 #swap_network.select-menu {
   position: absolute !important;
   top: 0;
-  
+  left: 50%;
+  transform: translateX(-50%);
   width: inherit;
 }
 #swap_network.select-menu.active {
@@ -1248,7 +1256,7 @@ section {
 }
 .select-menu .options .option{
     display: flex;
-    height: 36px;
+    /*height: 36px;*/
     cursor: pointer;
     padding: 0 16px;
     border-radius: 8px;
@@ -1256,6 +1264,11 @@ section {
     background: #fff;
     white-space: nowrap;
 }
+
+#current-network {
+    padding: 2px;
+}
+
 .select-menu .options .option:hover{
     background: #F2F2F28F;
 
@@ -1296,7 +1309,7 @@ section {
  font-weight:700;
  line-height:.5;
  color:#000;
- text-shadow:0 1px 0 #fff;
+ /*text-shadow:0 1px 0 #fff;*/
  filter:alpha(opacity=20);
  opacity:.2
 }
@@ -1548,7 +1561,7 @@ flex-direction: column;
   border: 2px solid var(--_border);
   box-shadow: var(--_shadow-2), var(--_shadow-depth),
     0 0 0 var(--_highlight-size) var(--_highlight);
-  text-shadow: var(--_ink-shadow);
+  /*text-shadow: var(--_ink-shadow);*/
 
 
 }
@@ -1640,6 +1653,20 @@ padding-bottom: 15px;
 .swapField.swapFlexColumn {
   flex-direction: column;
 }
+
+#buyBitbaySwapField {
+    gap: 5px;
+}
+
+#buyBitbaySwapField .btn {
+    padding: 14px;
+}
+@media (max-width: 1024px) {
+    #buyBitbaySwapField {
+        flex-direction: column;
+    }
+}
+
 .swapFlexColumn.withdraw > .swapField-child {
   max-width: unset;
   min-width: unset;
@@ -2191,6 +2218,8 @@ height: 40px;
   
   transition: all 0.3s ease-in-out;
 }
+
+
 
 /*
 border: 2px solid hsl(210 14% 89%);
