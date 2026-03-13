@@ -1,3 +1,6 @@
+// Tab indices
+const EARN_TAB_INDEX = 4;
+
 const DOM = {
   tabsNav: document.querySelector('.tabs__nav'),
   tabsNavItems: document.querySelectorAll('.tabs__nav-item'),
@@ -156,6 +159,36 @@ DOM.tabsNav.addEventListener('click', e => {
 
     checkSlippageBox(activeItemIndex)
 
+    // Handle Earn tab - show Treasury subtab by default on first click
+    if (activeItemIndex === EARN_TAB_INDEX) {
+      const earnSubNav = document.querySelector('.earn-subnav');
+      if (earnSubNav) {
+        const subNavItems = earnSubNav.querySelectorAll('.tabs__nav-item');
+        const subPanels = document.querySelectorAll('.earn-subtabs .tabs__panels > .tabs__panel');
+        
+        // Check if any subtab is already active
+        const hasActiveSubtab = Array.from(subNavItems).some(item => item.classList.contains('js-active'));
+        
+        // If no subtab is active, set first one (Treasury) as active
+        if (!hasActiveSubtab) {
+          subNavItems.forEach((item, index) => {
+            if (index === 0) {
+              item.classList.add('js-active');
+            } else {
+              item.classList.remove('js-active');
+            }
+          });
+          subPanels.forEach((panel, index) => {
+            if (index === 0) {
+              panel.classList.add('js-active');
+            } else {
+              panel.classList.remove('js-active');
+            }
+          });
+        }
+      }
+    }
+
   }
 
 });
@@ -206,40 +239,21 @@ function initDropDownMenu(elName, callBackEl="") {
          selectBtn = optionMenu.querySelector(".select-btn"),
          options = optionMenu.querySelectorAll(".option"),
          sBtn_text = optionMenu.querySelector(".sBtn-text");
-         sBtn_title = optionMenu.querySelector(".sBtn-title");
-
-
-         console.log('=======================');
-         console.log('element name: ' + elName);
-         console.log('sBtn_title: ', sBtn_title);
-   
-  selectBtn.addEventListener("click", () => optionMenu.classList.toggle("active"));       
+         sBtn_title = optionMenu.querySelector(".sBtn-title");   
+         selectBtn.addEventListener("click", () => optionMenu.classList.toggle("active"));       
    
   options.forEach(option =>{
       option.addEventListener("click", ()=>{
           var selectedOption = option.querySelector(".option-text").innerText;
-          //sBtn_text.innerText = selectedOption;
-          console.log('selectedOption: ' + selectedOption);
-
           optionMenu.classList.remove("active");
-
-
-          
           if(callBackEl != ""){
             if(document.getElementById(callBackEl) !== undefined)
               document.getElementById(callBackEl).innerText = selectedOption;
-          
               //set the select title text
             if (callBackEl.includes("buy") || callBackEl.includes("sell")) {
               sBtn_text.querySelector(".sBtn-title").innerText = selectedOption.split(' ')[0];
             }
           }
-
-          
-
-
-
-          
       });
   });
   

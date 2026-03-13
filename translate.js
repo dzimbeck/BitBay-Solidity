@@ -1,0 +1,10 @@
+translatech = {}
+translatear = {}
+translatefr = {}
+translatege = {}
+translateit = {}
+translateja = {}
+translateko = {}
+translatept = {}
+translateru = {}
+translatesp = {}

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rotating Provider Test</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; max-width: 1000px; margin: 0 auto; }
+    .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+    .success { background: #d4edda; color: #155724; }
+    .error { background: #f8d7da; color: #721c24; }
+    .info { background: #cce5ff; color: #004085; }
+    button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+    pre { background: #f4f4f4; padding: 15px; overflow-x: auto; border-radius: 5px; }
+    #logs { max-height: 300px; overflow-y: auto; }
+  </style>
+</head>
+<body>
+  <h1>Rotating Provider Test</h1>
+  
+  <div id="status" class="status info">Loading...</div>
+  
+  <h2>Controls</h2>
+  <button onclick="testGetBlockNumber()">Get Block Number</button>
+  <button onclick="testMultipleRequests()">Multiple Requests (10x)</button>
+  <button onclick="showState()">Show RPCState</button>
+  <button onclick="clearLogs()">Clear Logs</button>
+  
+  <h2>Current State</h2>
+  <pre id="state">Loading...</pre>
+  
+  <h2>Logs</h2>
+  <pre id="logs"></pre>
+
+  <!-- Note: This test page expects web3.min.js to be in ./deploy/ directory (already present in this repository) -->
+  <script src="./deploy/web3.min.js"></script>
+  <script src="./rotating-provider.js"></script>
+  <script>
+    var rotatingProvider;
+    var web3;
+
+    function log(msg, isError) {
+      var logsEl = document.getElementById('logs');
+      var timestamp = new Date().toLocaleTimeString();
+      var prefix = isError ? '❌' : '✓';
+      logsEl.textContent = '[' + timestamp + '] ' + prefix + ' ' + msg + '\n' + logsEl.textContent;
+    }
+
+    function updateStatus(msg, type) {
+      var statusEl = document.getElementById('status');
+      statusEl.textContent = msg;
+      statusEl.className = 'status ' + type;
+    }
+
+    function showState() {
+      var stateEl = document.getElementById('state');
+      if (window.RPCState && window.RPCState.length > 0) {
+        stateEl.textContent = JSON.stringify(window.RPCState[0].getStats(), null, 2);
+      } else {
+        stateEl.textContent = 'RPCState not initialized';
+      }
+    }
+
+    function clearLogs() {
+      document.getElementById('logs').textContent = '';
+    }
+
+    // Initialize
+    try {
+      rotatingProvider = new RotatingProvider();
+      web3 = new Web3(rotatingProvider);
+      updateStatus('Initialized successfully', 'success');
+      log('RotatingProvider created');
+      showState();
+    } catch (err) {
+      updateStatus('Initialization failed: ' + err.message, 'error');
+      log('Init error: ' + err.message, true);
+    }
+
+    // Test functions
+    async function testGetBlockNumber() {
+      try {
+        log('Requesting block number...');
+        var blockNum = await web3.eth.getBlockNumber();
+        log('Block number: ' + blockNum);
+        updateStatus('Success! Block: ' + blockNum, 'success');
+        showState();
+      } catch (err) {
+        log('Error: ' + err.message, true);
+        updateStatus('Error: ' + err.message, 'error');
+      }
+    }
+
+    async function testMultipleRequests() {
+      log('Starting 10 sequential requests...');
+      for (var i = 0; i < 10; i++) {
+        try {
+          var blockNum = await web3.eth.getBlockNumber();
+          log('Request ' + (i + 1) + ': Block ' + blockNum);
+        } catch (err) {
+          log('Request ' + (i + 1) + ' failed: ' + err.message, true);
+        }
+      }
+      log('Finished 10 requests');
+      showState();
+    }
+
+    // Auto-refresh state
+    setInterval(showState, 2000);
+  </script>
+</body>
+</html>
