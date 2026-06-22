@@ -75,19 +75,19 @@ var fallbackProvidersDefault = [
     return (
       code === 429 ||
       code === -32005 ||
-      message.includes('rate limit') ||
-      message.includes('too many requests') ||
+      message.includes(' limit') ||
+      message.includes(' requests') ||
       message.includes('throttle') ||
       message.includes('invalid json rpc response') ||
       message.includes('did it run out of gas') ||
       message.includes("returned values aren't valid") ||
       message.includes('is not a function') ||
-      message.includes('exceeded your limit') ||
       message.includes('dialing to the given tcp address timed out') ||
       message.includes('api key disabled') ||
       message.includes('rpc error') ||
       message.includes('unauthorized') ||
-      message.includes('paid plan')
+      message.includes('paid plan') ||
+      message.includes('max fee per gas less than block base fee')
     );
   }
 
@@ -189,6 +189,8 @@ var fallbackProvidersDefault = [
     this.fallbackStats = [];
     this.callRetries = 0;
     this.txRetries = 0;
+    this.txMax = 2;
+    this.callMax = 10;
     
     // Track indices
     this.preferredIndex = prefInx;
@@ -518,6 +520,22 @@ var fallbackProvidersDefault = [
     });
   }
 
+  function isRevert(err) {
+    if (!err) return false;
+    // Check message for gas related failures
+    var message = (err.message || '').toLowerCase();
+    if (message.includes('of gas') || message.includes('gas too') ||
+        message.includes('gas required') || message.includes('insufficient funds')) {
+      return true;
+    }
+    // Stringify the whole error and look for revert data (0x + 8 or more hex chars)
+    try {
+      var str = typeof err === 'object' ? JSON.stringify(err) : String(err);
+      if (/0x[0-9a-fA-F]{8,}/.test(str)) return true;
+    } catch(e) {}
+    return false;
+  }
+
   /**
    * Web3 provider interface - request method (Promise-based, EIP-1193)
    * @param {Object} payload - JSON-RPC request payload
@@ -588,9 +606,13 @@ var fallbackProvidersDefault = [
         
         // Only rotate on rate limit errors
         if (!isRateLimitError(err)) {
+          if (isTx && isRevert(err)) {
+            throw err; // Confirmed on-chain revert, same on every node, fail immediately
+          }
           // Use separate counters: tx failures and call failures should not influence each other
           var retryCount = isTx ? (++self.txRetries) : (++self.callRetries);
-          if(retryCount < 10) {
+          var maxRetry = isTx ? self.txMax : self.callMax;
+          if(retryCount < maxRetry) {
             throw err; // Semantic error, don't retry
           } else {
             if (isTx) { self.txRetries = 0; } else { self.callRetries = 0; }

@@ -16,7 +16,6 @@ contract AutoBridge {
     address public immutable minter;
     uint256 public varlock;
     uint256 public minAmount;
-
     event RecipientChanged(address indexed oldRecipient, address indexed newRecipient);
     event BridgedETH(address indexed from, address indexed to, uint256 amount);
     event BridgedERC20(address indexed from, address indexed token, address indexed to, uint256 amount);
@@ -48,8 +47,9 @@ contract AutoBridge {
         require(amount > 0, "invalid amount");
         require(to != address(0), "invalid recipient");
         require(IERC20(token).transferFrom(msg.sender, address(this), amount), "transfer failed");
-        IERC20(token).approve(address(rootChainManager), 0);
-        require(IERC20(token).approve(address(rootChainManager), amount), "approve failed");
+        address predicate = 0x40ec5B33f54e0E8A33A975908C5BA1c14e5BbbDf;
+        IERC20(token).approve(predicate, 0);
+        require(IERC20(token).approve(predicate, amount), "approve failed");
         rootChainManager.depositFor(to, token, abi.encode(amount));
         emit BridgedERC20(msg.sender, token, to, amount);
     }

@@ -14,11 +14,18 @@ const TREASURY_ADDRESSES = {
   FLOW_BAYR: '0xA8aea8Ea55c9C9626234AB097d1d29eDF78da2ce',
   VOTE_BAYL: '0x13a8D0E90BA6D29f2bE87aC81C80799813b68E92',
   VOTE_BAYR: '0x482e26B0309D9D3052aE50aA2D4E7DbcC6E1A3E7',
-  STABLE_POOL: '0x3bec8b6d568720133D2a4C5B98E811cA43687d57',
-  STABLE_FEE_VAULT: '0xD47B0e7e46CEccEaa1C40a805053a69754FAfEf0',
+  STABLE_POOL: '0x048E88311ca84876aeA086125825492e2AF2e5A0',
+  STABLE_POOL_PREVIOUS: '0x3bec8b6d568720133D2a4C5B98E811cA43687d57',
+  STABLE_FEE_VAULT: '0xDD15B203dAFF25C9d1Cc53E524e85aB20ae0A70c',
   AUTOBRIDGE: '0x1c682Bcb55B9be1296eed6e60dc0e4832b05B05A',
   UNISWAP_V4_POOL_MANAGER: '0x67366782805870060151383F4BbFF9daB53e5cD6',
   UNISWAP_V4_STATE_VIEW: '0x5eA1bD7974c8A611cBAB0bDCAFcB1D9CC9b3BA5a',
+  // Uniswap V4 Universal Router on Polygon (per Uniswap V4 deployments docs).
+  UNIVERSAL_ROUTER: '0x1095692A6237d83C6a72F3F5eFEdb9A670C49223',
+  // Permit2 (canonical address, same on every chain)
+  PERMIT2: '0x000000000022D473030F116dDEE9F6B43aC78BA3',
+  // Uniswap V4 DAI/USDC 0.005% fee tier pool ID (fee=50, tickSpacing=1, hooks=0)
+  V4_DAI_USDC_POOL_ID: '0x6da799cefb9ea6ceb8e45b37585c4cd7844b3aec34aa999c266beff925af1829',
   USDC: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359',
   DAI: '0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063',
   WETH: '0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619',
@@ -32,7 +39,9 @@ const TREASURY_ADDRESSES = {
   
   // Ethereum Network
   LIDO_VAULT: '0x618B4dBf7d071d3Eb4281DfDb484606C55c5f1d1',
-  LIDO_STETH: '0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84'
+  LIDO_STETH: '0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84',
+  ETH_DAI:    '0x6B175474E89094C44Da98b954EedeAC495271d0F',
+  ETH_POL:    '0x455e53CBB86018Ac2B8092FdCd39d8444aFFC3F6'
 };
 
 // ============================================================================
@@ -86,7 +95,8 @@ function resetEarnState() {
   // Balance displays (spans) - reset to "0.0"
   const balanceElements = [
     'ethBalance', 'lidoBalance', 'vaultBaylBalance', 'vaultBayrBalance', 
-    'daiBalanceAmount', 'usdcBalanceAmount', 'wethBalanceAmount', 'polBalanceAmount'
+    'daiBalanceAmount', 'usdcBalanceAmount', 'wethBalanceAmount', 'polBalanceAmount',
+    'ethDaiBalance', 'ethPolBalance'
   ];
   balanceElements.forEach(id => {
     const el = document.getElementById(id);
@@ -543,7 +553,7 @@ function initializeEarnTab() {
   }
   console.log('Initializing Earn tab...');
   // Initialize Ethereum Web3 for Lido operations using custom RPC if available
-  const ethRpc = typeof getEthereumRpc === 'function' ? getEthereumRpc() : 'https://eth.drpc.org/';
+  const ethRpc = typeof getEthereumRpc === 'function' ? getEthereumRpc() : 'https://ethereum-rpc.publicnode.com';
   earnState.ethWeb3 = new Web3(ethRpc);
   
   // Use custom Polygon RPC if available
@@ -604,7 +614,7 @@ async function onEarnUserLogin() {
   
   // Update web3 references with custom RPC if available
   const polRpc = new RotatingProvider(1);
-  const ethRpc = typeof getEthereumRpc === 'function' ? getEthereumRpc() : 'https://eth.drpc.org/';
+  const ethRpc = typeof getEthereumRpc === 'function' ? getEthereumRpc() : 'https://ethereum-rpc.publicnode.com';
   earnState.polWeb3 = new Web3(polRpc);
   earnState.ethWeb3 = new Web3(ethRpc);
   
@@ -746,7 +756,8 @@ function setupStableProfitDestinationHandler() {
         hideSpinner();
         console.log(error);
         dropdown.value = dropdown.dataset.previousValue || 'user';
-        await showScrollableError(translateThis('Transaction failed'), translateThis('Please check your browsers console for the full error message'));
+        const message = translateThis('Transaction failed:') + ' ' + (error.message || (typeof error === 'object' ? JSON.stringify(error) : String(error)));
+        await showScrollableError(translateThis('Transaction failed'), message);
         return;
       }
     }
@@ -769,7 +780,7 @@ async function loadLidoVaultInfo() {
     // Get total principal and yield
     const totalPrincipal = validation(DOMPurify.sanitize(await lidoContract.methods.totalPrincipal().call()));
     var totalYield = validation(DOMPurify.sanitize(await lidoContract.methods.totalYield().call()));
-    totalYield = (new BN(validation(DOMPurify.sanitize(await lidoContract.methods.availableYield().call()))).plus(new BN(totalYield))).toString();
+    totalYield = (new BN(validation(DOMPurify.sanitize(await lidoContract.methods.availableYield().call()))).plus(new BN(totalYield))).toFixed(0);
     
     // Convert from wei to ETH using BigNumber
     const principalETH = formatETHAmount(totalPrincipal, 8);
@@ -858,6 +869,36 @@ async function loadETHBalances() {
       document.getElementById('lidoBalance').textContent = stETHBalanceETH;
       document.getElementById('lidoBalanceField').classList.remove('hidden');
       balances.SETH = stETHBalanceETH;
+    }
+
+    // Get DAI balance on Ethereum (may appear if automation bridged assets were stuck)
+    const ethDaiContract = new earnState.ethWeb3.eth.Contract(
+      [{"constant": true, "inputs": [{"name": "account", "type": "address"}], "name": "balanceOf", "outputs": [{"name": "", "type": "uint256"}], "type": "function"}],
+      TREASURY_ADDRESSES.ETH_DAI
+    );
+    const ethDaiBalance = validation(DOMPurify.sanitize(await ethDaiContract.methods.balanceOf(myaccounts).call()));
+    if (new BN(ethDaiBalance).gt(new BN('0'))) {
+      const ethDaiFormatted = formatDAIAmount(ethDaiBalance, 4);
+      document.getElementById('ethDaiBalance').textContent = ethDaiFormatted;
+      document.getElementById('ethDaiBalanceField').classList.remove('hidden');
+      balances.ETH_DAI = ethDaiFormatted;
+    } else {
+      document.getElementById('ethDaiBalanceField').classList.add('hidden');
+    }
+
+    // Get POL balance on Ethereum (may appear if automation bridged assets were stuck)
+    const ethPolContract = new earnState.ethWeb3.eth.Contract(
+      [{"constant": true, "inputs": [{"name": "account", "type": "address"}], "name": "balanceOf", "outputs": [{"name": "", "type": "uint256"}], "type": "function"}],
+      TREASURY_ADDRESSES.ETH_POL
+    );
+    const ethPolBalance = validation(DOMPurify.sanitize(await ethPolContract.methods.balanceOf(myaccounts).call()));
+    if (new BN(ethPolBalance).gt(new BN('0'))) {
+      const ethPolFormatted = formatETHAmount(ethPolBalance, 4);
+      document.getElementById('ethPolBalance').textContent = ethPolFormatted;
+      document.getElementById('ethPolBalanceField').classList.remove('hidden');
+      balances.ETH_POL = ethPolFormatted;
+    } else {
+      document.getElementById('ethPolBalanceField').classList.add('hidden');
     }
 
     if (Object.keys(balances).length > 0) {
@@ -1164,7 +1205,7 @@ async function depositLidoHODL() {
     } catch (error) {
       hideSpinner();
       console.log(error);
-      const message = translateThis("Please check your browsers console for the full error message");
+      const message = translateThis('Transaction failed:') + ' ' + (error.message || (typeof error === 'object' ? JSON.stringify(error) : String(error)));
       await showScrollableError(translateThis('Transaction failed'), message);
     }
     
@@ -1252,7 +1293,7 @@ async function withdrawLidoHODL() {
     } catch (error) {
       hideSpinner();
       console.log(error);
-      const message = translateThis("Please check your browsers console for the full error message");
+      const message = translateThis('Transaction failed:') + ' ' + (error.message || (typeof error === 'object' ? JSON.stringify(error) : String(error)));
       await showScrollableError(translateThis('Transaction failed'), message);
     }
     
@@ -1266,9 +1307,340 @@ async function withdrawLidoHODL() {
 // STABLEVAULT FUNCTIONS
 // ============================================================================
 
+// Permit2 ABI subset (allowance + approve + max)
+const PERMIT2_ABI = [
+  {"inputs":[{"name":"user","type":"address"},{"name":"token","type":"address"},{"name":"spender","type":"address"}],"name":"allowance","outputs":[{"name":"amount","type":"uint160"},{"name":"expiration","type":"uint48"},{"name":"nonce","type":"uint48"}],"stateMutability":"view","type":"function"},
+  {"inputs":[{"name":"token","type":"address"},{"name":"spender","type":"address"},{"name":"amount","type":"uint160"},{"name":"expiration","type":"uint48"}],"name":"approve","outputs":[],"stateMutability":"nonpayable","type":"function"}
+];
+
+// Universal Router ABI subset (execute with deadline)
+const UNIVERSAL_ROUTER_ABI = [
+  {"inputs":[{"name":"commands","type":"bytes"},{"name":"inputs","type":"bytes[]"},{"name":"deadline","type":"uint256"}],"name":"execute","outputs":[],"stateMutability":"payable","type":"function"}
+];
+
+async function ensureUsdcPermit2ForV4(amountUsdcWei) {
+  const BN = BigNumber;
+  const usdc = new earnState.polWeb3.eth.Contract(ERC20ABI, TREASURY_ADDRESSES.USDC);
+  const permit2 = new earnState.polWeb3.eth.Contract(PERMIT2_ABI, TREASURY_ADDRESSES.PERMIT2);
+
+  // 1. ERC20 allowance: USDC -> Permit2
+  const erc20Allowance = validation(DOMPurify.sanitize(await usdc.methods.allowance(myaccounts, TREASURY_ADDRESSES.PERMIT2).call()));
+  if (new BN(erc20Allowance).lt(new BN(amountUsdcWei))) {
+    Swal.fire({
+      icon: 'info',
+      title: translateThis('Allowance'),
+      text: translateThis('Authorizing USDC for Permit2...'),
+      showConfirmButton: false
+    });
+    // Approve max so subsequent swaps don't need to re-approve.
+    const maxUint = new BN(2).pow(256).minus(1).toFixed(0);
+    await sendTx(usdc, "approve", [TREASURY_ADDRESSES.PERMIT2, maxUint], 100000, "0", false, false);
+  }
+
+  // 2. Permit2 allowance: Permit2 -> UniversalRouter for USDC
+  const p2Allow = validation(JSON.parse(DOMPurify.sanitize(JSON.stringify(await permit2.methods.allowance(myaccounts, TREASURY_ADDRESSES.USDC, TREASURY_ADDRESSES.UNIVERSAL_ROUTER).call()))));
+  const p2Amount = new BN(p2Allow.amount || p2Allow[0] || '0');
+  const p2Expiration = new BN(p2Allow.expiration || p2Allow[1] || '0');
+  const nowSec = new BN(Math.floor(Date.now() / 1000));
+  if (p2Amount.lt(new BN(amountUsdcWei)) || p2Expiration.lte(nowSec)) {
+    Swal.fire({
+      icon: 'info',
+      title: translateThis('Allowance'),
+      text: translateThis('Authorizing Universal Router via Permit2...'),
+      showConfirmButton: false
+    });
+    // Permit2 amount is uint160, expiration is uint48. Use type-max for both.
+    const maxUint160 = new BN(2).pow(160).minus(1).toFixed(0);
+    const maxUint48 = new BN(2).pow(48).minus(1).toFixed(0);
+    await sendTx(permit2, "approve", [TREASURY_ADDRESSES.USDC, TREASURY_ADDRESSES.UNIVERSAL_ROUTER, maxUint160, maxUint48], 100000, "0", false, false);
+  }
+}
+
+// Perform a USDC -> DAI swap on Uniswap V4 0.005% (fee=50, tickSpacing=1)
+async function swapUsdcForDai(amountUsdcWei) {
+  const BN = BigNumber;
+  if (new BN(amountUsdcWei).lte(0)) return '0';
+
+  const dai = new earnState.polWeb3.eth.Contract(ERC20ABI, TREASURY_ADDRESSES.DAI);
+  const usdc = new earnState.polWeb3.eth.Contract(ERC20ABI, TREASURY_ADDRESSES.USDC);
+
+  // Confirm user actually has the USDC requested.
+  const userUsdcBal = new BN(validation(DOMPurify.sanitize(await usdc.methods.balanceOf(myaccounts).call())));
+  if (userUsdcBal.lt(new BN(amountUsdcWei))) {
+    throw new Error(translateThis('Not enough USDC to perform swap'));
+  }
+
+  // Pre-swap DAI balance so we can return the actual amount received.
+  const preDai = new BN(validation(DOMPurify.sanitize(await dai.methods.balanceOf(myaccounts).call())));
+
+  showSpinner();
+  try {
+    await ensureUsdcPermit2ForV4(amountUsdcWei);
+
+    // Build PoolKey: currencies sorted; DAI=0x8f3..., USDC=0x3c4... -> USDC < DAI
+    const usdcAddr = TREASURY_ADDRESSES.USDC.toLowerCase();
+    const daiAddr = TREASURY_ADDRESSES.DAI.toLowerCase();
+    const usdcIsZero = usdcAddr < daiAddr;
+    const currency0 = usdcIsZero ? TREASURY_ADDRESSES.USDC : TREASURY_ADDRESSES.DAI;
+    const currency1 = usdcIsZero ? TREASURY_ADDRESSES.DAI : TREASURY_ADDRESSES.USDC;
+    const fee = 50;            // 0.005%
+    const tickSpacing = 1;
+    const hooks = '0x0000000000000000000000000000000000000000';
+    const zeroForOne = usdcIsZero; // input = USDC
+    const expectedDaiWei = new BN(amountUsdcWei).times('1e12');
+    const minDaiOutWei = expectedDaiWei.times('0.99').integerValue(BN.ROUND_DOWN).toFixed(0);
+
+    // V4 action ids
+    const ACTION_SWAP_EXACT_IN_SINGLE = '06';
+    const ACTION_SETTLE_ALL = '0c';
+    const ACTION_TAKE_ALL = '0f';
+    const actions = '0x' + ACTION_SWAP_EXACT_IN_SINGLE + ACTION_SETTLE_ALL + ACTION_TAKE_ALL;
+
+    // Encode SWAP_EXACT_IN_SINGLE params:
+    // (PoolKey poolKey, bool zeroForOne, uint128 amountIn, uint128 amountOutMinimum, bytes hookData)
+    const swapParams = web3.eth.abi.encodeParameters(
+      [{
+        "type": "tuple",
+        "components": [
+          { "name": "poolKey", "type": "tuple", "components": [
+            { "name": "currency0", "type": "address" },
+            { "name": "currency1", "type": "address" },
+            { "name": "fee", "type": "uint24" },
+            { "name": "tickSpacing", "type": "int24" },
+            { "name": "hooks", "type": "address" }
+          ]},
+          { "name": "zeroForOne", "type": "bool" },
+          { "name": "amountIn", "type": "uint128" },
+          { "name": "amountOutMinimum", "type": "uint128" },
+          { "name": "hookData", "type": "bytes" }
+        ]
+      }],
+      [[
+        [currency0, currency1, fee, tickSpacing, hooks],
+        zeroForOne,
+        String(amountUsdcWei),
+        minDaiOutWei,
+        '0x'
+      ]]
+    );
+
+    // SETTLE_ALL: pay USDC into the pool. (currency, maxAmount)
+    const settleParams = web3.eth.abi.encodeParameters(
+      ['address', 'uint256'],
+      [TREASURY_ADDRESSES.USDC, String(amountUsdcWei)]
+    );
+    // TAKE_ALL: collect DAI to user. (currency, minAmount)
+    const takeParams = web3.eth.abi.encodeParameters(
+      ['address', 'uint256'],
+      [TREASURY_ADDRESSES.DAI, minDaiOutWei]
+    );
+
+    // Universal Router input for V4_SWAP command: abi.encode(bytes actions, bytes[] params)
+    const v4Input = web3.eth.abi.encodeParameters(
+      ['bytes', 'bytes[]'],
+      [actions, [swapParams, settleParams, takeParams]]
+    );
+
+    const COMMAND_V4_SWAP = '0x10';
+    const router = new web3.eth.Contract(UNIVERSAL_ROUTER_ABI, TREASURY_ADDRESSES.UNIVERSAL_ROUTER);
+    const deadline = Math.floor(Date.now() / 1000) + 600;
+
+    Swal.fire({
+      icon: 'info',
+      title: translateThis('Swapping'),
+      text: translateThis('Swapping USDC for DAI on Uniswap V4...'),
+      showConfirmButton: false
+    });
+    await delay(500);
+
+    await sendTx(router, "execute", [COMMAND_V4_SWAP, [v4Input], deadline.toString()], 600000, "0", false, false);
+    const start = Date.now();
+    let postDai = preDai;
+    while (Date.now() - start < 90_000) {
+      const current = new BN(validation(DOMPurify.sanitize(await dai.methods.balanceOf(myaccounts).call())));
+      if (!current.eq(preDai)) {
+        postDai = current;
+        break; // balance changed → swap has materialized
+      }
+      await delay(10_000);
+    }
+    if (postDai.eq(preDai)) {
+      throw new Error('Timed out waiting for DAI balance change after swap');
+    }
+    const received = postDai.minus(preDai);
+    if (received.lt(new BN(minDaiOutWei))) {
+      throw new Error('Timed out waiting for balance update after swap');
+    }
+    hideSpinner();
+    return received.integerValue(BN.ROUND_DOWN).toFixed(0);
+  } catch (swapErr) {
+    hideSpinner();
+    throw swapErr;
+  }
+}
+
+// Mandatory upgrade flow: when the user still holds shares in the previous
+// (now deprecated) StableVault pool, walk them through withdrawing, swapping
+// any received USDC for DAI on the V4 0.005% pool with 1% slippage, and
+// depositing into the new pool.
+let runningFunction = false;
+async function upgradeStableVaultIfNeeded() {
+  runningFunction = true;
+  if (!earnState.polWeb3 || !myaccounts) return false;
+  const BN = BigNumber;
+
+  // Cheap up-front check using the previous pool's shares() view.
+  const prevPool = new earnState.polWeb3.eth.Contract(stableVaultABI, TREASURY_ADDRESSES.STABLE_POOL_PREVIOUS);
+  let prevShares;
+  try {
+    prevShares = validation(DOMPurify.sanitize(await prevPool.methods.shares(myaccounts).call()));
+  } catch (e) {
+    // The previous pool may not exist on test environments; treat as no upgrade.
+    return false;
+  }
+  if (!isGreaterThanZero(prevShares)) return false;
+
+  // Mandatory dialog. The user MUST agree to proceed; cancellation throws so
+  // pool-info loading aborts (otherwise the new pool data confuses the user).
+  const intro = await Swal.fire({
+    title: translateThis('StableVault Upgrade Required'),
+    html:
+      '<div style="text-align:left;">' +
+        '<p>' + translateThis('The StableVault has been updated to a new contract. Before you can interact with the new pool you must migrate your existing position from the previous pool.') + '</p>' +
+        '<p>' + translateThis('You will be guided through the following transactions:') + '</p>' +
+        '<ol style="padding-left:20px;">' +
+          '<li>' + translateThis('Clean any leftover dust on the previous pool (only if needed).') + '</li>' +
+          '<li>' + translateThis('Withdraw your full position from the previous pool.') + '</li>' +
+          '<li>' + translateThis('Swap any USDC you received into DAI on Uniswap V4 (0.005% fee tier, 1% slippage tolerance).') + '</li>' +
+          '<li>' + translateThis('Deposit the resulting DAI into the new pool.') + '</li>' +
+        '</ol>' +
+        '<p><strong>' + translateThis('You must complete this upgrade so that you may see information about the new pool.') + '</strong></p>' +
+      '</div>',
+    icon: 'warning',
+    showCancelButton: true,
+    allowOutsideClick: false,
+    allowEscapeKey: false,
+    confirmButtonText: translateThis('Approve and Continue'),
+    cancelButtonText: translateThis('Cancel')
+  });
+  if (!intro.isConfirmed) {
+    throw new Error(translateThis('StableVault upgrade is required to proceed'));
+  }
+
+  const dai = new earnState.polWeb3.eth.Contract(ERC20ABI, TREASURY_ADDRESSES.DAI);
+  const usdc = new earnState.polWeb3.eth.Contract(ERC20ABI, TREASURY_ADDRESSES.USDC);
+
+  let preDai, preUsdc;
+  showSpinner();
+
+  try {
+    // Step 1: clean dust on the previous pool if either side > $2 so the
+    // value is folded into the user's withdrawal rather than left behind.
+    const oldPoolDaiBal = new BN(validation(DOMPurify.sanitize(await dai.methods.balanceOf(TREASURY_ADDRESSES.STABLE_POOL_PREVIOUS).call())));
+    const oldPoolUsdcBal = new BN(validation(DOMPurify.sanitize(await usdc.methods.balanceOf(TREASURY_ADDRESSES.STABLE_POOL_PREVIOUS).call())));
+    if (oldPoolUsdcBal.gt(new BN('2000000'))) {
+      const cleanDeadline = Math.floor(Date.now() / 1000) + 300;
+      Swal.fire({ icon: 'info', title: translateThis('Cleaning Dust'), text: translateThis('Moving pool dust into the position before withdrawing...'), showConfirmButton: false });
+      await delay(500);
+      await sendTx(prevPool, "cleanDust", [cleanDeadline, "0"], 1500000, "0", false, false);
+    }
+    var addDust = false;
+    if (oldPoolUsdcBal.gt(new BN('2000000')) || oldPoolDaiBal.gt(new BN('2000000000000000000'))) {
+      addDust = true;
+    }
+    // Capture pre-balances so we can compute exactly how much DAI/USDC the
+    // withdraw produced (needed for the swap and deposit amounts).
+    preDai = new BN(validation(DOMPurify.sanitize(await dai.methods.balanceOf(myaccounts).call())));
+    preUsdc = new BN(validation(DOMPurify.sanitize(await usdc.methods.balanceOf(myaccounts).call())));
+
+    // Step 2: withdraw 100% from the previous pool.
+    Swal.fire({ icon: 'info', title: translateThis('Withdrawing'), text: translateThis('Withdrawing the full position from the previous StableVault...'), showConfirmButton: false });
+    await delay(500);
+    const wDeadline = Math.floor(Date.now() / 1000) + 300;
+    await sendTx(prevPool, "withdraw", [prevShares, wDeadline, addDust], 1500000, "0", false, false);
+  } catch (preErr) {
+    hideSpinner();
+    console.log(preErr);
+    const message = translateThis('Please check console for error message.');
+    await showScrollableError(translateThis('Upgrade failed'), message);
+    throw preErr;
+  }
+
+  try {
+    const start = Date.now();
+    let postDaiBalance  = preDai;
+    let postUsdcBalance = preUsdc;
+    while (Date.now() - start < 90_000) {
+      const curDai = new BN(validation(DOMPurify.sanitize(await dai.methods.balanceOf(myaccounts).call())));
+      const curUsdc = new BN(validation(DOMPurify.sanitize(await usdc.methods.balanceOf(myaccounts).call())));
+      if (!curDai.eq(preDai) || !curUsdc.eq(preUsdc)) {
+        postDaiBalance  = curDai;
+        postUsdcBalance = curUsdc;
+        break;
+      }
+      await delay(10_000);
+    }
+    if (postDaiBalance.eq(preDai) && postUsdcBalance.eq(preUsdc)) {
+      hideSpinner();
+      throw new Error('Timed out waiting for token balances to update after withdrawal. Please deposit to the new pool manually after you confirm your withdrawal.');
+    }
+    const receivedDai  = postDaiBalance.minus(preDai);
+    const receivedUsdc = postUsdcBalance.minus(preUsdc);
+    let totalDaiToDeposit = receivedDai.gt(0) ? receivedDai : new BN('0');
+    if (receivedUsdc.gt(0)) {
+      const swapped = await swapUsdcForDai(receivedUsdc.toFixed(0));
+      totalDaiToDeposit = totalDaiToDeposit.plus(new BN(swapped));
+    }
+    if (totalDaiToDeposit.lte(0)) {
+      hideSpinner();
+      await Swal.fire({
+        icon: 'warning',
+        title: translateThis('Nothing to deposit'),
+        text: translateThis('The withdrawal produced no DAI to migrate.')
+      });
+      return true;
+    }
+
+    // Step 4: approve + deposit into the new pool.
+    const newPool = new earnState.polWeb3.eth.Contract(stableVaultABI, TREASURY_ADDRESSES.STABLE_POOL);
+    const allowance = validation(DOMPurify.sanitize(await dai.methods.allowance(myaccounts, TREASURY_ADDRESSES.STABLE_POOL).call()));
+    if (new BN(allowance).lt(totalDaiToDeposit)) {
+      Swal.fire({ icon: 'info', title: translateThis('Allowance'), text: translateThis('Authorizing DAI for the new StableVault...'), showConfirmButton: false });
+      await delay(500);
+      await sendTx(dai, "approve", [TREASURY_ADDRESSES.STABLE_POOL, totalDaiToDeposit.toFixed(0)], 100000, "0", false, false);
+    }
+
+    Swal.fire({ icon: 'info', title: translateThis('Depositing'), text: translateThis('Depositing migrated DAI into the new StableVault...'), showConfirmButton: false });
+    await delay(500);
+    const dDeadline = Math.floor(Date.now() / 1000) + 300;
+    await sendTx(newPool, "deposit", [totalDaiToDeposit.toFixed(0), dDeadline], 2000000, "0", false, false);
+
+    hideSpinner();
+    await Swal.fire({ icon: 'success', title: translateThis('Upgrade Complete'), text: translateThis('Your StableVault position has been migrated to the new pool.') });
+    return true;
+  } catch (postErr) {
+    hideSpinner();
+    console.log(postErr);
+    const message = translateThis('Upgrade failed after withdrawal. Your funds are now safely in your wallet. Please try to deposit to the new pool manually.');
+    await showScrollableError(translateThis('Transaction failed'), message);
+    throw postErr;
+  }
+}
+
 async function loadStableVaultInfo() {
   if (!earnState.polWeb3) return;
-  
+  if (myaccounts) {
+    try {
+      if(!runningFunction) {
+        await upgradeStableVaultIfNeeded();
+      }
+      runningFunction = false;
+    } catch (upErr) {
+      runningFunction = false;
+      console.log('Skipping StableVault info load: upgrade not completed.', upErr);
+      return;
+    }
+  }
   try {
     const stableContract = new earnState.polWeb3.eth.Contract(stableVaultABI, TREASURY_ADDRESSES.STABLE_POOL);
     
@@ -1431,12 +1803,13 @@ async function depositStableVault() {
     if (!result) {
       hideSpinner();
       return;
-    }    
+    }
+
     const amountWei = earnState.polWeb3.utils.toWei(amount, 'ether');
     const stableContract = new earnState.polWeb3.eth.Contract(stableVaultABI, TREASURY_ADDRESSES.STABLE_POOL);
     const feeVault = validation(DOMPurify.sanitize(await stableContract.methods.feeVault().call()));
     const feeVaultContract = new earnState.polWeb3.eth.Contract(stableVaultFeesABI, feeVault);
-    
+
     // Check current sendTo setting
     const currentSendTo = validation(DOMPurify.sanitize(await feeVaultContract.methods.sendTo(myaccounts).call()));
     let targetSendTo = myaccounts; // Default to user
@@ -1472,32 +1845,48 @@ async function depositStableVault() {
     }
     
     // Approve DAI (check allowance first)
-    const daiContract = new earnState.polWeb3.eth.Contract(
-      [{
-        "constant": false,
-        "inputs": [
-          {"name": "spender", "type": "address"},
-          {"name": "amount", "type": "uint256"}
-        ],
-        "name": "approve",
-        "outputs": [{"name": "", "type": "bool"}],
-        "type": "function"
-      },
-      {
-        "constant": true,
-        "inputs": [
-          {"name": "owner", "type": "address"},
-          {"name": "spender", "type": "address"}
-        ],
-        "name": "allowance",
-        "outputs": [{"name": "", "type": "uint256"}],
-        "type": "function"
-      }],
-      TREASURY_ADDRESSES.DAI
-    );
+    const daiContract = new earnState.polWeb3.eth.Contract(ERC20ABI,TREASURY_ADDRESSES.DAI);
+    // Check to see if USDC can cover the difference
+    const userDaiBal = new BN(validation(DOMPurify.sanitize(await daiContract.methods.balanceOf(myaccounts).call())));
+    if (userDaiBal.lt(new BN(amountWei))) {
+      const shortfallDaiWei = new BN(amountWei).minus(userDaiBal);
+      const usdcContract = new earnState.polWeb3.eth.Contract(ERC20ABI, TREASURY_ADDRESSES.USDC);
+      const userUsdcBal = new BN(validation(DOMPurify.sanitize(await usdcContract.methods.balanceOf(myaccounts).call())));
+      // USDC has 6 decimals, DAI has 18; at peg 1 USDC -> 1e12 DAI wei. Add
+      // 1% to the USDC needed to cover swap slippage and rounding.
+      const usdcEquivalentForShortfall = shortfallDaiWei.dividedBy('1e12').times('1.01').integerValue(BN.ROUND_UP);
+      if (userUsdcBal.gte(usdcEquivalentForShortfall)) {
+        const { isConfirmed } = await Swal.fire({
+          icon: 'question',
+          title: translateThis('Top up DAI with USDC?'),
+          text: translateThis('Your DAI balance is short. Do you want to swap some USDC to DAI to complete the deposit?'),
+          showCancelButton: true,
+          confirmButtonText: translateThis('Yes, swap USDC to DAI'),
+          cancelButtonText: translateThis('No, cancel')
+        });
+        if (!isConfirmed) {
+          hideSpinner();
+          return false;
+        }
+        Swal.fire({
+          icon: 'info',
+          title: translateThis('Topping up DAI'),
+          text: translateThis('Swapping USDC to DAI on Uniswap V4 to cover the deposit...'),
+          showConfirmButton: false
+        });
+        await delay(500);
+        await swapUsdcForDai(usdcEquivalentForShortfall.toFixed(0));
+        const postSwapDai = new BN(validation(DOMPurify.sanitize(await daiContract.methods.balanceOf(myaccounts).call())));
+        if (postSwapDai.lt(new BN(amountWei))) {
+          throw new Error(translateThis('Balance has not refreshed yet. Please try again later and verify that the transactions have confirmed.'));
+        }
+      } else {
+        throw new Error(translateThis('Insufficient DAI balance for the requested deposit.'));
+      }
+    }
     
     // Check existing allowance before requesting approval
-    const existingAllowance = String(await daiContract.methods.allowance(myaccounts, TREASURY_ADDRESSES.STABLE_POOL).call());
+    const existingAllowance = validation(DOMPurify.sanitize(await daiContract.methods.allowance(myaccounts, TREASURY_ADDRESSES.STABLE_POOL).call()));
     if (new BN(existingAllowance).lt(new BN(amountWei))) {
       Swal.fire({
         icon: 'info',
@@ -1528,7 +1917,7 @@ async function depositStableVault() {
   } catch (error) {
     hideSpinner();
     console.log(error);
-    const message = translateThis("Please check your browsers console for the full error message");
+    const message = translateThis('Transaction failed:') + ' ' + (error.message || (typeof error === 'object' ? JSON.stringify(error) : String(error)));
     await showScrollableError(translateThis('Transaction failed'), message);
   }
 }
@@ -1553,8 +1942,8 @@ async function checkPoolHealth() {
     // 3. Calculate the 98% threshold
     // If Assets < (Shares * 0.98), the pool is underwater by > 2%
     const threshold = totalShares.times(0.98);
-    console.log(threshold.toString());
-    console.log(totalAssets.toString());
+    console.log(threshold.toFixed(0));
+    console.log(totalAssets.toFixed(0));
 
     if (totalAssets.lt(threshold)) {
       // Calculate current health percentage for display
@@ -1565,7 +1954,7 @@ async function checkPoolHealth() {
         title: translateThis('Pool Value Warning'),
         html: `
           <p><strong>${translateThis('Health')}: ${healthPercent}%</strong></p>
-          <p>${translateThis('The StableVault is currently under valued. This can happen if it repositions too frequently or when there is impermanent loss or changes in stablecoin prices.')}</p>          
+          <p>${translateThis('The StableVault is currently under valued. This can happen if it repositions too frequently or when there is impermanent loss or changes in stablecoin prices.')}</p>
           <p>${translateThis('The total liquidity plus dust is less than the total shares by more than 2%. Depositing now effectively pays off this debt and may result in immediate loss of value.')}</p>
         `,
         icon: 'warning',
@@ -1599,7 +1988,7 @@ async function collectStableFees() {
     const feeVault = validation(DOMPurify.sanitize(await stableContract.methods.feeVault().call()));
     const feeVaultContract = new earnState.polWeb3.eth.Contract(stableVaultFeesABI, feeVault);
     
-    await sendTx(feeVaultContract, "claim", [], 500000, "0", true, false);
+    await sendTx(feeVaultContract, "claim", [], 2000000, "0", true, false);
     
     hideSpinner();
     await Swal.fire(translateThis('Success'), translateThis('Fees collected!'), 'success');
@@ -1608,7 +1997,7 @@ async function collectStableFees() {
   } catch (error) {
     hideSpinner();
     console.log(error);
-    const message = translateThis("Please check your browsers console for the full error message");
+    const message = translateThis('Transaction failed:') + ' ' + (error.message || (typeof error === 'object' ? JSON.stringify(error) : String(error)));
     await showScrollableError(translateThis('Transaction failed'), message);
   }
 }
@@ -1650,9 +2039,21 @@ async function withdrawStableVault() {
     //Only compact dust if there is enough to avoid USDC slippage truncation
     const daiTokenDust = new earnState.polWeb3.eth.Contract(ERC20ABI, TREASURY_ADDRESSES.DAI);
     const daiDust = validation(DOMPurify.sanitize(await daiTokenDust.methods.balanceOf(TREASURY_ADDRESSES.STABLE_POOL).call()));
-    const addDust = new BN(daiDust).gt(new BN('10000000000000000'));
-    await sendTx(stableContract, "withdraw", [withdrawShares.toString(), deadline, addDust], 1000000, "0", true, false);
-    
+
+    const dai = new earnState.polWeb3.eth.Contract(ERC20ABI, TREASURY_ADDRESSES.DAI);
+    const usdc = new earnState.polWeb3.eth.Contract(ERC20ABI, TREASURY_ADDRESSES.USDC);
+    const PoolDaiBal = new BN(validation(DOMPurify.sanitize(await dai.methods.balanceOf(TREASURY_ADDRESSES.STABLE_POOL).call())));
+    const PoolUsdcBal = new BN(validation(DOMPurify.sanitize(await usdc.methods.balanceOf(TREASURY_ADDRESSES.STABLE_POOL).call())));
+    if (PoolUsdcBal.gt(new BN('2000000'))) {
+      Swal.fire({ icon: 'info', title: translateThis('Cleaning Dust'), text: translateThis('Moving pool dust into the position before withdrawing...'), showConfirmButton: false });
+      await delay(500);
+      await sendTx(stableContract, "cleanDust", [deadline, "0"], 1500000, "0", false, false);
+    }
+    var addDust = false;
+    if (PoolUsdcBal.gt(new BN('2000000')) || PoolDaiBal.gt(new BN('2000000000000000000'))) {
+      addDust = true;
+    }
+    await sendTx(stableContract, "withdraw", [withdrawShares.toFixed(0), deadline, addDust], 1000000, "0", true, false);    
     hideSpinner();
     await Swal.fire(translateThis('Success'), translateThis('Withdrawal successful!'), 'success');
     await refreshStableVaultInfo();
@@ -1660,7 +2061,7 @@ async function withdrawStableVault() {
   } catch (error) {
     hideSpinner();
     console.log(error);
-    const message = translateThis("Please check your browsers console for the full error message");
+    const message = translateThis('Transaction failed:') + ' ' + (error.message || (typeof error === 'object' ? JSON.stringify(error) : String(error)));
     await showScrollableError(translateThis('Transaction failed'), message);
   }
 }
@@ -1859,7 +2260,7 @@ async function toggleStaking() {
           <br>
           <p>${translateThis('It is recommended that you connect to this site using a password instead of Metamask. However if you wish to stake with Metamask you may unlock your wallet directly using your private key.')}</p>
           <br>
-          <p><strong>${translateThis('Security Notice')}:</strong> ${translateThis('We only recommend this option if you trust the source code of this site. You may also wish to run the code locally. You are responsible for risks of direct key handling.')}</p>
+          <p><strong>${translateThis('Security Notice')}:</strong> ${translateThis('We only recommend this option if you trust the source code of this site. You may also wish to run the code locally. You are responsible for the risks of direct key handling.')}</p>
           <br>
           <p>${translateThis('If you agree, you may continue and unlock your wallet using your private key.')}</p>
         </div>
@@ -2244,7 +2645,7 @@ async function checkAndManageStableVault() {
           // Collect once per day
           if (now - lastFeeCollection > 86400) {
             logToConsole('Collecting personal fees from StableVault (donating user)');
-            const tx = await sendTx(feeVaultContract, "claim", [], 500000, "0", false, false, false);            
+            const tx = await sendTx(feeVaultContract, "claim", [], 2000000, "0", false, false, false);            
             localStorage.setItem(myaccounts+'stableFeeLastCollection', now.toString());
             logToConsole(`Personal fees collected $${stripZeros(totalPendingUSD.toFixed(8, BN.ROUND_DOWN))}: ` + tx);
           }
@@ -2297,21 +2698,13 @@ async function checkAndManageStableVault() {
           logToConsole('StableVault repositioned successfully: ' + tx);
         }
       }
-      
-      // Check if dust needs cleaning
-      const lastDustClean = parseInt(validation(DOMPurify.sanitize(await stableContract.methods.lastDustClean().call())));
-      const cleanTimelock = parseInt(validation(DOMPurify.sanitize(await stableContract.methods.CLEAN_TIMELOCK().call())));
-      now = Math.floor(Date.now() / 1000);
-      
-      if (now - lastDustClean > cleanTimelock) {        
-        const USDCToken = new earnState.polWeb3.eth.Contract(ERC20ABI, TREASURY_ADDRESSES.USDC);
-        const USDCBalance = validation(DOMPurify.sanitize(await USDCToken.methods.balanceOf(TREASURY_ADDRESSES.STABLE_POOL).call()));
-        if (new BN(USDCBalance).gt(new BN('1000000'))) {
-          logToConsole('Cleaning StableVault dust...');
-          const deadline = now + 300;
-          const tx = await sendTx(stableContract, "cleanDust", [deadline], 1500000, "0", false, false, false);        
-          logToConsole('StableVault dust cleaned successfully: ' + tx);
-        }
+      const USDCToken = new earnState.polWeb3.eth.Contract(ERC20ABI, TREASURY_ADDRESSES.USDC);
+      const USDCBalance = validation(DOMPurify.sanitize(await USDCToken.methods.balanceOf(TREASURY_ADDRESSES.STABLE_POOL).call()));
+      if (new BN(USDCBalance).gt(new BN('2000000'))) {
+        logToConsole('Cleaning StableVault dust...');
+        const deadline = now + 300;
+        const tx = await sendTx(stableContract, "cleanDust", [deadline, "0"], 1500000, "0", false, false, false);        
+        logToConsole('StableVault dust cleaned successfully: ' + tx);
       }
     }
     
@@ -2337,15 +2730,21 @@ async function loadStakingInfo() {
     // Load BAYL treasury info
     const baylTreasury = new earnState.polWeb3.eth.Contract(treasuryABI, TREASURY_ADDRESSES.BAYL_TREASURY);
     
-    const totalTokens = validation(DOMPurify.sanitize(await baylTreasury.methods.totalTokens().call()));
-    const totalShares = validation(DOMPurify.sanitize(await baylTreasury.methods.totalShares().call()));
+    const totalTokens = validation(DOMPurify.sanitize(await baylTreasury.methods.totalTokens().call()));    
     const refreshRate = validation(DOMPurify.sanitize(await baylTreasury.methods.refreshRate().call()));
     const claimRate = validation(DOMPurify.sanitize(await baylTreasury.methods.claimRate().call()));
+    const lastInterval = validation(DOMPurify.sanitize(await baylTreasury.methods.lastInterval().call()));
+    const currentBlock = parseInt(validation(DOMPurify.sanitize(await earnState.polWeb3.eth.getBlockNumber())));
+    const currentInterval = Math.floor(currentBlock / parseInt(claimRate));
+    const pendingInterval = parseInt(lastInterval) < currentInterval;
+
+    const totalShares = pendingInterval
+      ? validation(DOMPurify.sanitize(await baylTreasury.methods.nextTotalShares().call()))
+      : validation(DOMPurify.sanitize(await baylTreasury.methods.totalShares().call()));
     
     document.getElementById('baylTotalStaked').textContent = displayBAYAmount(totalTokens, 4);
     document.getElementById('baylTotalShares').textContent = totalShares;
     document.getElementById('baylRefreshRate').textContent = Math.floor(parseInt(refreshRate) / 86400) + ' days';
-    const currentBlock = parseInt(validation(DOMPurify.sanitize(await earnState.polWeb3.eth.getBlockNumber())));
 
     const blocksRemaining = Math.floor(currentBlock % parseInt(claimRate));
     document.getElementById('baylClaimRate').textContent = claimRate + ' blocks (' + blocksRemaining + "/" + claimRate + ")";
@@ -2527,7 +2926,7 @@ async function depositStake() {
   }
   try {
     showSpinner();
-    amount = new BN(amount).times('1e8').toString();
+    amount = new BN(amount).times('1e8').toFixed(0);
     const vaultContract = new earnState.polWeb3.eth.Contract(vaultABI, TREASURY_ADDRESSES.VAULT);
     const baylTreasury = new earnState.polWeb3.eth.Contract(treasuryABI, TREASURY_ADDRESSES.BAYL_TREASURY);
     // Check if this is first deposit - if so, set coins first
@@ -2587,7 +2986,7 @@ async function depositStake() {
   } catch (error) {
     hideSpinner();
     console.log(error);
-    const message = translateThis("Please check your browsers console for the full error message");
+    const message = translateThis('Transaction failed:') + ' ' + (error.message || (typeof error === 'object' ? JSON.stringify(error) : String(error)));
     await showScrollableError(translateThis('Transaction failed'), message);
   }
 }
@@ -2658,7 +3057,7 @@ async function unstakeBAYL() {
       if (!value || new BN(value).lte(new BN('0'))) {
         return translateThis('Please enter a valid amount');
       }
-      const amountWei = BN(value).times('1e8').toString();
+      const amountWei = BN(value).times('1e8').toFixed(0);
       if (new BN(amountWei).gt(new BN(vaultTokenBalance))) {
         return translateThis('Insufficient balance in vault. Maximum available') + ': ' + vaultTokenBalanceFormatted;
       }
@@ -2667,7 +3066,7 @@ async function unstakeBAYL() {
   if (!result.isConfirmed) return;
   try {
     showSpinner();
-    const amount = BN(result.value).times('1e8').toString();
+    const amount = BN(result.value).times('1e8').toFixed(0);
     if (isBAYL) {
       await sendTx(vaultContract, "withdrawLiquid", [amount], 1500000, "0", true, false);
     } else {
@@ -2679,7 +3078,7 @@ async function unstakeBAYL() {
   } catch (error) {
     hideSpinner();
     console.log(error);
-    const message = translateThis("Please check your browsers console for the full error message");
+    const message = translateThis('Transaction failed:') + ' ' + (error.message || (typeof error === 'object' ? JSON.stringify(error) : String(error)));
     await showScrollableError(translateThis('Transaction failed'), message);
   }
 }
@@ -2762,7 +3161,7 @@ async function claimStakingRewards(showSwal = false) {
         } else {
           amount = new BN(pending).dividedBy('1e18');
         }
-        earnState.userTotalRewards[coinName] = new BN(earnState.userTotalRewards[coinName] || 0).plus(amount).toString();
+        earnState.userTotalRewards[coinName] = new BN(earnState.userTotalRewards[coinName] || 0).plus(amount).toFixed(0);
       }
     }
     var tx;
@@ -2797,7 +3196,7 @@ async function claimStakingRewards(showSwal = false) {
     hideSpinner();
     console.error('Error claiming rewards:', error);
     if(showSwal) {
-      const message = translateThis("Please check your browsers console for the full error message");
+      const message = translateThis('Transaction failed:') + ' ' + (error.message || (typeof error === 'object' ? JSON.stringify(error) : String(error)));
       await showScrollableError(translateThis('Transaction failed'), message);
     }
   }
@@ -3376,7 +3775,7 @@ async function copyDepositAddress(coinType) {
           ${address}
         </p>
         <p style="margin-top: 10px; font-size: 0.9em; color: #777;">
-          ${coinType === 'ETH' || coinType === 'Lido' ? translateThis('Network: Ethereum Mainnet') : translateThis('Network: Polygon')}
+          ${coinType === 'ETH' || coinType === 'Lido' || coinType === 'DAI-Ethereum' || coinType === 'POL-Ethereum' ? translateThis('Network: Ethereum Mainnet') : translateThis('Network: Polygon')}
         </p>
       `,
       icon: 'success',
@@ -3390,7 +3789,7 @@ async function copyDepositAddress(coinType) {
           ${address}
         </p>
         <p style="margin-top: 10px; font-size: 0.9em; color: #777;">
-          ${coinType === 'ETH' || coinType === 'Lido' ? translateThis('Network: Ethereum Mainnet') : translateThis('Network: Polygon')}
+          ${coinType === 'ETH' || coinType === 'Lido' || coinType === 'DAI-Ethereum' || coinType === 'POL-Ethereum' ? translateThis('Network: Ethereum Mainnet') : translateThis('Network: Polygon')}
         </p>
       `,
       icon: 'info',
@@ -3469,6 +3868,28 @@ async function showWithdrawDialog() {
       if (stETHBalanceFormatted.gt(new BN('0'))) {
         balances.push({ coin: 'stETH (Lido)', balance: stripZeros(stETHBalanceFormatted.toFixed(8, BN.ROUND_DOWN)), network: 'Ethereum' });
       }
+
+      // Check DAI balance on Ethereum (may appear if automation bridging was incomplete)
+      const ethDaiContract = new earnState.ethWeb3.eth.Contract(
+        [{"constant": true, "inputs": [{"name": "account", "type": "address"}], "name": "balanceOf", "outputs": [{"name": "", "type": "uint256"}], "type": "function"}],
+        TREASURY_ADDRESSES.ETH_DAI
+      );
+      const ethDaiBalance = validation(DOMPurify.sanitize(await ethDaiContract.methods.balanceOf(myaccounts).call()));
+      const ethDaiFormatted = new BN(ethDaiBalance).dividedBy('1e18');
+      if (ethDaiFormatted.gt(new BN('0'))) {
+        balances.push({ coin: 'DAI (Ethereum)', balance: stripZeros(ethDaiFormatted.toFixed(8, BN.ROUND_DOWN)), network: 'Ethereum' });
+      }
+
+      // Check POL balance on Ethereum (may appear if automation bridging was incomplete)
+      const ethPolContract = new earnState.ethWeb3.eth.Contract(
+        [{"constant": true, "inputs": [{"name": "account", "type": "address"}], "name": "balanceOf", "outputs": [{"name": "", "type": "uint256"}], "type": "function"}],
+        TREASURY_ADDRESSES.ETH_POL
+      );
+      const ethPolBalance = validation(DOMPurify.sanitize(await ethPolContract.methods.balanceOf(myaccounts).call()));
+      const ethPolFormatted = new BN(ethPolBalance).dividedBy('1e18');
+      if (ethPolFormatted.gt(new BN('0'))) {
+        balances.push({ coin: 'POL (Ethereum)', balance: stripZeros(ethPolFormatted.toFixed(8, BN.ROUND_DOWN)), network: 'Ethereum' });
+      }
     }
     
     if (balances.length === 0) {
@@ -3524,7 +3945,7 @@ async function showWithdrawDialog() {
     
   } catch (error) {
     console.log(error);
-    const message = translateThis('Transaction failed:') + ' ' + translateThis("Please check your browsers console for the full error message");
+    const message = translateThis('Transaction failed:') + ' ' + (error.message || (typeof error === 'object' ? JSON.stringify(error) : String(error)));
     await showScrollableError(translateThis('Transaction failed'), message);
   }
 }
@@ -3549,7 +3970,7 @@ async function executeWithdrawal(withdrawData) {
           throw new Error('Insufficient balance to cover gas fees');
         }
       }
-      await sendTx("ETH",amountWei.toString(),[address],150000,"0",true);
+      await sendTx("ETH",amountWei.toFixed(0),[address],150000,"0",true);
     } else if (coin.coin === 'ETH') {
       // Withdraw ETH
       let amountWei;
@@ -3565,10 +3986,11 @@ async function executeWithdrawal(withdrawData) {
           throw new Error('Insufficient balance to cover gas fees');
         }
       }
-      await sendTx("ETH",amountWei.toString(),[address],150000,"0",true,true);
+      await sendTx("ETH",amountWei.toFixed(0),[address],150000,"0",true,true);
     } else {
       // Withdraw ERC20 token
       let tokenAddress, decimals, web3Instance;
+      let requiresEthNetwork = false;
       if (coin.coin === 'USDC') {
         tokenAddress = TREASURY_ADDRESSES.USDC;
         decimals = '1e6';
@@ -3585,6 +4007,17 @@ async function executeWithdrawal(withdrawData) {
         tokenAddress = TREASURY_ADDRESSES.LIDO_STETH;
         decimals = '1e18';
         web3Instance = earnState.ethWeb3;
+        requiresEthNetwork = true;
+      } else if (coin.coin === 'DAI (Ethereum)') {
+        tokenAddress = TREASURY_ADDRESSES.ETH_DAI;
+        decimals = '1e18';
+        web3Instance = earnState.ethWeb3;
+        requiresEthNetwork = true;
+      } else if (coin.coin === 'POL (Ethereum)') {
+        tokenAddress = TREASURY_ADDRESSES.ETH_POL;
+        decimals = '1e18';
+        web3Instance = earnState.ethWeb3;
+        requiresEthNetwork = true;
       }
       const tokenContract = new web3Instance.eth.Contract(
         [{"constant": false, "inputs": [{"name": "recipient", "type": "address"}, {"name": "amount", "type": "uint256"}], "name": "transfer", "outputs": [{"name": "", "type": "bool"}], "type": "function"},
@@ -3593,8 +4026,8 @@ async function executeWithdrawal(withdrawData) {
       );
       const balance = validation(DOMPurify.sanitize(await tokenContract.methods.balanceOf(myaccounts).call()));
       const amountWei = amount ? new BN(amount).times(decimals).toFixed(0, BN.ROUND_DOWN) : balance;
-      if(coin.coin === 'stETH (Lido)') {
-        await sendTx(tokenContract, "transfer", [address, amountWei], 150000, "0", true, false, true);
+      if (requiresEthNetwork) {
+        await sendTx(tokenContract, "transfer", [address, amountWei], 150000, "0", true, true, true);
       } else {
         await sendTx(tokenContract, "transfer", [address, amountWei], 150000, "0", true, false);
       }
@@ -3605,7 +4038,7 @@ async function executeWithdrawal(withdrawData) {
   } catch (error) {
     hideSpinner();
     console.log(error);
-    const message = translateThis('Transaction failed:') + ' ' + translateThis("Please check your browsers console for the full error message");
+    const message = translateThis('Transaction failed:') + ' ' + (error.message || (typeof error === 'object' ? JSON.stringify(error) : String(error)));
     await showScrollableError(translateThis('Transaction failed'), message);
   }
 }

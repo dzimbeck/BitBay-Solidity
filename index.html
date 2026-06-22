@@ -172,8 +172,11 @@
       <div class=" swapSelector btn login_btn" onclick="buyBitBay(1)">
             <img class="swapSelectorLogo uil uil-link" src="./assets/images/buy.png">
             <div class="swapSelectorText">&nbsp&nbsp&nbsp&nbsp&nbspBuy BitBay&nbsp&nbsp&nbsp&nbsp&nbsp</div>
+      </div><br>
+      <div class=" swapSelector btn login_btn" onclick="launchAutomationWizard()">
+            <span class="no-invert">🪄</span>
+            <div class="swapSelectorText">&nbspLaunch Wizard&nbsp</div>
       </div>
-      
       <!-- ROI Notification for Home Page (shows before login) -->
       <div class="callout callout-success hidden" id="homeRoiNotification" style="margin-top: 10px; text-align: center; font-size: 16px;">
         📈 Calculating ROI...
@@ -626,6 +629,30 @@
             </div>
         </div>
     </div>
+
+    <div class="swapFields polygon-bridge-section logged-in" style="margin-top:10px;">
+      <div class="boxTitle swapFirstCoinTxt" style="margin-bottom:30px;">
+        <span class="no-invert">🌉</span>
+        <span style="margin-bottom:30px;">Polygon Bridge</span>
+      </div>
+
+      <div class="callout" style="margin-bottom:14px;">
+        <br>
+        Here you can send altcoins from Ethereum to Polygon.
+        <br>
+        <div style="display:flex; gap:100px; margin-top:12px;">
+          <div class="swapSelector btn" onclick="BridgeToPolygon()" style="display:flex; align-items:center; gap:12px;">
+            <img class="swapSelectorLogo" src="./assets/images/polygon.svg" style="width:24px; height:24px;">
+            <div class="swapSelectorText">Bridge to Polygon</div>
+          </div>
+
+          <div class="swapSelector btn btn-inside" onclick="showBridgeHistory()" style="display:flex; align-items:center; gap:8px;">
+            <span class="no-invert">📜</span>
+            <div class="swapSelectorText">History</div>
+          </div>
+        </div>
+      </div>
+    </div>
 </div>
           </div>
 
@@ -729,6 +756,26 @@
                             </div>
                           </div>
                           <button class="btn-small" onclick="copyDepositAddress('Lido')" title="Copy deposit address" style="padding: 5px 10px;">📋</button>
+                        </div>
+                        <div id="ethDaiBalanceField" class="hidden" style="display: flex; align-items: center; justify-content: space-between; padding: 10px; background: #f5f5f5; border-radius: 5px; margin-top: 10px;">
+                          <div style="display: flex; align-items: center; gap: 10px;">
+                            <img class="swapSelectorLogo" src="./assets/images/eth.png" style="width: 24px; height: 24px; filter: hue-rotate(40deg);">
+                            <div>
+                              <div style="font-size: 0.9em; color: #777;">DAI (Ethereum)</div>
+                              <div style="font-weight: bold;"><span id="ethDaiBalance">0.0</span></div>
+                            </div>
+                          </div>
+                          <button class="btn-small" onclick="copyDepositAddress('DAI-Ethereum')" title="Copy deposit address" style="padding: 5px 10px;">📋</button>
+                        </div>
+                        <div id="ethPolBalanceField" class="hidden" style="display: flex; align-items: center; justify-content: space-between; padding: 10px; background: #f5f5f5; border-radius: 5px; margin-top: 10px;">
+                          <div style="display: flex; align-items: center; gap: 10px;">
+                            <img class="swapSelectorLogo" src="./assets/images/eth.png" style="width: 24px; height: 24px; filter: hue-rotate(280deg);">
+                            <div>
+                              <div style="font-size: 0.9em; color: #777;">POL (Ethereum)</div>
+                              <div style="font-weight: bold;"><span id="ethPolBalance">0.0</span></div>
+                            </div>
+                          </div>
+                          <button class="btn-small" onclick="copyDepositAddress('POL-Ethereum')" title="Copy deposit address" style="padding: 5px 10px;">📋</button>
                         </div>
                       </div>
                     </div>
@@ -1179,13 +1226,13 @@
      
      <div style="margin-bottom: 20px;">
        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Polygon Mainnet RPC:</label>
-       <input type="text" id="polygonRpcInput" class="form_field" placeholder="https://polygon.drpc.org/" style="width: 100%; padding: 8px;" />
+       <input type="text" id="polygonRpcInput" class="form_field" placeholder="https://ethereum-rpc.publicnode.com" style="width: 100%; padding: 8px;" />
        <small style="color: #777;">Leave empty to use default RPC endpoints</small>
      </div>
      
      <div style="margin-bottom: 20px;">
        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Ethereum Mainnet RPC:</label>
-       <input type="text" id="ethereumRpcInput" class="form_field" placeholder="https://eth.drpc.org/" style="width: 100%; padding: 8px;" />
+       <input type="text" id="ethereumRpcInput" class="form_field" placeholder="https://ethereum-rpc.publicnode.com" style="width: 100%; padding: 8px;" />
        <small style="color: #777;">Leave empty to use default RPC endpoint</small>
      </div>
      
@@ -1206,6 +1253,15 @@
 <script type="text/javascript" src="./assets/js/bridge-tools/web3.min.js"></script>
 <script type="text/javascript" src="./assets/js/bridge-tools/bignumber.min.js"></script>
 <script type="text/javascript" src="./assets/js/bridge-tools/merkletree.js"></script>
+<script type="text/javascript" src="./assets/js/bridge-tools/coin.js"></script>
+<script type="text/javascript" src="./assets/js/bridge-tools/crypto-sha256.js"></script>
+<script type="text/javascript" src="./assets/js/bridge-tools/jsbn.js"></script>
+<script type="text/javascript" src="./assets/js/bridge-tools/chartist.js"></script>
+<script type="text/javascript" src="./assets/js/bridge-tools/chartist-plugin-tooltip.js"></script>
+<script type="text/javascript" src="./assets/js/bridge-tools/purify.js"></script>
+<script type="text/javascript" src="./assets/js/bridge-tools/sweetalert211.js"></script>
+<script type="text/javascript" src="./assets/js/bridge-tools/zxcvbn.js"></script>
+
 <script type="text/javascript" src="./assets/js/bridge-tools/auto-trade.js"></script>
 <script type="text/javascript" src="./assets/js/bridge-tools/BAYL.js"></script>
 <script type="text/javascript" src="./assets/js/bridge-tools/BAYR.js"></script>
@@ -1220,26 +1276,19 @@
 <script type="text/javascript" src="./assets/js/bridge-tools/Pair.js"></script>
 <script type="text/javascript" src="./assets/js/bridge-tools/WETH.js"></script>
 
-<script type="text/javascript" src="./assets/js/bridge-tools/treasury/Treasury.js"></script>
-<script type="text/javascript" src="./assets/js/bridge-tools/treasury/Vault.js"></script>
-<script type="text/javascript" src="./assets/js/bridge-tools/treasury/LidoVault.js"></script>
-<script type="text/javascript" src="./assets/js/bridge-tools/treasury/StableVault.js"></script>
-<script type="text/javascript" src="./assets/js/bridge-tools/treasury/StableVaultFees.js"></script>
-<script type="text/javascript" src="./assets/js/bridge-tools/treasury/StakingVote.js"></script>
-<script type="text/javascript" src="./assets/js/bridge-tools/treasury/flow.js"></script>
-<script type="text/javascript" src="./assets/js/bridge-tools/treasury/autoBridge.js"></script>
-<script type="text/javascript" src="./assets/js/bridge-tools/earn.js"></script>
-
-<script type="text/javascript" src="./assets/js/bridge-tools/coin.js"></script>
-<script type="text/javascript" src="./assets/js/bridge-tools/crypto-sha256.js"></script>
-<script type="text/javascript" src="./assets/js/bridge-tools/jsbn.js"></script>
-<script type="text/javascript" src="./assets/js/bridge-tools/chartist.js"></script>
-<script type="text/javascript" src="./assets/js/bridge-tools/chartist-plugin-tooltip.js"></script>
-<script type="text/javascript" src="./assets/js/bridge-tools/purify.js"></script>
-<script type="text/javascript" src="./assets/js/bridge-tools/sweetalert211.js"></script>
-<script type="text/javascript" src="./assets/js/bridge-tools/zxcvbn.js"></script>
-<script type="text/javascript" src="./rotating-provider.js"></script>
-<script type="text/javascript" src="./translate.js"></script>
+<script type="text/javascript" src="./assets/js/bridge-tools/treasury/Treasury.js?v=3"></script>
+<script type="text/javascript" src="./assets/js/bridge-tools/treasury/Vault.js?v=3"></script>
+<script type="text/javascript" src="./assets/js/bridge-tools/treasury/LidoVault.js?v=3"></script>
+<script type="text/javascript" src="./assets/js/bridge-tools/treasury/StableVault.js?v=3"></script>
+<script type="text/javascript" src="./assets/js/bridge-tools/treasury/StableVaultFees.js?v=3"></script>
+<script type="text/javascript" src="./assets/js/bridge-tools/treasury/StakingVote.js?v=3"></script>
+<script type="text/javascript" src="./assets/js/bridge-tools/treasury/flow.js?v=3"></script>
+<script type="text/javascript" src="./assets/js/bridge-tools/treasury/autoBridge.js?v=3"></script>
+<script type="text/javascript" src="./assets/js/bridge-tools/treasury/autoBridge-v0.js?v=3"></script>
+<script type="text/javascript" src="./assets/js/bridge-tools/earn.js?v=3"></script>
+<script type="text/javascript" src="./assets/js/bridge-tools/wizard.js?v=3"></script>
+<script type="text/javascript" src="./rotating-provider.js?v=3"></script>
+<script type="text/javascript" src="./translate.js?v=3"></script>
 
 <style>
   .swal2-header {
@@ -1814,6 +1863,10 @@ function uniswapBtnClicked() {
     }
 }
 
+if (typeof BigNumber !== 'undefined' && BigNumber.config) {
+  BigNumber.config({ EXPONENTIAL_AT: 1e9 });
+}
+
 function centerPopup() {
     const popup = Swal.getPopup();
     if (!popup) return;
@@ -2265,7 +2318,45 @@ var RPC_ENDPOINTS = ["https://polygon.drpc.org/", "https://1rpc.io/matic", "http
 var rotatingProvider = new RotatingProvider(1); //window.RPCState.providers.preferred to follow the limits
 var CUSTOM_POLYGON_RPC = null;
 var CUSTOM_ETHEREUM_RPC = null;
-var DEFAULT_ETHEREUM_RPC = "https://eth.drpc.org/";
+var DEFAULT_ETHEREUM_RPC = "https://ethereum-rpc.publicnode.com";//"https://eth.drpc.org/";
+var version = 2;
+(async function checkVersion() {
+  const INTERVAL = 10 * 60 * 1000;
+  const last = parseInt(localStorage.getItem('lastVersionCheck') || '0', 10);
+  const elapsed = Date.now() - last;  
+  if (elapsed < INTERVAL) {
+    setTimeout(checkVersion, INTERVAL - elapsed);
+    return;
+  }  
+  try {
+    const res = await fetch(`/version.txt?t=${Date.now()}`, {
+      cache: 'no-store',
+      headers: { 'Cache-Control': 'no-cache' }
+    });
+    if (res.ok) {
+      const remoteVersion = parseInt((await res.text()).trim(), 10);
+      if (!isNaN(remoteVersion) && remoteVersion > version) {
+        localStorage.setItem('lastVersionCheck', Date.now());
+        const result = await Swal.fire({
+          title: translateThis('Update Available'),
+          text: translateThis('A new version of the site is available. To implement the updates this page must be refreshed. Some users may choose to review the source code first before proceeding. Would you like to refresh now?'),
+          icon: 'info',
+          showCancelButton: true,
+          confirmButtonText: 'Refresh',
+          cancelButtonText: 'Later'
+        });
+        if (result.isConfirmed) {
+          window.location.reload();
+          return;
+        } else {
+          return;
+        }
+      }
+    }
+  } catch (e) {}
+  localStorage.setItem('lastVersionCheck', Date.now());
+  setTimeout(checkVersion, INTERVAL);
+})();
 
 // Load custom RPC settings from localStorage
 function loadRpcSettings() {
@@ -2285,9 +2376,10 @@ function loadRpcSettings() {
   }
 }
 
+//You can get live node statistics from: https://chainlist.org/
 function getPolygonRpc() {
   if (currentChainId === "11155111") {
-    return "https://eth-sepolia.public.blastapi.io";
+    return "https://ethereum-sepolia-rpc.publicnode.com";//"https://eth-sepolia.public.blastapi.io";
   }
   if (currentRpcIndex == 999) {
     return rotatingProvider;
@@ -2297,7 +2389,7 @@ function getPolygonRpc() {
 
 function getEthereumRpc() {
   if (currentChainId === "11155111") {
-    return DEFAULT_ETHEREUM_RPC;
+    return "https://ethereum-sepolia-rpc.publicnode.com";
   }
   return CUSTOM_ETHEREUM_RPC || DEFAULT_ETHEREUM_RPC;
 }
@@ -2360,6 +2452,36 @@ window.addEventListener("load", async function() {
       console.log('chainChanged',thenetworkId);
       if(netSwitch || loggingIn) {
         return;
+      }
+      var mw3 = new Web3(window.ethereum);
+      var chainId = await mw3.eth.net.getId();
+      if(chainId != "137") {
+        const { isConfirmed } = await Swal.fire({
+            icon: 'warning',
+            title: translateThis('Unsupported network'),
+            text: translateThis('Please switch to the Polygon network to continue.'),
+            showCancelButton: true,
+            confirmButtonText: translateThis('Switch to Polygon'),
+            cancelButtonText: translateThis('Close')
+        });
+        if (isConfirmed) {
+            try {
+                await window.ethereum.request({
+                    method: 'wallet_switchEthereumChain',
+                    params: [{ chainId: '0x89' }],
+                });
+                await new Promise(r => setTimeout(r, 1000));
+                var chainId2 = await mw3.eth.net.getId();
+                if (chainId2 != "137") {
+                  await Swal.fire(translateThis('Network Switch Required'), translateThis('Polygon was not selected. Please select Polygon within MetaMask to continue.'));
+                }
+            } catch (e) {
+                await Swal.fire(translateThis('Network Switch Required'), translateThis('Unable to switch to Polygon. Please select Polygon within MetaMask to continue.'));
+                location.reload();
+            }
+        } else {
+          location.reload();
+        }
       }
       defaultvars();
       await login();
@@ -2515,6 +2637,10 @@ async function login() {
             modalDialog(translateThis('Connect'), translateThis("Please unlock Metamask so it can connect."), "warning");
             return;
         }
+        if (chainId2 == "11155111") {
+          await Swal.fire(translateThis("Testnet disabled."), translateThis("Test network is currently not enabled. Please select Polygon network within MetaMask in order to connect."));
+          return false;
+        }
         myaccounts = validation(DOMPurify.sanitize(myaccounts2[0]));
         // Always prompt for signature - no stored credentials
         console.log("Requesting signature for", myaccounts);
@@ -2524,7 +2650,7 @@ async function login() {
         });
         var chainId2 = await mmweb3.eth.net.getId();
         if (chainId2 == "11155111") {
-          web3 = new Web3("https://eth-sepolia.public.blastapi.io");
+          web3 = new Web3("https://ethereum-sepolia-rpc.publicnode.com");
         } else if (chainId2 == "137") {
           currentRpcIndex = 1;
           web3 = new Web3(getPolygonRpc());
@@ -2563,7 +2689,6 @@ async function login() {
           html:`
               <select id="network" class="swal2-select">
                   <option value="0" selected>Polygon</option>
-                  <option value="1">Sepolia Testnet</option>
               </select>
               <input type="password" id="password" class="swal2-input" placeholder="${translateThis('Enter Password')}">
               <input type="password" id="confirmPassword" class="swal2-input" placeholder="${translateThis('Confirm Password')}">
@@ -2695,7 +2820,7 @@ async function login() {
                   web3 = new Web3(getPolygonRpc());
                   //web3 = new Web3("https://polygon-mainnet.public.blastapi.io");
               } else {
-                  web3 = new Web3("https://eth-sepolia.public.blastapi.io");
+                  web3 = new Web3("https://ethereum-sepolia-rpc.publicnode.com");
               }
               myaccounts = await web3.eth.accounts.privateKeyToAccount(accountprivkey);
               const wallet = web3.eth.accounts.wallet;
@@ -2770,6 +2895,11 @@ async function login2() {
         if (typeof onEarnUserLogin === 'function') {
           onEarnUserLogin().catch(e => console.error('Error initializing Earn tab:', e));
           document.getElementById("treasury-tab").click();
+        }
+
+        // Check automation wizard state after balances are loaded
+        if (typeof checkAutomationOnLogin === 'function') {
+          checkAutomationOnLogin().catch(e => console.error('Error checking automation:', e));
         }
         
         hideSpinner();
@@ -2995,7 +3125,9 @@ async function sendTx(contract, method, args = [], glimit = 2500000, val = "0", 
         switchedNetwork = true;
         // Rebuild contract with mmweb3 now on ETH
         mmweb3 = new Web3(window.ethereum);
-        contract = new mmweb3.eth.Contract(contract.options.jsonInterface, contract.options.address);
+        if (contract != "ETH") {
+          contract = new mmweb3.eth.Contract(contract.options.jsonInterface, contract.options.address);
+        }
         await delay(250);
         gasPrice2 = validation(DOMPurify.sanitize(await mmweb3.eth.getGasPrice()));
         gasPrice2 = window.web3.utils.toWei(parseInt(parseInt(gasPrice2) * 1.5).toString(), 'wei');
@@ -3009,7 +3141,7 @@ async function sendTx(contract, method, args = [], glimit = 2500000, val = "0", 
       if(contract == "ETH") {
         const value = method;       // value in wei
         const to = args[0];         // recipient
-        txPromise = mmweb3.eth.sendTransaction({
+        txPromise = await mmweb3.eth.sendTransaction({
           from: myaccounts,
           to,
           value,
@@ -3032,7 +3164,8 @@ async function sendTx(contract, method, args = [], glimit = 2500000, val = "0", 
         await new Promise(r => setTimeout(r, 1000));
         mmweb3 = new Web3(window.ethereum);
       }      
-      netSwitch = false;      
+      netSwitch = false;
+      return showResult(txPromise);
     } catch (e) {
       if (switchedNetwork) {
         try {
@@ -3192,11 +3325,17 @@ async function sendTx(contract, method, args = [], glimit = 2500000, val = "0", 
 
     const txReceipt = await txPromise;
     const txHash = validation(DOMPurify.sanitize(txReceipt.transactionHash));
+    console.log("TXID:", txHash);
 
     // Poll for confirmation
     const startTime = Date.now();
     while (true && confCheck) {
-      const receipt = await web3.eth.getTransactionReceipt(txHash);
+      var receipt;
+      try {
+        receipt = await web3.eth.getTransactionReceipt(txHash);
+      } catch (e) {
+        console.log(e);
+      }
       if (receipt) {
         Swal.close();
         // Switch back provider if we switched for loginType 2
@@ -3292,10 +3431,14 @@ function stripZeros(valStr) {
     : valStr;
 }
 
+function stripSafe(str) {
+  return str.replace(/[^a-zA-Z0-9 .,!?\-\n]/g, '');
+}
+
 // Display error in a compact scrollable format suitable for mobile
 async function showScrollableError(title, errorMessage, icon = 'error') {
-  const sanitizedTitle = DOMPurify.sanitize(title);
-  const sanitizedMessage = DOMPurify.sanitize(String(errorMessage || 'Unknown error'));
+  const sanitizedTitle = stripSafe(DOMPurify.sanitize(title));
+  const sanitizedMessage = stripSafe(DOMPurify.sanitize(String(errorMessage || 'Unknown error')));
   
   // If the error is short (< 200 chars), show it normally
   if (sanitizedMessage.length < 200) {
@@ -3383,14 +3526,12 @@ async function checkbalances() {
         }
     }    
     if (netname == "unknown") {
-        //document.getElementById("text1").innerHTML = "Unsupported network";
         Swal.fire({
             icon: 'warning',
             title: translateThis('Error'),
             text: translateThis('Unsupported network.'),
             confirmButtonText: translateThis('Close')
         });
-        //modalDialog('Connect', "Unsupported network.", "danger");
         return;
     }
     gasPrice = "20000000000";
@@ -3556,26 +3697,68 @@ async function checkbalances() {
       '<div style="font-family: \'Lucida Console\', Monaco, monospace; background-color: #f4f4ff; color: #004400; padding: 16px; border: 2px solid #333; border-radius: 6px; max-width: 500px; margin: auto; box-shadow: 4px 4px 0 #bbb;">' +
         '<div style="margin-bottom: 10px; font-weight: bold;">Contracts to import into MetaMask to interact with BitBay:</div>' +
 
-        createAddressBlock("BitBay", BAYLaddy) +
-        createAddressBlock("BitBay Reserve", BAYRaddy) +
-        createAddressBlock("BitBay Frozen", BAYFaddy) +
+        createAddressBlock("BitBay", BAYLaddy, true) +
+        createAddressBlock("BitBay Reserve", BAYRaddy, true) +
+        createAddressBlock("BitBay Frozen", BAYFaddy, true) +
       '</div>';
 
-    function createAddressBlock(label, address) {
+    function createAddressBlock(label, address, crop = false) {
+      // Unique id so we can target the exact address box when revealing
+      var blockId = 'addrBlock_' + Math.random().toString(36).slice(2, 10);
+
+      var shownAddress;
+      if (crop) {
+        // Show first half + "...(show)" link
+        var half = Math.ceil(address.length / 2);
+        var firstHalf = address.substring(0, half);
+        shownAddress =
+          '<span id="' + blockId + '_text">' + firstHalf + '...</span>' +
+          '<span id="' + blockId + '_toggle" ' +
+                'style="color: #0066cc; cursor: pointer; text-decoration: underline; margin-left: 4px;" ' +
+                'onclick="revealAddress(\'' + blockId + '\', \'' + address + '\')">(show)</span>';
+      } else {
+        shownAddress = address;
+      }
+
       return (
         '<div style="margin-bottom: 10px;">' +
           '<div style="color: #000066; font-weight: bold; font-size: 12px;">' + label + ':</div>' +
           '<div style="display: flex; align-items: center; flex-wrap: wrap;">' +
-            '<div style="background-color: #ffffff; border: 1px dashed #888; padding: 6px 8px; margin-right: 8px; font-size: 11px; overflow-wrap: break-word; word-break: break-all; flex: 1;">' +
-              address +
+            '<div id="' + blockId + '" style="background-color: #ffffff; border: 1px dashed #888; padding: 6px 8px; margin-right: 8px; font-size: 11px; overflow-wrap: break-word; word-break: break-all; flex: 1;">' +
+              shownAddress +
             '</div>' +
-            '<div style="cursor: pointer; font-size: 16px; user-select: none;" onclick="copyAddress(\'' + address + '\')" title="Copy address">' +
+            '<div style="cursor: pointer; font-size: 16px; user-select: none;" onclick="copyAddress(\'' + address + '\', ' + crop.toString() + ')" title="Copy address">' +
               '<span class="no-invert">📋</span>' +
             '</div>' +
           '</div>' +
         '</div>'
       );
     }
+
+    // Warn the user before revealing the full contract address
+    window.revealAddress = async function (blockId, address) {
+      const result = await Swal.fire({
+        icon: 'warning',
+        title: 'Do NOT send funds to this address!',
+        html:
+          translateThis('This contract address is only for importing into MetaMask so you can track and manage your BitBay coins.') +
+          '<br><br><br>' + translateThis('Sending funds directly to this contract will result in permanent loss of your funds. Do you understand and wish to reveal the full address?'),
+        showCancelButton: true,
+        confirmButtonText: translateThis('I understand'),
+        cancelButtonText: translateThis('Cancel'),
+        confirmButtonColor: '#cc0000',
+        reverseButtons: true,
+        focusCancel: true
+      });
+
+      if (result.isConfirmed) {
+        var box = document.getElementById(blockId);
+        if (box) {
+          box.textContent = address; // reveal full address, removes the (show) link
+        }
+      }
+    };
+
     await getNetworkInfo();
     await getMarketData();
     await checkAutomaticTradingAccount();
@@ -3641,7 +3824,7 @@ function populateSendOptions() {
 
 
 
-function copyAddress(address) {
+async function copyAddress(address, notifyThis = false) {
   const tempInput = document.createElement("textarea");
   tempInput.value = address;
 
@@ -3653,6 +3836,25 @@ function copyAddress(address) {
   tempInput.select();
 
   try {
+    if(notifyThis) {
+      const result = await Swal.fire({
+        icon: 'warning',
+        title: 'Do NOT send funds to this address!',
+        html:
+          translateThis('This contract address is only for importing into MetaMask so you can track and manage your BitBay coins.') +
+          '<br><br><br>' + translateThis('Sending funds directly to this contract will result in permanent loss of your funds. Do you understand and wish to copy the address?'),
+        showCancelButton: true,
+        confirmButtonText: translateThis('I understand'),
+        cancelButtonText: translateThis('Cancel'),
+        confirmButtonColor: '#cc0000',
+        reverseButtons: true,
+        focusCancel: true
+      });
+
+      if (!result.isConfirmed) {
+        return;
+      }
+    }
     const successful = document.execCommand("copy");
     if (successful) {
       Swal.fire({
@@ -4169,6 +4371,49 @@ async function getBAYPrice(tempWeb3 = null) {
       return "error";
     }
     return assumedPriceBAY.toString();
+  } catch (e) {
+    console.log(e);
+    return "error";
+  }
+}
+
+async function getBAYRPrice(tempWeb3 = null) {
+  try {
+    const w3 = tempWeb3 || web3;
+    const BN2 = w3.utils.BN;
+
+    const bayrAddr = "0xA177cB6ae813230618Af26F059d9370af9f4AEE9";
+    const pairToken = "0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063";
+
+    var mypair = '';
+    var exchange = "0x9e5A52f57b3038F1B8EeE45F28b3C1967e22799C";
+    var exchangecontract = new w3.eth.Contract(FactoryABI, exchange);
+    await exchangecontract.methods.getPair(bayrAddr, pairToken).call().then(function (thisresult) {
+        mypair = validation(DOMPurify.sanitize(thisresult));
+    });
+    var myreserves = '';
+    var assumedPriceBAYR = '';
+    if(/^0x0+$/.test(mypair) == false) {
+        paircontract = new w3.eth.Contract(PairABI, mypair);
+        await paircontract.methods.getReserves().call().then(function (thisresult) {
+            myreserves = validation(JSON.parse(DOMPurify.sanitize(JSON.stringify(thisresult))));
+        });
+        const token0 = validation(DOMPurify.sanitize(await paircontract.methods.token0().call()));
+        let reserveBase, reserveBAYR;
+
+        if (token0.toLowerCase() === bayrAddr.toLowerCase()) {
+          reserveBAYR = new BN2(myreserves._reserve0.toString());
+          reserveBase = new BN2(myreserves._reserve1.toString());
+        } else {
+          reserveBAYR = new BN2(myreserves._reserve1.toString());
+          reserveBase = new BN2(myreserves._reserve0.toString());
+        }
+        assumedPriceBAYR = (reserveBase.mul(new BN2("100000000")).div(reserveBAYR)).div(new BN2("10000000000"));
+    } else {
+      console.log("invalid pair");
+      return "error";
+    }
+    return assumedPriceBAYR.toString();
   } catch (e) {
     console.log(e);
     return "error";
@@ -5232,7 +5477,7 @@ async function sendLiquid() {
     } catch (e) { 
       hideSpinner();
       console.log(e);
-      const message = translateThis('Transaction failed:') + ' ' + translateThis("Please check your browsers console for the full error message");
+      const message = translateThis('Transaction failed:') + ' ' + (e.message || (typeof e === 'object' ? JSON.stringify(e) : String(e)));
       await showScrollableError(translateThis('Error'), message);
     }
 }
@@ -5284,7 +5529,7 @@ async function sendReserve() {
     } catch (e) { 
       hideSpinner();
       console.log(e);
-      const message = translateThis('Transaction failed:') + ' ' + translateThis("Please check your browsers console for the full error message");
+      const message = translateThis('Transaction failed:') + ' ' + (e.message || (typeof e === 'object' ? JSON.stringify(e) : String(e)));
       await showScrollableError(translateThis('Error'), message);      
     }
 }
@@ -5345,7 +5590,7 @@ async function sendALT() {
     } catch (e) { 
       hideSpinner();
       console.log(e);
-      const message = translateThis('Transaction failed:') + ' ' + translateThis("Please check your browsers console for the full error message");
+      const message = translateThis('Transaction failed:') + ' ' + (e.message || (typeof e === 'object' ? JSON.stringify(e) : String(e)));
       await showScrollableError(translateThis('Error'), message);
     }
 }
@@ -5396,14 +5641,14 @@ async function sendBase() {
     if (!confirm.isConfirmed) return;
     try {
       showSpinner();
-      await sendTx("ETH",amountBN.toString(),[addy],1000000);
+      await sendTx("ETH",amountBN.toFixed(0),[addy],1000000);
       hideSpinner();
       Swal.fire(translateThis('Success'), translateThis('Transfer complete.'), 'success');
       checkbalances();
     } catch (e) { 
       hideSpinner();
       console.log(e);
-      const message = translateThis('Transaction failed:') + ' ' + translateThis("Please check your browsers console for the full error message");
+      const message = translateThis('Transaction failed:') + ' ' + (e.message || (typeof e === 'object' ? JSON.stringify(e) : String(e)));
       await showScrollableError(translateThis('Error'), message);
     }
 }
@@ -5431,7 +5676,7 @@ async function sendFrozen() {
         } catch (e) { 
           hideSpinner();
           console.log(e);
-          const message = translateThis('Transaction failed:') + ' ' + translateThis("Please check your browsers console for the full error message");
+          const message = translateThis('Transaction failed:') + ' ' + (e.message || (typeof e === 'object' ? JSON.stringify(e) : String(e)));
           await showScrollableError(translateThis('Error'), message);
         }
     }
@@ -5535,7 +5780,7 @@ async function showPegChart(selectedChart = 0) {
                 }
                 if (iters >= min && iters <= max) {
                     const val = new BigNumber(result[parseInt(result2[1]) + y]);
-                    data.push(val.toString());
+                    data.push(val.toFixed(0));
                     iters2 += 1;
                 }
             } else {
@@ -5544,7 +5789,7 @@ async function showPegChart(selectedChart = 0) {
                         tot2 = new BigNumber(0);
                     }
                     if (iters >= min && iters <= max) {
-                        data.push(tot2.toString());
+                        data.push(tot2.toFixed(0));
                         iters2 += 1;
                     }
                 } else {
@@ -5553,7 +5798,7 @@ async function showPegChart(selectedChart = 0) {
                         tot = new BigNumber(0);
                     }
                     if (iters >= min && iters <= max) {
-                        data.push(tot.toString());
+                        data.push(tot.toFixed(0));
                         iters2 += 1;
                     }
                 }
@@ -5663,7 +5908,7 @@ async function mintFromBitBay(jsondata2="") {
     } catch (e) {
       hideSpinner();
       console.log(e);
-      const message = translateThis('Transaction failed:') + ' ' + translateThis("Please check your browsers console for the full error message");
+      const message = translateThis('Transaction failed:') + ' ' + (e.message || (typeof e === 'object' ? JSON.stringify(e) : String(e)));
       await showScrollableError(translateThis('Error'), message);
     }
 }
@@ -5721,7 +5966,7 @@ async function registerBitBay(regaddy) {
     } catch (e) {
       hideSpinner();
       console.log(e);
-      const message = translateThis('Transaction failed:') + ' ' + translateThis("Please check your browsers console for the full error message");
+      const message = translateThis('Transaction failed:') + ' ' + (e.message || (typeof e === 'object' ? JSON.stringify(e) : String(e)));
       await showScrollableError(translateThis('Error'), message);      
     } 
 }
@@ -5742,7 +5987,7 @@ async function burnToBitBay(burnamount) {
         return;
     }
     var orgamount = burnamount;
-    burnamount = new BN(web3.utils.toWei(burnamount, 'gwei')).div(10).toString();
+    burnamount = new BN(web3.utils.toWei(burnamount, 'gwei')).div(10).toFixed(0);
     var myvar = document.getElementById("coinToBurn").value;
     var selectedaccount = myaccounts;
     var myadmin = "";
@@ -5800,7 +6045,7 @@ async function burnToBitBay(burnamount) {
     } catch (e) {
       hideSpinner();
       console.log(e);
-      const message = translateThis('Transaction failed:') + ' ' + translateThis("Please check your browsers console for the full error message");
+      const message = translateThis('Transaction failed:') + ' ' + (e.message || (typeof e === 'object' ? JSON.stringify(e) : String(e)));
       await showScrollableError(translateThis('Error'), message);      
     } 
 }
@@ -5892,6 +6137,182 @@ async function copyNonce() {
     } else {
         navigator.clipboard.writeText(JSON.stringify(jsonreceipt));
     }
+}
+
+function getBridgeTxidsKey() { return myaccounts + 'bridgetxids'; }
+
+function loadBridgeTxids() {
+    try { return JSON.parse(localStorage.getItem(getBridgeTxidsKey()) || '[]'); }
+    catch (e) { return []; }
+}
+
+function saveBridgeTxid(entry) {
+    var list = loadBridgeTxids();
+    list.unshift(entry);
+    localStorage.setItem(getBridgeTxidsKey(), JSON.stringify(list));
+}
+
+async function BridgeToPolygon() {
+    if (!isConnected || !myaccounts) {
+        return Swal.fire(translateThis('Not connected'), translateThis('Please connect your wallet first.'), 'warning');
+    }
+    if (currentChainId == "11155111") {
+        return Swal.fire(translateThis('Not available on testnet'), translateThis('The Polygon bridge is only available on mainnet.'), 'warning');
+    }
+    var ethW3;
+    try {
+        ethW3 = (typeof getEthWeb3Instance === 'function') ? getEthWeb3Instance() : new Web3(getEthereumRpc());
+    } catch (e) {
+        ethW3 = new Web3(getEthereumRpc());
+    }
+    var polErc = new ethW3.eth.Contract(ERC20ABI, MAINNET_ADDR.POL);
+    var daiErc = new ethW3.eth.Contract(ERC20ABI, MAINNET_ADDR.DAI);
+    var polBalRaw = '0';
+    var daiBalRaw = '0';
+    try {
+        polBalRaw = validation(DOMPurify.sanitize(await polErc.methods.balanceOf(myaccounts).call()));
+        daiBalRaw = validation(DOMPurify.sanitize(await daiErc.methods.balanceOf(myaccounts).call()));
+    } catch (e) {
+        return Swal.fire(translateThis('Network error'), translateThis('Unable to read your Ethereum balances. Please try again.'), 'error');
+    }
+    var polBal = stripZeros(new BigNumber(polBalRaw).dividedBy('1e18').toFixed(6));
+    var daiBal = stripZeros(new BigNumber(daiBalRaw).dividedBy('1e18').toFixed(6));
+
+    var bHtml =
+        '<p style="text-align:left;">' + translateThis('Select a token to bridge from Ethereum to Polygon and enter an amount.') + '</p>' +
+        '<div style="text-align:left;font-size:14px;margin:8px 0;">' +
+            '<div><strong>' + translateThis('POL balance') + ':</strong> ' + polBal + '</div>' +
+            '<div><strong>' + translateThis('DAI balance') + ':</strong> ' + daiBal + '</div>' +
+        '</div>' +
+        '<select id="bridgeTokenSel" class="swal2-select" style="display:block;margin:8px auto;">' +
+            '<option value="POL">POL</option>' +
+            '<option value="DAI">DAI</option>' +
+        '</select>' +
+        '<input id="bridgeAmt" type="text" class="swal2-input" placeholder="0.0">';
+
+    var result = await Swal.fire({
+        title: '🌉 ' + translateThis('Bridge to Polygon'),
+        html: bHtml,
+        showCancelButton: true,
+        confirmButtonText: translateThis('Continue'),
+        cancelButtonText: translateThis('Cancel'),
+        focusConfirm: false,
+        preConfirm: function() {
+            var tokenSel = document.getElementById('bridgeTokenSel').value;
+            var amtRaw = document.getElementById('bridgeAmt').value.trim();
+            var amtNum = parseFloat(amtRaw);
+            if (!amtRaw || isNaN(amtNum) || amtNum <= 0) {
+                Swal.showValidationMessage(translateThis('Please enter a valid amount greater than zero.'));
+                return false;
+            }
+            var availWei = tokenSel === 'POL' ? polBalRaw : daiBalRaw;
+            var amtWei = new BigNumber(amtRaw).times('1e18').integerValue(BigNumber.ROUND_DOWN);
+            if (amtWei.gt(new BigNumber(availWei))) {
+                Swal.showValidationMessage(translateThis('Amount exceeds your available balance.'));
+                return false;
+            }
+            return { token: tokenSel, amount: amtRaw };
+        }
+    });
+    if (!result.isConfirmed || !result.value) return;
+
+    var token  = result.value.token;
+    var amount = result.value.amount;
+    var amountWei = new BigNumber(amount).times('1e18').integerValue(BigNumber.ROUND_DOWN).toFixed(0);
+
+    var confirmHtml =
+        '<p style="text-align:left;">' + translateThis('You are about to bridge from Ethereum to Polygon through the official Polygon bridge contracts.') + '</p>' +
+        '<p style="text-align:left;font-size:13px;">' + translateThis('Funds can take up to an hour to show on the other side. This is the official third-party bridge and is not associated with BitBay — for any questions about the bridge, contact Polygon directly. Please make sure you are aware of the risks and benefits of using bridges and second layer networks.') + '</p>';
+    var confirm = await Swal.fire({
+        icon: 'question',
+        title: translateThis('Confirm bridge'),
+        html: confirmHtml,
+        showCancelButton: true,
+        confirmButtonText: translateThis('I understand'),
+        cancelButtonText: translateThis('Cancel')
+    });
+    if (!confirm.isConfirmed) return;
+    var rootToken  = token === 'POL' ? MAINNET_ADDR.POL : MAINNET_ADDR.DAI;
+    var spender    = token === 'POL' ? MAINNET_ADDR.PLASMA_DEPOSIT_MANAGER : MAINNET_ADDR.AUTO_BRIDGE;
+
+    var POLYGON_BRIDGE_ABI = [
+        { "inputs":[{"name":"_token","type":"address"},{"name":"_user","type":"address"},{"name":"_amount","type":"uint256"}],"name":"depositERC20ForUser","outputs":[],"stateMutability":"nonpayable","type":"function" }
+    ];
+
+    var tokenContract  = new ethW3.eth.Contract(ERC20ABI, rootToken);
+    var bridgeContractPOL = new ethW3.eth.Contract(POLYGON_BRIDGE_ABI, MAINNET_ADDR.PLASMA_DEPOSIT_MANAGER);
+    var bridgeContractDAI = new ethW3.eth.Contract(autoBridgev0ABI, MAINNET_ADDR.AUTO_BRIDGE);
+
+    try {
+        var allowance  = new BigNumber(validation(DOMPurify.sanitize(await tokenContract.methods.allowance(myaccounts, spender).call())));
+        if (allowance.lt(amountWei)) {
+            Swal.fire({
+              icon: 'info',
+              title: translateThis('Allowance'),
+              text: translateThis('Authorizing allowance...'),
+              showConfirmButton: false
+            });
+            await sendTx(tokenContract, 'approve', [spender, amountWei], 100000, '0', false, true, true);
+        }
+        Swal.fire({
+          icon: 'info',
+          title: translateThis('Sending transaction'),
+          text: translateThis('Depositing funds to the Polygon bridge...'),
+          showConfirmButton: false
+        });
+        var txid;
+        if (token === 'POL') {
+            txid = await sendTx(bridgeContractPOL, 'depositERC20ForUser', [MAINNET_ADDR.POL, myaccounts, amountWei], 300000, '0', false, true, true);
+        } else {
+            txid = await sendTx(bridgeContractDAI, 'bridgeERC20', [MAINNET_ADDR.DAI, myaccounts, amountWei], 300000, '0', false, true, true);
+        }
+        txid = validation(DOMPurify.sanitize(txid));
+        if (txid && typeof txid === 'string' && txid.length > 0 && txid !== 'Transaction submitted') {
+            saveBridgeTxid({token: token, amount: amount, txid: txid, time: Date.now()});
+        }
+        var theHtml =
+            '<p>' + translateThis('Your transaction has been routed through the official Polygon bridge contracts.') + '</p>' +
+            (txid ? '<p style="font-size:13px;word-break:break-all;"><strong>TXID:</strong> <code>' + txid + '</code></p>' : '') +
+            '<p style="font-size:13px;">' + translateThis('You can confirm your transaction using the transaction ID. Funds may take up to an hour to show on the Polygon side.') + '</p>';
+        await Swal.fire({
+            icon: 'success',
+            title: translateThis('Bridge submitted'),
+            html: theHtml,
+            confirmButtonText: translateThis('Close')
+        });
+    } catch (e) {
+        await showScrollableError(translateThis('Bridge failed'), e && e.message ? e.message : String(e));
+    }
+}
+
+async function showBridgeHistory() {
+    if (!myaccounts) {
+        return Swal.fire(translateThis('Not connected'), translateThis('Please connect your wallet first.'), 'warning');
+    }
+    var list = loadBridgeTxids();
+    var body;
+    if (!list.length) {
+        body = '<p>' + translateThis('No bridge transactions recorded for this account yet.') + '</p>';
+    } else {
+        var rows = list.map(function(e) {
+            var when = '';
+            try { when = new Date(e.time).toLocaleString(); } catch (err) { when = ''; }
+            var safeTxid   = validation(DOMPurify.sanitize(e.txid));
+            var safeToken  = validation(DOMPurify.sanitize(e.token));
+            var safeAmount = validation(DOMPurify.sanitize(e.amount));
+            return '<div style="border-bottom:1px dashed #ccc;padding:6px 0;">' +
+                       '<div><strong>' + safeAmount + ' ' + safeToken + '</strong>' + (when ? ' &mdash; <span style="color:#777;">' + when + '</span>' : '') + '</div>' +
+                       '<div style="font-family:monospace;font-size:12px;word-break:break-all;">' + safeTxid + '</div>' +
+                   '</div>';
+        }).join('');
+        body = '<div style="max-height:300px;overflow-y:auto;text-align:left;font-size:14px;">' + rows + '</div>';
+    }
+    await Swal.fire({
+        title: '📜 ' + translateThis('Polygon Bridge History'),
+        html: body,
+        confirmButtonText: translateThis('Close'),
+        width: 520
+    });
 }
 
 //Valid pair hash for known AMM types: 0x5b83bdbcc56b2e630f2807bbadd2b0c21619108066b92a58de081261089e9ce5
@@ -6283,7 +6704,7 @@ async function addLiquidity() {
           //modalDialog('Connect', "Transaction failed", "danger");
           hideSpinner();
           console.log(e);
-          const message = translateThis('Transaction failed:') + ' ' + translateThis("Please check your browsers console for the full error message");
+          const message = translateThis('Transaction failed:') + ' ' + (e.message || (typeof e === 'object' ? JSON.stringify(e) : String(e)));
           await showScrollableError(translateThis('Error'), message);
           return;
       }
@@ -6578,7 +6999,7 @@ async function Swap() {
       } else {
           swapval = new BN(swapval.toString()).times(new BN('100000000'));
       }
-      swapval = swapval.toString();
+      swapval = swapval.toFixed(0);
       lastMinMax2 = lastMinMax.toString();
       console.log(mypair);
       console.log(swapval);
@@ -6697,7 +7118,7 @@ async function Swap() {
           hideSpinner();
           //document.getElementById("SwapSummary").innerHTML = '<div class="callout callout-danger" >Error: Swap failed!</div>';
           console.log(e);
-          const message = translateThis('Transaction failed:') + ' ' + translateThis("Please check your browsers console for the full error message");
+          const message = translateThis('Transaction failed:') + ' ' + (e.message || (typeof e === 'object' ? JSON.stringify(e) : String(e)));
           await showScrollableError(translateThis('Transaction failed'), message);
           return;
       }
@@ -6897,7 +7318,7 @@ async function withdrawLP() {
           hideSpinner();
           //document.getElementById("LPdetails1").innerHTML = 'Withdrawal failed';
           console.log(e);
-          const message = translateThis('Transaction failed:') + ' ' + translateThis("Please check your browsers console for the full error message");
+          const message = translateThis('Transaction failed:') + ' ' + (e.message || (typeof e === 'object' ? JSON.stringify(e) : String(e)));
           await showScrollableError(translateThis('Transaction failed'), message);
           return;
       }

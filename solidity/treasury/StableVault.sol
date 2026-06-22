@@ -276,7 +276,8 @@ contract FeeVault {
 }
 
 contract UsdcDaiV4Vault is IUnlockCallback {
-    IStateView public immutable stateView;
+    IStateView immutable stateView;
+    IPoolManager immutable poolManager;
 
     uint8 internal constant ACTION_DEPOSIT = 0x00;
     uint8 internal constant ACTION_WITHDRAW = 0x01;
@@ -284,16 +285,19 @@ contract UsdcDaiV4Vault is IUnlockCallback {
     uint8 internal constant ACTION_REPOSITION = 0x03;
     uint8 internal constant ACTION_CLEAN_DUST = 0x04;
     uint8 internal constant ACTION_WITHDRAW_DUST = 0x05;
+    uint8 public tradeThis = 0;
     uint256 public MIN_PRICE = 0.995e18;
     uint256 public MAX_PRICE = 1.005e18;
-    uint256 public MAX_SLIPPAGE_BPS = 25; // .25%
+    uint256 public MAX_SLIPPAGE_BPS = 20; // .2%
 
-    IERC20 public immutable DAI;
-    IERC20 public immutable USDC;
-    IPoolManager public immutable poolManager;
+    IERC20 immutable DAI;
+    IERC20 immutable USDC;
+    IERC20 immutable USDT;
     address public immutable treasury;
 
-    PoolKey public poolKey;
+    PoolKey poolKey;
+    PoolKey daiKey;
+    PoolKey usdcKey;
     int24 public RANGE = 1;
     int24 public offset = 1;
     int24 public constant TICK_SPACING = 1;
@@ -307,10 +311,8 @@ contract UsdcDaiV4Vault is IUnlockCallback {
     bytes32 public salt;
 
     uint256 public totalShares;
-    uint256 public lastDustClean;
     uint256 public lastReposition;
     uint256 public POSITION_TIMELOCK = 3 days; // If the position is moved too much it might cost too much in trading fees
-    uint256 public CLEAN_TIMELOCK = 3 days; // If the dust is traded too often it costs more for users of the pool. Deposits auto-compound the DAI.
     int128 public commission = 25; //Percentage paid to treasury for stakers to manage the pool and fees
     address public minter;
     address public feeVault;
@@ -349,12 +351,17 @@ contract UsdcDaiV4Vault is IUnlockCallback {
         locked = false;
     }
 
-    constructor(address _dai, address _usdc, address _poolManager, address _stateView, address _treasury) {
+    constructor(address _treasury) {
+        address _dai = 0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063;
+        address _usdc = 0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359;
+        address _usdt = 0xc2132D05D31c914a87C6611C10748AEb04B58e8F;
+        address _poolManager = 0x67366782805870060151383F4BbFF9daB53e5cD6;
         feeVault = address(new FeeVault(_dai, _usdc, msg.sender));
         DAI = IERC20(_dai);
         USDC = IERC20(_usdc);
+        USDT = IERC20(_usdt);
         poolManager = IPoolManager(_poolManager);
-        stateView = IStateView(_stateView);
+        stateView = IStateView(0x5eA1bD7974c8A611cBAB0bDCAFcB1D9CC9b3BA5a);
         treasury = _treasury;
         (address c0, address c1) = _dai < _usdc ? (_dai, _usdc) : (_usdc, _dai);
         poolKey = PoolKey({
@@ -364,9 +371,26 @@ contract UsdcDaiV4Vault is IUnlockCallback {
             tickSpacing: TICK_SPACING,
             hooks: address(0)
         });
+        (c0, c1) = _usdt < _usdc ? (_usdt, _usdc) : (_usdc, _usdt);
+        usdcKey = PoolKey({
+            currency0: c0,
+            currency1: c1,
+            fee: 8,
+            tickSpacing: 1,
+            hooks: address(0)
+        });
+        (c0, c1) = _usdt < _dai ? (_usdt, _dai) : (_dai, _usdt);
+        daiKey = PoolKey({
+            currency0: c0,
+            currency1: c1,
+            fee: 20,
+            tickSpacing: 1,
+            hooks: address(0)
+        });
         salt = bytes32(uint256(1));
         IERC20(_dai).approve(_poolManager, type(uint256).max);
         IERC20(_usdc).approve(_poolManager, type(uint256).max);
+        IERC20(_usdt).approve(_poolManager, type(uint256).max);
         minter = msg.sender;
     }
 
@@ -379,6 +403,7 @@ contract UsdcDaiV4Vault is IUnlockCallback {
     function changeVault(address vault, bool migrate) public {
         require(msg.sender == minter, OnlyMinter());
         require(salvageFees, MinterLocked());
+        require(vault != address(0));
         if(migrate) {
             IFeeVault(feeVault).migrate(vault);
         }
@@ -387,7 +412,7 @@ contract UsdcDaiV4Vault is IUnlockCallback {
 
     function changeCommission(int128 _commission) public {
         require(msg.sender == minter, OnlyMinter());
-        require(_commission >= 25 && _commission <= 75);
+        require(_commission >= 10 && _commission <= 75);
         commission = _commission;
     }
 
@@ -398,17 +423,15 @@ contract UsdcDaiV4Vault is IUnlockCallback {
         MAX_PRICE = maxPrice;
     }
 
-    function setTimelocks(uint256 days1, uint256 days2) public {
+    function setTimelocks(uint256 days1) public {
         require(msg.sender == minter, OnlyMinter());
-        require(days1 <= 14 days && days2 <= 14 days);
-        require(days1 > 1 hours && days2 > 1 hours);
+        require(days1 > 1 hours && days1 <= 28 days);
         POSITION_TIMELOCK = days1;
-        CLEAN_TIMELOCK = days2;
     }
 
     function setSlippage(uint256 slippageBps) public {
         require(msg.sender == minter, OnlyMinter());
-        require(slippageBps >= 5 && slippageBps <= 200);
+        require(slippageBps >= 1 && slippageBps <= 100);
         MAX_SLIPPAGE_BPS = slippageBps;
     }
 
@@ -420,7 +443,7 @@ contract UsdcDaiV4Vault is IUnlockCallback {
 
     function setOffset(int24 _offset) public {
         require(msg.sender == minter, OnlyMinter());
-        require(_offset >= -2 && _offset <= 2, OutOfRange());
+        require(_offset >= 0 && _offset <= 2, OutOfRange());
         offset = _offset;
     }
 
@@ -436,6 +459,12 @@ contract UsdcDaiV4Vault is IUnlockCallback {
         checkPriceBounds(TickMath.getSqrtPriceAtTick(_highTickAdmin));
         lowTickAdmin = _lowTickAdmin;
         highTickAdmin = _highTickAdmin;
+    }
+
+    function tradeSamePool(uint8 direction) public {
+        require(msg.sender == minter, OnlyMinter());
+        require(direction <3);
+        tradeThis = direction; //This is used when there are issues with external pools or calls. Then users should migrate to a new pool.
     }
 
     function lockMinter() public {
@@ -512,7 +541,7 @@ contract UsdcDaiV4Vault is IUnlockCallback {
     function deposit(uint256 amount, uint256 deadline) external nonReentrant {
         if (block.timestamp > deadline) revert Expired();
         if (amount == 0) {
-            require(DAI.balanceOf(address(this)) > 0); //Compound existing DAI
+            require(DAI.balanceOf(address(this)) > 0 || USDC.balanceOf(address(this)) > 0); //Compound existing DAI
         } else {
             DAI.transferFrom(msg.sender, address(this), amount);
         }        
@@ -551,21 +580,23 @@ contract UsdcDaiV4Vault is IUnlockCallback {
         if(mintThis) {
             require(msg.sender == minter, OnlyMinter());
         }
+        if (msg.sender != minter) {
+            int24 ct = _getCurrentTick();
+            if (ct >= tickLower && ct < tickUpper) revert PositionInRange();
+        }
         if (block.timestamp > deadline) revert Expired();
-        require(block.timestamp > lastReposition + POSITION_TIMELOCK, "Repositioning too soon");
-        lastReposition = block.timestamp;        
+        require(block.timestamp > lastReposition + POSITION_TIMELOCK, Expired());
+        lastReposition = block.timestamp;
         if (liquidity == 0) revert NoPosition();
         poolManager.unlock(abi.encode(ACTION_REPOSITION, uint256(0), address(0)));
     }
 
-    function cleanDust(uint256 deadline) public nonReentrant {
+    function cleanDust(uint256 deadline, uint256 amount) public nonReentrant {
         if(msg.sender != minter) {
             checkPriceBounds(_getCurrentSqrtPrice());
         }
         if (block.timestamp > deadline) revert Expired();
-        require(block.timestamp > lastDustClean + CLEAN_TIMELOCK, "Dust cleaning too soon");
-        lastDustClean = block.timestamp;
-        poolManager.unlock(abi.encode(ACTION_CLEAN_DUST, uint256(0), address(0)));
+        poolManager.unlock(abi.encode(ACTION_CLEAN_DUST, amount, address(0)));
     }
 
     // ============ CALLBACK ============
@@ -582,7 +613,7 @@ contract UsdcDaiV4Vault is IUnlockCallback {
         } else if (action == ACTION_REPOSITION) {
             _reposition();
         } else if (action == ACTION_CLEAN_DUST) {
-            _cleanDust();
+            _cleanDust(amount);
         } else if (action == ACTION_WITHDRAW_DUST) {
             _withdraw(amount, recipient, true);
         } else {
@@ -609,10 +640,11 @@ contract UsdcDaiV4Vault is IUnlockCallback {
         } else {
             tl = tickLower;
             tu = tickUpper;
-            if (currentTick < tickLower || currentTick >= tickUpper) revert OutOfRange();
         }
         uint160 sqrtPriceX96 = _getCurrentSqrtPrice();
-        checkPriceBounds(sqrtPriceX96);
+        if(tradeThis == 0) {
+            checkPriceBounds(sqrtPriceX96);
+        }
         uint160 sqrtPriceLower = TickMath.getSqrtPriceAtTick(tl);
         uint160 sqrtPriceUpper = TickMath.getSqrtPriceAtTick(tu);
         uint256 ratio0 = _getRequiredRatio(sqrtPriceX96, sqrtPriceLower, sqrtPriceUpper);
@@ -622,30 +654,34 @@ contract UsdcDaiV4Vault is IUnlockCallback {
         uint256 swapAmount;
         if (daiIs0) {
             swapAmount = (daiBal * (10000 - ratio0)) / 10000;
-            if (swapAmount > 0) _swap(swapAmount, true);
+            if (swapAmount > 0) _daitrade(swapAmount);
         } else {
             swapAmount = (daiBal * ratio0) / 10000;
-            if (swapAmount > 0) _swap(swapAmount, false);
+            if (swapAmount > 0) _daitrade(swapAmount);
         }
         // Refresh after swap
         daiBal = DAI.balanceOf(address(this));
         uint256 usdcBal = USDC.balanceOf(address(this));
-        currentTick = _getCurrentTick();
         sqrtPriceX96 = _getCurrentSqrtPrice();
         uint256 amount0 = daiIs0 ?  daiBal : usdcBal;
         uint256 amount1 = daiIs0 ?  usdcBal : daiBal;
-        // Calculate which token is the constraint
-        uint128 liq0 = LiquidityAmounts.getLiquidityForAmount0(sqrtPriceX96, sqrtPriceUpper, amount0);
-        uint256 required1 = _getAmount1ForLiquidity(sqrtPriceLower, sqrtPriceX96, liq0);
         uint128 newLiquidity;
-        if (required1 <= amount1) {
-            newLiquidity = liq0;
+        if (sqrtPriceX96 <= sqrtPriceLower) {
+            newLiquidity = LiquidityAmounts.getLiquidityForAmount0(sqrtPriceLower, sqrtPriceUpper, amount0); //Price below range
+        } else if (sqrtPriceX96 >= sqrtPriceUpper) {
+            newLiquidity = LiquidityAmounts.getLiquidityForAmount1(sqrtPriceLower, sqrtPriceUpper, amount1); //Price above range
         } else {
-            newLiquidity = LiquidityAmounts.getLiquidityForAmount1(sqrtPriceLower, sqrtPriceX96, amount1);
+            // Calculate which token is the constraint
+            uint128 liq0 = LiquidityAmounts.getLiquidityForAmount0(sqrtPriceX96, sqrtPriceUpper, amount0);
+            uint256 required1 = _getAmount1ForLiquidity(sqrtPriceLower, sqrtPriceX96, liq0);
+            if (required1 <= amount1) {
+                newLiquidity = liq0;
+            } else {
+                newLiquidity = LiquidityAmounts.getLiquidityForAmount1(sqrtPriceLower, sqrtPriceX96, amount1);
+            }
         }
         if (newLiquidity > 0) {
             _modifyLiquidity(tl, tu, int128(newLiquidity));
-
             if (liquidity == 0) {
                 tickLower = tl;
                 tickUpper = tu;
@@ -663,12 +699,16 @@ contract UsdcDaiV4Vault is IUnlockCallback {
             emit Withdrawn(recipient, shareAmount, daiBal, usdcBal);
             return;
         }
-        int24 currentTick = _getCurrentTick();
-        if(DAI.balanceOf(address(this)) > 0 && currentTick >= tickLower && currentTick < tickUpper && addDust) {
+        if((DAI.balanceOf(address(this)) > 0 || USDC.balanceOf(address(this)) > 0) && addDust) {
             _deposit();
+        } else {
+            if(tradeThis == 0) {
+                _collect();
+            }
         }
         uint256 currentTotalShares = totalShares + shareAmount;
         uint128 toRemove = uint128((uint256(liquidity) * shareAmount) / currentTotalShares);
+        require(toRemove > 0, ZeroAmount());
         // Get balances before to exclude dust
         uint256 daiBefore = DAI.balanceOf(address(this));
         uint256 usdcBefore = USDC.balanceOf(address(this));
@@ -749,16 +789,17 @@ contract UsdcDaiV4Vault is IUnlockCallback {
     function _reposition() internal {
         RepositionState memory s;
         s.currentTick = _getCurrentTick();
-        if (s.currentTick >= tickLower && s.currentTick < tickUpper) revert PositionInRange();
         _collect();
         _modifyLiquidity(tickLower, tickUpper, -int128(liquidity));
-        s.newTickLower = _alignTick(s.currentTick - RANGE);
-        s.newTickUpper = _alignTick(s.currentTick + RANGE);
-        if(offset < 0) {
-            s.newTickLower += (offset * TICK_SPACING);
-        }
-        if(offset > 0) {
-            s.newTickUpper += (offset * TICK_SPACING);
+        bool crossedUp = s.currentTick >= tickUpper;
+        if (crossedUp) {
+            // Range extends downward (toward peg), currentTick near top
+            s.newTickUpper = _alignTick(s.currentTick + TICK_SPACING);
+            s.newTickLower = _alignTick(s.currentTick - (RANGE * 2) + TICK_SPACING - (offset * TICK_SPACING));
+        } else {
+            // Range extends upward (toward peg), currentTick near bottom
+            s.newTickLower = _alignTick(s.currentTick);
+            s.newTickUpper = _alignTick(s.currentTick + (RANGE * 2) + (offset * TICK_SPACING));
         }
         if(lowTickAdmin != 0 || highTickAdmin != 0) {
             s.newTickLower = lowTickAdmin;
@@ -784,17 +825,16 @@ contract UsdcDaiV4Vault is IUnlockCallback {
         if (daiNormalized > targetDaiNormalized) {
             // Too much DAI, swap DAI for USDC
             uint256 swapAmount = daiNormalized - targetDaiNormalized; // Already 18 decimals
-            if (swapAmount > 0) _swap(swapAmount, s.daiIs0);
+            if (swapAmount > 0) _daitrade(swapAmount);
         } else if (daiNormalized < targetDaiNormalized) {
             // Too little DAI, swap USDC for DAI
             uint256 swapAmountNormalized = targetDaiNormalized - daiNormalized;
             uint256 swapAmount = swapAmountNormalized / 1e12; // Convert to 6 decimals for USDC
-            if (swapAmount > 0) _swap(swapAmount, !s.daiIs0);
+            if (swapAmount > 0) _usdctrade(swapAmount);
         }
         // Refresh after swap
         daiBal = DAI.balanceOf(address(this));
         usdcBal = USDC.balanceOf(address(this));
-        s.currentTick = _getCurrentTick();
         s.sqrtPriceX96 = _getCurrentSqrtPrice();
         uint256 amount0 = s.daiIs0 ? daiBal : usdcBal;
         uint256 amount1 = s.daiIs0 ? usdcBal :  daiBal;
@@ -815,14 +855,32 @@ contract UsdcDaiV4Vault is IUnlockCallback {
         emit Repositioned(s.newTickLower, s.newTickUpper, newLiquidity);
     }
 
-    function _cleanDust() internal {
-        uint256 usdcBalance = USDC.balanceOf(address(this));
-        uint256 daiFromUSDC = 0;
-        if (usdcBalance > 100000) {
-            daiFromUSDC = _swap(usdcBalance, !_daiIsToken0());
+    function _cleanDust(uint256 amt) internal {
+        uint256 usdcBalance = 0;
+        uint256 daiBalance = 0;
+        uint256 swapOut = 0;
+        if(tradeThis == 2) {
+            daiBalance = DAI.balanceOf(address(this));
+            if(amt > 0 && amt < daiBalance) {
+                daiBalance = amt;
+            }
+            swapOut = _swap(daiBalance, _daiIsToken0());
+        } else {
+            usdcBalance = USDC.balanceOf(address(this));
+            if(amt > 0 && amt < usdcBalance) {
+                usdcBalance = amt;
+            }
+            if (usdcBalance > 100000) {
+                if(tradeThis == 0) {
+                    swapOut = _usdctrade(usdcBalance);
+                }
+                if(tradeThis == 1) {
+                    swapOut = _swap(usdcBalance, !_daiIsToken0());
+                }
+            }
         }
-        uint256 daiBalance = DAI.balanceOf(address(this));
-        emit DustCleaned(daiBalance, daiFromUSDC);
+        daiBalance = DAI.balanceOf(address(this));
+        emit DustCleaned(daiBalance, swapOut);
     }
 
     // ============ POOL OPERATIONS ============
@@ -863,22 +921,56 @@ contract UsdcDaiV4Vault is IUnlockCallback {
         }
     }
 
+    function _swapHop(PoolKey memory key, address tokenIn, uint256 amountIn, uint8 inDecimals, uint8 outDecimals) internal returns (uint256 amountOut) {
+        if (amountIn == 0) return 0;
+        bool zeroForOne = (key.currency0 == tokenIn);
+        int256 delta = poolManager.swap(
+            key,
+            SwapParams({
+                zeroForOne: zeroForOne,
+                amountSpecified: -int256(amountIn),
+                sqrtPriceLimitX96: zeroForOne ? TickMath.MIN_SQRT_PRICE + 1 : TickMath.MAX_SQRT_PRICE - 1
+            }),
+            ""
+        );
+        _settleKey(key, delta);
+        amountOut = uint256(uint128(zeroForOne ? _amount1(delta) : _amount0(delta)));
+        // normalize both sides to 18-dec value and enforce per-hop slippage
+        uint256 inValue  = inDecimals  == 18 ? amountIn  : amountIn  * (10 ** (18 - inDecimals));
+        uint256 outValue = outDecimals == 18 ? amountOut : amountOut * (10 ** (18 - outDecimals));
+        if (outValue < (inValue * (10000 - MAX_SLIPPAGE_BPS)) / 10000) revert SlippageExceeded();
+    }
+
+    function _daitrade(uint256 amountIn) internal returns (uint256 usdcOut) {
+        uint256 usdtOut = _swapHop(daiKey, address(DAI),  amountIn, 18, 6);
+        usdcOut         = _swapHop(usdcKey, address(USDT), usdtOut, 6,  6);
+    }
+
+    function _usdctrade(uint256 amountIn) internal returns (uint256 daiOut) {
+        uint256 usdtOut = _swapHop(usdcKey, address(USDC), amountIn, 6, 6);
+        daiOut          = _swapHop(daiKey, address(USDT), usdtOut, 6, 18);
+    }
+
     function _settle(int256 delta) internal {
+        _settleKey(poolKey, delta);
+    }
+
+    function _settleKey(PoolKey memory key, int256 delta) internal {
         int128 a0 = _amount0(delta);
         int128 a1 = _amount1(delta);
         if (a0 < 0) {
-            poolManager.sync(poolKey.currency0);
-            IERC20(poolKey.currency0).transfer(address(poolManager), uint128(-a0));
+            poolManager.sync(key.currency0);
+            IERC20(key.currency0).transfer(address(poolManager), uint128(-a0));
             poolManager.settle();
         } else if (a0 > 0) {
-            poolManager.take(poolKey.currency0, address(this), uint128(a0));
+            poolManager.take(key.currency0, address(this), uint128(a0));
         }
         if (a1 < 0) {
-            poolManager.sync(poolKey.currency1);
-            IERC20(poolKey.currency1).transfer(address(poolManager), uint128(-a1));
+            poolManager.sync(key.currency1);
+            IERC20(key.currency1).transfer(address(poolManager), uint128(-a1));
             poolManager.settle();
         } else if (a1 > 0) {
-            poolManager.take(poolKey.currency1, address(this), uint128(a1));
+            poolManager.take(key.currency1, address(this), uint128(a1));
         }
     }
 
@@ -909,10 +1001,8 @@ contract UsdcDaiV4Vault is IUnlockCallback {
     function getUnclaimedFees() external view returns (uint256 fee0, uint256 fee1) {
         if (liquidity == 0) return (0, 0);
         bytes32 poolId = keccak256(abi.encode(poolKey));
-        
         (uint256 feeGrowthInside0X128, uint256 feeGrowthInside1X128) = stateView.getFeeGrowthInside(poolId, tickLower, tickUpper);
         (, uint256 feeGrowthInside0LastX128, uint256 feeGrowthInside1LastX128) = stateView.getPositionInfo(poolId, address(this), tickLower, tickUpper, salt);
-        
         unchecked {
             fee0 = uint256(liquidity) * (feeGrowthInside0X128 - feeGrowthInside0LastX128) / (1 << 128);
             fee1 = uint256(liquidity) * (feeGrowthInside1X128 - feeGrowthInside1LastX128) / (1 << 128);
@@ -951,9 +1041,9 @@ contract UsdcDaiV4Vault is IUnlockCallback {
     }
 
     function getTotalAssets() public view returns (uint256) {
-        uint256 positionValue = getPositionValue();           // Liquidity in pool
-        uint256 daiBal = DAI.balanceOf(address(this));        // Dust/pending DAI
-        uint256 usdcBal = USDC.balanceOf(address(this)) * 1e12;  // Dust/pending USDC (normalized)
+        uint256 positionValue = getPositionValue();               // Liquidity in pool
+        uint256 daiBal = DAI.balanceOf(address(this));            // Dust/pending DAI
+        uint256 usdcBal = USDC.balanceOf(address(this)) * 1e12;   // Dust/pending USDC (normalized)
         return positionValue + daiBal + usdcBal;
     }
 
