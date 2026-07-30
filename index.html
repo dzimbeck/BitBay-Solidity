@@ -4555,7 +4555,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 async function buyBitBay(method=0) {
-  if(method == 1) {
+  if(method == 1 && loginType == 0) {
     await Swal.fire({'title':translateThis("Create your account"),"text":translateThis("Before purchasing BitBay you must create/access your wallet to receive funds. You will first be asked to login and then you may proceed with the different purchase options.")});
     await login();    
   }
