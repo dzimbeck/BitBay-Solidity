@@ -3094,7 +3094,7 @@ async function claimStakingRewards(showSwal = false) {
     if(showSwal) {
       showSpinner();
     }
-    const baylTreasury = new earnState.polWeb3.eth.Contract(treasuryABI, TREASURY_ADDRESSES.BAYL_TREASURY);    
+    const baylTreasury = new earnState.polWeb3.eth.Contract(treasuryABI, TREASURY_ADDRESSES.BAYL_TREASURY);
     // Get user's saved votes
     const savedVotes = JSON.parse(localStorage.getItem(myaccounts+'earnUserVotes') || '[]');
     const votesToCast = [];
@@ -3161,7 +3161,7 @@ async function claimStakingRewards(showSwal = false) {
         } else {
           amount = new BN(pending).dividedBy('1e18');
         }
-        earnState.userTotalRewards[coinName] = new BN(earnState.userTotalRewards[coinName] || 0).plus(amount).toFixed(0);
+        earnState.userTotalRewards[coinName] = new BN(earnState.userTotalRewards[coinName] || 0).plus(amount);
       }
     }
     var tx;
