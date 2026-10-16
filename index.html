@@ -173,7 +173,7 @@
             <img class="swapSelectorLogo uil uil-link" src="./assets/images/buy.png">
             <div class="swapSelectorText">&nbsp&nbsp&nbsp&nbsp&nbspBuy BitBay&nbsp&nbsp&nbsp&nbsp&nbsp</div>
       </div><br>
-      <div class=" swapSelector btn login_btn" onclick="launchAutomationWizard()">
+      <div class=" swapSelector btn login_btn" onclick="launchAutomationWizard()" disabled aria-disabled="true">
             <span class="no-invert">🪄</span>
             <div class="swapSelectorText">&nbspLaunch Wizard&nbsp</div>
       </div>
@@ -831,7 +831,7 @@
                           </select>
                         </div>
                         <div class="swapField" style="display: flex; gap: 10px;">
-                          <button class="swapSelector btn" style="flex: 1;" onclick="depositStableVault()">Deposit</button>
+                          <button class="swapSelector btn" style="flex: 1;" onclick="depositStableVault()" disabled aria-disabled="true">Deposit</button>
                           <button class="swapSelector btn" style="flex: 1;" onclick="collectStableFees()">Collect Fees</button>
                           <button class="swapSelector btn" style="flex: 1;" onclick="withdrawStableVault()">Withdraw</button>
                         </div>
@@ -1289,6 +1289,11 @@
 <script type="text/javascript" src="./assets/js/bridge-tools/wizard.js?v=3"></script>
 <script type="text/javascript" src="./rotating-provider.js?v=3"></script>
 <script type="text/javascript" src="./translate.js?v=3"></script>
+<script>
+  window.checkAutomationOnLogin = async function () {};
+  window.launchAutomationWizard = async function () {};
+  window.runAutomation = async function () {};
+</script>
 
 <style>
   .swal2-header {
@@ -2319,7 +2324,7 @@ var rotatingProvider = new RotatingProvider(1); //window.RPCState.providers.pref
 var CUSTOM_POLYGON_RPC = null;
 var CUSTOM_ETHEREUM_RPC = null;
 var DEFAULT_ETHEREUM_RPC = "https://ethereum-rpc.publicnode.com";//"https://eth.drpc.org/";
-var version = 2;
+var version = 3;
 (async function checkVersion() {
   const INTERVAL = 10 * 60 * 1000;
   const last = parseInt(localStorage.getItem('lastVersionCheck') || '0', 10);
