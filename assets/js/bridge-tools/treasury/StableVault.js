@@ -1,5 +1,31 @@
 stableVaultABI = [
 	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_treasury",
+				"type": "address"
+			},
+			{
+				"internalType": "address[]",
+				"name": "users",
+				"type": "address[]"
+			},
+			{
+				"internalType": "uint256[]",
+				"name": "amounts",
+				"type": "uint256[]"
+			},
+			{
+				"internalType": "uint256",
+				"name": "expectedTotalShares",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "constructor"
+	},
+	{
 		"inputs": [],
 		"name": "Expired",
 		"type": "error"
@@ -27,6 +53,11 @@ stableVaultABI = [
 	{
 		"inputs": [],
 		"name": "OnlyMinter",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "OutOfGas",
 		"type": "error"
 	},
 	{
@@ -184,6 +215,155 @@ stableVaultABI = [
 		"type": "event"
 	},
 	{
+		"inputs": [],
+		"name": "FEE",
+		"outputs": [
+			{
+				"internalType": "uint24",
+				"name": "",
+				"type": "uint24"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "MAX_PRICE",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "MAX_SLIPPAGE_BPS",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "MIN_PRICE",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "POSITION_TIMELOCK",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "RANGE",
+		"outputs": [
+			{
+				"internalType": "int24",
+				"name": "",
+				"type": "int24"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "TICK_SPACING",
+		"outputs": [
+			{
+				"internalType": "int24",
+				"name": "",
+				"type": "int24"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "int24",
+				"name": "tick",
+				"type": "int24"
+			}
+		],
+		"name": "_alignTick",
+		"outputs": [
+			{
+				"internalType": "int24",
+				"name": "",
+				"type": "int24"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "_daiIsToken0",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "_getCurrentSqrtPrice",
+		"outputs": [
+			{
+				"internalType": "uint160",
+				"name": "sqrtPriceX96",
+				"type": "uint160"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "_getCurrentTick",
+		"outputs": [
+			{
+				"internalType": "int24",
+				"name": "tick",
+				"type": "int24"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
 		"inputs": [
 			{
 				"internalType": "int128",
@@ -259,6 +439,19 @@ stableVaultABI = [
 		"type": "function"
 	},
 	{
+		"inputs": [],
+		"name": "commission",
+		"outputs": [
+			{
+				"internalType": "int128",
+				"name": "",
+				"type": "int128"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
 		"inputs": [
 			{
 				"internalType": "uint256",
@@ -274,277 +467,6 @@ stableVaultABI = [
 		"name": "deposit",
 		"outputs": [],
 		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "lockMinter",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "bool",
-				"name": "_mintThis",
-				"type": "bool"
-			}
-		],
-		"name": "minterOnly",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "deadline",
-				"type": "uint256"
-			}
-		],
-		"name": "reposition",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "int24",
-				"name": "_lowTickAdmin",
-				"type": "int24"
-			},
-			{
-				"internalType": "int24",
-				"name": "_highTickAdmin",
-				"type": "int24"
-			}
-		],
-		"name": "setCustomRange",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "int24",
-				"name": "_offset",
-				"type": "int24"
-			}
-		],
-		"name": "setOffset",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "minPrice",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "maxPrice",
-				"type": "uint256"
-			}
-		],
-		"name": "setPriceBounds",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "int24",
-				"name": "_range",
-				"type": "int24"
-			}
-		],
-		"name": "setRange",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "slippageBps",
-				"type": "uint256"
-			}
-		],
-		"name": "setSlippage",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "days1",
-				"type": "uint256"
-			}
-		],
-		"name": "setTimelocks",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint8",
-				"name": "direction",
-				"type": "uint8"
-			}
-		],
-		"name": "tradeSamePool",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "bytes",
-				"name": "data",
-				"type": "bytes"
-			}
-		],
-		"name": "unlockCallback",
-		"outputs": [
-			{
-				"internalType": "bytes",
-				"name": "",
-				"type": "bytes"
-			}
-		],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "shareAmount",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "deadline",
-				"type": "uint256"
-			},
-			{
-				"internalType": "bool",
-				"name": "addDust",
-				"type": "bool"
-			}
-		],
-		"name": "withdraw",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "_treasury",
-				"type": "address"
-			}
-		],
-		"stateMutability": "nonpayable",
-		"type": "constructor"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "int24",
-				"name": "tick",
-				"type": "int24"
-			}
-		],
-		"name": "_alignTick",
-		"outputs": [
-			{
-				"internalType": "int24",
-				"name": "",
-				"type": "int24"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "_daiIsToken0",
-		"outputs": [
-			{
-				"internalType": "bool",
-				"name": "",
-				"type": "bool"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "_getCurrentSqrtPrice",
-		"outputs": [
-			{
-				"internalType": "uint160",
-				"name": "sqrtPriceX96",
-				"type": "uint160"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "_getCurrentTick",
-		"outputs": [
-			{
-				"internalType": "int24",
-				"name": "tick",
-				"type": "int24"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "commission",
-		"outputs": [
-			{
-				"internalType": "int128",
-				"name": "",
-				"type": "int128"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "FEE",
-		"outputs": [
-			{
-				"internalType": "uint24",
-				"name": "",
-				"type": "uint24"
-			}
-		],
-		"stateMutability": "view",
 		"type": "function"
 	},
 	{
@@ -718,6 +640,13 @@ stableVaultABI = [
 	},
 	{
 		"inputs": [],
+		"name": "lockMinter",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
 		"name": "lockThis",
 		"outputs": [
 			{
@@ -744,51 +673,12 @@ stableVaultABI = [
 	},
 	{
 		"inputs": [],
-		"name": "MAX_PRICE",
+		"name": "minPositionValue",
 		"outputs": [
 			{
 				"internalType": "uint256",
 				"name": "",
 				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "MAX_SLIPPAGE_BPS",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "MIN_PRICE",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "minter",
-		"outputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
 			}
 		],
 		"stateMutability": "view",
@@ -809,6 +699,32 @@ stableVaultABI = [
 	},
 	{
 		"inputs": [],
+		"name": "minter",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "bool",
+				"name": "_mintThis",
+				"type": "bool"
+			}
+		],
+		"name": "minterOnly",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
 		"name": "offset",
 		"outputs": [
 			{
@@ -821,29 +737,16 @@ stableVaultABI = [
 		"type": "function"
 	},
 	{
-		"inputs": [],
-		"name": "POSITION_TIMELOCK",
-		"outputs": [
+		"inputs": [
 			{
 				"internalType": "uint256",
-				"name": "",
+				"name": "deadline",
 				"type": "uint256"
 			}
 		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "RANGE",
-		"outputs": [
-			{
-				"internalType": "int24",
-				"name": "",
-				"type": "int24"
-			}
-		],
-		"stateMutability": "view",
+		"name": "reposition",
+		"outputs": [],
+		"stateMutability": "nonpayable",
 		"type": "function"
 	},
 	{
@@ -875,6 +778,107 @@ stableVaultABI = [
 	{
 		"inputs": [
 			{
+				"internalType": "int24",
+				"name": "_lowTickAdmin",
+				"type": "int24"
+			},
+			{
+				"internalType": "int24",
+				"name": "_highTickAdmin",
+				"type": "int24"
+			}
+		],
+		"name": "setCustomRange",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "_min",
+				"type": "uint256"
+			}
+		],
+		"name": "setMinPositionValue",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "int24",
+				"name": "_offset",
+				"type": "int24"
+			}
+		],
+		"name": "setOffset",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "minPrice",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "maxPrice",
+				"type": "uint256"
+			}
+		],
+		"name": "setPriceBounds",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "int24",
+				"name": "_range",
+				"type": "int24"
+			}
+		],
+		"name": "setRange",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "slippageBps",
+				"type": "uint256"
+			}
+		],
+		"name": "setSlippage",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "days1",
+				"type": "uint256"
+			}
+		],
+		"name": "setTimelocks",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
 				"internalType": "address",
 				"name": "",
 				"type": "address"
@@ -886,19 +890,6 @@ stableVaultABI = [
 				"internalType": "uint256",
 				"name": "",
 				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "TICK_SPACING",
-		"outputs": [
-			{
-				"internalType": "int24",
-				"name": "",
-				"type": "int24"
 			}
 		],
 		"stateMutability": "view",
@@ -944,6 +935,19 @@ stableVaultABI = [
 		"type": "function"
 	},
 	{
+		"inputs": [
+			{
+				"internalType": "uint8",
+				"name": "direction",
+				"type": "uint8"
+			}
+		],
+		"name": "tradeSamePool",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
 		"inputs": [],
 		"name": "tradeThis",
 		"outputs": [
@@ -972,6 +976,25 @@ stableVaultABI = [
 	{
 		"inputs": [
 			{
+				"internalType": "bytes",
+				"name": "data",
+				"type": "bytes"
+			}
+		],
+		"name": "unlockCallback",
+		"outputs": [
+			{
+				"internalType": "bytes",
+				"name": "",
+				"type": "bytes"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
 				"internalType": "uint256",
 				"name": "",
 				"type": "uint256"
@@ -991,6 +1014,29 @@ stableVaultABI = [
 			}
 		],
 		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "shareAmount",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "deadline",
+				"type": "uint256"
+			},
+			{
+				"internalType": "bool",
+				"name": "addDust",
+				"type": "bool"
+			}
+		],
+		"name": "withdraw",
+		"outputs": [],
+		"stateMutability": "nonpayable",
 		"type": "function"
 	}
 ]

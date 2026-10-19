@@ -288,7 +288,8 @@ contract UsdcDaiV4Vault is IUnlockCallback {
     uint8 public tradeThis = 0;
     uint256 public MIN_PRICE = 0.995e18;
     uint256 public MAX_PRICE = 1.005e18;
-    uint256 public MAX_SLIPPAGE_BPS = 20; // .2%
+    uint256 public MAX_SLIPPAGE_BPS = 15; // .15%
+    uint256 public minPositionValue = 9900; // 99% of the capital must be in play or the pool waits
 
     IERC20 immutable DAI;
     IERC20 immutable USDC;
@@ -312,7 +313,7 @@ contract UsdcDaiV4Vault is IUnlockCallback {
 
     uint256 public totalShares;
     uint256 public lastReposition;
-    uint256 public POSITION_TIMELOCK = 3 days; // If the position is moved too much it might cost too much in trading fees
+    uint256 public POSITION_TIMELOCK = 1 days; // If the position is moved too much it might cost too much in trading fees
     int128 public commission = 25; //Percentage paid to treasury for stakers to manage the pool and fees
     address public minter;
     address public feeVault;
@@ -339,6 +340,7 @@ contract UsdcDaiV4Vault is IUnlockCallback {
     error OutOfRange();
     error UnknownAction();
     error Expired();
+    error OutOfGas();
     error SlippageExceeded();
     error PriceOutOfBounds();
     error OnlyMinter();
@@ -351,7 +353,7 @@ contract UsdcDaiV4Vault is IUnlockCallback {
         locked = false;
     }
 
-    constructor(address _treasury) {
+    constructor(address _treasury, address[] memory users, uint256[] memory amounts, uint256 expectedTotalShares) {
         address _dai = 0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063;
         address _usdc = 0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359;
         address _usdt = 0xc2132D05D31c914a87C6611C10748AEb04B58e8F;
@@ -392,6 +394,14 @@ contract UsdcDaiV4Vault is IUnlockCallback {
         IERC20(_usdc).approve(_poolManager, type(uint256).max);
         IERC20(_usdt).approve(_poolManager, type(uint256).max);
         minter = msg.sender;
+        if(expectedTotalShares > 0) { //Migration
+            for (uint256 i; i < users.length; i++) {
+                shares[users[i]] = amounts[i];
+                totalShares += amounts[i];
+                IFeeVault(feeVault).addShares(users[i], amounts[i]);
+            }
+            require(totalShares == expectedTotalShares);
+        }
     }
 
     function changeMinter(address newminter) public {
@@ -406,6 +416,7 @@ contract UsdcDaiV4Vault is IUnlockCallback {
         require(vault != address(0));
         if(migrate) {
             IFeeVault(feeVault).migrate(vault);
+            salvageFees = false;
         }
         feeVault = vault;
     }
@@ -421,6 +432,12 @@ contract UsdcDaiV4Vault is IUnlockCallback {
         require(minPrice < maxPrice && minPrice > 0.98e18 && maxPrice < 1.02e18, PriceOutOfBounds());
         MIN_PRICE = minPrice;
         MAX_PRICE = maxPrice;
+    }
+
+    function setMinPositionValue(uint256 _min) external {
+        require(msg.sender == minter);
+        require(_min >= 9500 && _min <= 9950);
+        minPositionValue = _min;
     }
 
     function setTimelocks(uint256 days1) public {
@@ -540,15 +557,21 @@ contract UsdcDaiV4Vault is IUnlockCallback {
 
     function deposit(uint256 amount, uint256 deadline) external nonReentrant {
         if (block.timestamp > deadline) revert Expired();
+        if(msg.sender != minter) {
+            uint256 posval = getPositionValue() + DAI.balanceOf(address(this)) + (USDC.balanceOf(address(this)) * 1e12);
+            require(posval >= (totalShares * 95) / 100, PriceOutOfBounds());
+        }
         if (amount == 0) {
             require(DAI.balanceOf(address(this)) > 0 || USDC.balanceOf(address(this)) > 0); //Compound existing DAI
         } else {
             DAI.transferFrom(msg.sender, address(this), amount);
         }        
         shares[msg.sender] += amount;
-        IFeeVault(feeVault).addShares(msg.sender, amount);
         totalShares += amount;
+        uint liquidityBefore = liquidity;
         poolManager.unlock(abi.encode(ACTION_DEPOSIT, uint256(0), address(0)));
+        require(liquidity > liquidityBefore, ZeroAmount());
+        IFeeVault(feeVault).addShares(msg.sender, amount);
         emit Deposited(msg.sender, amount, amount);
     }
 
@@ -557,16 +580,18 @@ contract UsdcDaiV4Vault is IUnlockCallback {
         if (shareAmount == 0) revert ZeroAmount();
         if (shares[msg.sender] < shareAmount) revert InsufficientShares();
         shares[msg.sender] -= shareAmount;
-        try IFeeVault(feeVault).removeShares(msg.sender, shareAmount) {
-        } catch {
-            IFeeVault(feeVault).setMigrate();
-            salvageFees = true; //Should probably never happen however it must never impede withdrawals
-        }
         totalShares -= shareAmount;
         if(addDust) {
             poolManager.unlock(abi.encode(ACTION_WITHDRAW_DUST, shareAmount, msg.sender));
         } else {
             poolManager.unlock(abi.encode(ACTION_WITHDRAW, shareAmount, msg.sender));
+        }
+        uint256 gasBefore = gasleft();
+        try IFeeVault(feeVault).removeShares(msg.sender, shareAmount) {
+        } catch {
+            require(gasleft() > gasBefore / 8, OutOfGas());
+            IFeeVault(feeVault).setMigrate();
+            salvageFees = true; //Should probably never happen however it must never impede withdrawals
         }
     }
 
@@ -579,6 +604,10 @@ contract UsdcDaiV4Vault is IUnlockCallback {
     function reposition(uint256 deadline) external nonReentrant {
         if(mintThis) {
             require(msg.sender == minter, OnlyMinter());
+        }
+        if(msg.sender != minter) {
+            uint256 posval = getPositionValue() + DAI.balanceOf(address(this)) + (USDC.balanceOf(address(this)) * 1e12);
+            require(posval >= (totalShares * 95) / 100, PriceOutOfBounds());
         }
         if (msg.sender != minter) {
             int24 ct = _getCurrentTick();
@@ -648,6 +677,9 @@ contract UsdcDaiV4Vault is IUnlockCallback {
         uint160 sqrtPriceLower = TickMath.getSqrtPriceAtTick(tl);
         uint160 sqrtPriceUpper = TickMath.getSqrtPriceAtTick(tu);
         uint256 ratio0 = _getRequiredRatio(sqrtPriceX96, sqrtPriceLower, sqrtPriceUpper);
+        if(ratio0 < 100) {
+            ratio0 += 1;
+        }
         bool daiIs0 = _daiIsToken0(); //This will also absorb prior dust and profits
         _collect();
         uint256 daiBal = DAI.balanceOf(address(this));
@@ -691,14 +723,6 @@ contract UsdcDaiV4Vault is IUnlockCallback {
     }
 
     function _withdraw(uint256 shareAmount, address recipient, bool addDust) internal {
-        if (liquidity == 0) {
-            uint256 daiBal = DAI.balanceOf(address(this));
-            uint256 usdcBal = USDC.balanceOf(address(this));
-            if (daiBal > 0) DAI.transfer(recipient, daiBal);
-            if (usdcBal > 0) USDC.transfer(recipient, usdcBal);
-            emit Withdrawn(recipient, shareAmount, daiBal, usdcBal);
-            return;
-        }
         if((DAI.balanceOf(address(this)) > 0 || USDC.balanceOf(address(this)) > 0) && addDust) {
             _deposit();
         } else {
@@ -818,6 +842,9 @@ contract UsdcDaiV4Vault is IUnlockCallback {
         uint256 usdcNormalized = usdcBal * 1e12;
         uint256 totalNormalized = daiNormalized + usdcNormalized;
         uint256 ratio0 = _getRequiredRatio(s.sqrtPriceX96, s.sqrtPriceLower, s.sqrtPriceUpper);
+        if(ratio0 < 100) {
+            ratio0 += 1;
+        }
         // Calculate target DAI in normalized terms
         uint256 targetDaiNormalized = s.daiIs0 
             ? (totalNormalized * ratio0) / 10000 
@@ -846,12 +873,12 @@ contract UsdcDaiV4Vault is IUnlockCallback {
         } else {
             newLiquidity = LiquidityAmounts.getLiquidityForAmount1(s.sqrtPriceLower, s.sqrtPriceX96, amount1);
         }
-        if (newLiquidity > 0) {
-            _modifyLiquidity(s.newTickLower, s.newTickUpper, int128(newLiquidity));
-        }
+        require(newLiquidity > 0);
+        _modifyLiquidity(s.newTickLower, s.newTickUpper, int128(newLiquidity));
         tickLower = s.newTickLower;
         tickUpper = s.newTickUpper;
         liquidity = newLiquidity;
+        require(getPositionValue() >= (totalNormalized * minPositionValue) / 10000, OutOfRange());
         emit Repositioned(s.newTickLower, s.newTickUpper, newLiquidity);
     }
 

@@ -14,9 +14,9 @@ const TREASURY_ADDRESSES = {
   FLOW_BAYR: '0xA8aea8Ea55c9C9626234AB097d1d29eDF78da2ce',
   VOTE_BAYL: '0x13a8D0E90BA6D29f2bE87aC81C80799813b68E92',
   VOTE_BAYR: '0x482e26B0309D9D3052aE50aA2D4E7DbcC6E1A3E7',
-  STABLE_POOL: '0x048E88311ca84876aeA086125825492e2AF2e5A0',
+  STABLE_POOL: '0xadcC8a0076E20B72230278571d0B42ac3Fbc81b9',
   STABLE_POOL_PREVIOUS: '0x3bec8b6d568720133D2a4C5B98E811cA43687d57',
-  STABLE_FEE_VAULT: '0xDD15B203dAFF25C9d1Cc53E524e85aB20ae0A70c',
+  STABLE_FEE_VAULT: '0xbe2523009298297Cdd19aCe0B813813fBa8A84dd',
   AUTOBRIDGE: '0x1c682Bcb55B9be1296eed6e60dc0e4832b05B05A',
   UNISWAP_V4_POOL_MANAGER: '0x67366782805870060151383F4BbFF9daB53e5cD6',
   UNISWAP_V4_STATE_VIEW: '0x5eA1bD7974c8A611cBAB0bDCAFcB1D9CC9b3BA5a',
@@ -657,7 +657,7 @@ function setupEarnSubTabs() {
     } else {
       item.classList. remove('js-active');
     }
-  });  
+  });
   subPanels.forEach((panel, index) => {
     if (index === 0) {
       panel.classList.add('js-active');
@@ -2053,7 +2053,7 @@ async function withdrawStableVault() {
     if (PoolUsdcBal.gt(new BN('2000000')) || PoolDaiBal.gt(new BN('2000000000000000000'))) {
       addDust = true;
     }
-    await sendTx(stableContract, "withdraw", [withdrawShares.toFixed(0), deadline, addDust], 1000000, "0", true, false);    
+    await sendTx(stableContract, "withdraw", [withdrawShares.toFixed(0), deadline, addDust], 2000000, "0", true, false);    
     hideSpinner();
     await Swal.fire(translateThis('Success'), translateThis('Withdrawal successful!'), 'success');
     await refreshStableVaultInfo();
