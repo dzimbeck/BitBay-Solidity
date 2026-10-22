@@ -2026,6 +2026,12 @@ async function withdrawStableVault() {
   
   try {
     showSpinner();
+    const res = await checkPoolHealth();
+    if (!res) {
+      hideSpinner();
+      return;
+    }
+    showSpinner();
     
     const stableContract = new earnState.polWeb3.eth.Contract(stableVaultABI, TREASURY_ADDRESSES.STABLE_POOL);
     const userShares = validation(DOMPurify.sanitize(await stableContract.methods.shares(myaccounts).call()));
@@ -2042,8 +2048,8 @@ async function withdrawStableVault() {
 
     const dai = new earnState.polWeb3.eth.Contract(ERC20ABI, TREASURY_ADDRESSES.DAI);
     const usdc = new earnState.polWeb3.eth.Contract(ERC20ABI, TREASURY_ADDRESSES.USDC);
-    const PoolDaiBal = new BN(validation(DOMPurify.sanitize(await dai.methods.balanceOf(TREASURY_ADDRESSES.STABLE_POOL).call())));
-    const PoolUsdcBal = new BN(validation(DOMPurify.sanitize(await usdc.methods.balanceOf(TREASURY_ADDRESSES.STABLE_POOL).call())));
+    var PoolDaiBal = new BN(validation(DOMPurify.sanitize(await dai.methods.balanceOf(TREASURY_ADDRESSES.STABLE_POOL).call())));
+    var PoolUsdcBal = new BN(validation(DOMPurify.sanitize(await usdc.methods.balanceOf(TREASURY_ADDRESSES.STABLE_POOL).call())));
     if (PoolUsdcBal.gt(new BN('2000000'))) {
       Swal.fire({ icon: 'info', title: translateThis('Cleaning Dust'), text: translateThis('Moving pool dust into the position before withdrawing...'), showConfirmButton: false });
       await delay(500);
@@ -2052,6 +2058,28 @@ async function withdrawStableVault() {
     var addDust = false;
     if (PoolUsdcBal.gt(new BN('2000000')) || PoolDaiBal.gt(new BN('2000000000000000000'))) {
       addDust = true;
+    }
+
+    // --- Clipping protection: ensure ~99% of pool funds are in the position ---
+    const totalAssets = new BN(validation(DOMPurify.sanitize(await stableContract.methods.getTotalAssets().call())));
+    const utilizationOK = async () => {
+      if (totalAssets.lte(0)) return true;
+      const dust = PoolDaiBal.plus(PoolUsdcBal.times('1e12'));
+      // dust must be <= 1% of total assets (>= 99% utilization)
+      return dust.times(100).lte(totalAssets);
+    };
+
+    if (!(await utilizationOK())) {
+      //Try a zero deposit to fold idle funds into the position
+      Swal.fire({ icon: 'info', title: translateThis('Optimizing Position'), text: translateThis('Folding idle funds into the position before withdrawing...'), showConfirmButton: false });
+      await delay(500);
+      await sendTx(stableContract, "deposit", ["0", deadline], 2000000, "0", false, false);
+      await delay(1500);
+      PoolDaiBal = new BN(validation(DOMPurify.sanitize(await dai.methods.balanceOf(TREASURY_ADDRESSES.STABLE_POOL).call())));
+      PoolUsdcBal = new BN(validation(DOMPurify.sanitize(await usdc.methods.balanceOf(TREASURY_ADDRESSES.STABLE_POOL).call())));
+      if (!(await utilizationOK())) {
+        throw new Error(translateThis('Pool funds are not fully positioned yet. Please try again.'));
+      }
     }
     await sendTx(stableContract, "withdraw", [withdrawShares.toFixed(0), deadline, addDust], 2000000, "0", true, false);    
     hideSpinner();
@@ -2685,17 +2713,32 @@ async function checkAndManageStableVault() {
       
       // Check if position needs repositioning (if out of range)
       const isInRange = validation(DOMPurify.sanitize(await stableContract.methods.isInRange().call())) === true;
-      
       if (!isInRange) {
-        const lastReposition = parseInt(validation(DOMPurify.sanitize(await stableContract.methods.lastReposition().call())));
-        const positionTimelock = parseInt(validation(DOMPurify.sanitize(await stableContract.methods.POSITION_TIMELOCK().call())));
-        now = Math.floor(Date.now() / 1000);
-        
-        if (now - lastReposition > positionTimelock) {
-          logToConsole('StableVault is out of range, repositioning...');
-          const deadline = now + 300;          
-          const tx = await sendTx(stableContract, "reposition", [deadline], 2000000, "0", false, false, false);          
-          logToConsole('StableVault repositioned successfully: ' + tx);
+        let canReposition = true;
+        try {
+          const mintThis = validation(DOMPurify.sanitize(await stableContract.methods.mintThis().call())) === true;
+          if (mintThis) {
+            const minter = validation(DOMPurify.sanitize(await stableContract.methods.minter().call()));
+            canReposition = minter.toLowerCase() === myaccounts.toLowerCase();
+            if(canReposition) {
+              logToConsole('Minter reposition authorization complete...');
+            }
+          }
+        } catch (e) {
+          console.error('Error checking minter status:', e);
+          canReposition = false; // fail safe: don't send a tx that may revert
+        }
+        if(canReposition) {
+          const lastReposition = parseInt(validation(DOMPurify.sanitize(await stableContract.methods.lastReposition().call())));
+          const positionTimelock = parseInt(validation(DOMPurify.sanitize(await stableContract.methods.POSITION_TIMELOCK().call())));
+          now = Math.floor(Date.now() / 1000);
+          
+          if (now - lastReposition > positionTimelock) {
+            logToConsole('StableVault is out of range, repositioning...');
+            const deadline = now + 300;          
+            const tx = await sendTx(stableContract, "reposition", [deadline], 2000000, "0", false, false, false);          
+            logToConsole('StableVault repositioned successfully: ' + tx);
+          }
         }
       }
       const USDCToken = new earnState.polWeb3.eth.Contract(ERC20ABI, TREASURY_ADDRESSES.USDC);

@@ -1276,19 +1276,19 @@
 <script type="text/javascript" src="./assets/js/bridge-tools/Pair.js"></script>
 <script type="text/javascript" src="./assets/js/bridge-tools/WETH.js"></script>
 
-<script type="text/javascript" src="./assets/js/bridge-tools/treasury/Treasury.js?v=4"></script>
-<script type="text/javascript" src="./assets/js/bridge-tools/treasury/Vault.js?v=4"></script>
-<script type="text/javascript" src="./assets/js/bridge-tools/treasury/LidoVault.js?v=4"></script>
-<script type="text/javascript" src="./assets/js/bridge-tools/treasury/StableVault.js?v=4"></script>
-<script type="text/javascript" src="./assets/js/bridge-tools/treasury/StableVaultFees.js?v=4"></script>
-<script type="text/javascript" src="./assets/js/bridge-tools/treasury/StakingVote.js?v=4"></script>
-<script type="text/javascript" src="./assets/js/bridge-tools/treasury/flow.js?v=4"></script>
-<script type="text/javascript" src="./assets/js/bridge-tools/treasury/autoBridge.js?v=4"></script>
-<script type="text/javascript" src="./assets/js/bridge-tools/treasury/autoBridge-v0.js?v=4"></script>
-<script type="text/javascript" src="./assets/js/bridge-tools/earn.js?v=4"></script>
-<script type="text/javascript" src="./assets/js/bridge-tools/wizard.js?v=4"></script>
-<script type="text/javascript" src="./rotating-provider.js?v=4"></script>
-<script type="text/javascript" src="./translate.js?v=4"></script>
+<script type="text/javascript" src="./assets/js/bridge-tools/treasury/Treasury.js?v=5"></script>
+<script type="text/javascript" src="./assets/js/bridge-tools/treasury/Vault.js?v=5"></script>
+<script type="text/javascript" src="./assets/js/bridge-tools/treasury/LidoVault.js?v=5"></script>
+<script type="text/javascript" src="./assets/js/bridge-tools/treasury/StableVault.js?v=5"></script>
+<script type="text/javascript" src="./assets/js/bridge-tools/treasury/StableVaultFees.js?v=5"></script>
+<script type="text/javascript" src="./assets/js/bridge-tools/treasury/StakingVote.js?v=5"></script>
+<script type="text/javascript" src="./assets/js/bridge-tools/treasury/flow.js?v=5"></script>
+<script type="text/javascript" src="./assets/js/bridge-tools/treasury/autoBridge.js?v=5"></script>
+<script type="text/javascript" src="./assets/js/bridge-tools/treasury/autoBridge-v0.js?v=5"></script>
+<script type="text/javascript" src="./assets/js/bridge-tools/earn.js?v=5"></script>
+<script type="text/javascript" src="./assets/js/bridge-tools/wizard.js?v=5"></script>
+<script type="text/javascript" src="./rotating-provider.js?v=5"></script>
+<script type="text/javascript" src="./translate.js?v=5"></script>
 
 <style>
   .swal2-header {
@@ -2319,7 +2319,7 @@ var rotatingProvider = new RotatingProvider(1); //window.RPCState.providers.pref
 var CUSTOM_POLYGON_RPC = null;
 var CUSTOM_ETHEREUM_RPC = null;
 var DEFAULT_ETHEREUM_RPC = "https://ethereum-rpc.publicnode.com";//"https://eth.drpc.org/";
-var version = 4;
+var version = 5;
 (async function checkVersion() {
   const INTERVAL = 10 * 60 * 1000;
   const last = parseInt(localStorage.getItem('lastVersionCheck') || '0', 10);
@@ -3089,6 +3089,67 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelector('input[name="b-swap-group"][value="0"]').checked = true;
 });
 
+// True when web3 broadcast the tx but its own receipt watcher (running over MetaMask's RPC) failed.
+function isReceiptWatchError(e) {
+  const msg = String((e && e.message) || e || '').toLowerCase();
+  return msg.includes('failed to check for transaction receipt') ||
+         msg.includes('rpc endpoint returned http client error') ||
+         msg.includes('was not mined within');
+}
+
+async function pollForReceipt(w3, txHash, timeoutMs = 120000, intervalMs = 5000) {
+  const startTime = Date.now();
+  while (true) {
+    try {
+      const receipt = await w3.eth.getTransactionReceipt(txHash);
+      if (receipt) return receipt;
+    } catch (e) {
+      console.log(e);
+    }
+    if (Date.now() - startTime > timeoutMs) return null;
+    await new Promise(r => setTimeout(r, intervalMs));
+  }
+}
+
+async function showConfirmationPending(txHash) {
+  await Swal.fire({
+    icon: "info",
+    title: translateThis("Confirmation pending"),
+    html: `
+      ${translateThis('Transaction may take longer to confirm. Please check that it confirms on a block explorer.')}<br><br>
+      TXID: <code id="txid">${txHash}</code><br>
+      <button id="copyTxBtn" style="
+        margin-top:8px;
+        padding:6px 12px;
+        font-size:14px;
+        cursor:pointer;
+      ">${translateThis('Copy TXID')}</button>
+    `,
+    showConfirmButton: true,
+    didOpen: async () => {
+      const btn = document.getElementById("copyTxBtn");
+      const txidEl = document.getElementById("txid");
+
+      btn.addEventListener("click", async () => {
+        const text = txidEl.textContent || txidEl.innerText;
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.style.position = "fixed"; // avoid scroll jump
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        try {
+          document.execCommand("copy");
+          await Swal.fire(translateThis("Copied!"), translateThis("TXID copied to clipboard."), "success");
+        } catch (err) {
+          await Swal.fire(translateThis("Error"), translateThis("Failed to copy TXID"), "error");
+        }
+        document.body.removeChild(textarea);
+      });
+    }
+  });
+}
+
 async function sendTx(contract, method, args = [], glimit = 2500000, val = "0", confirmBox = false, switchNetworks = false, confCheck = true) {
   if(netSwitch) {
     await Swal.fire(translateThis("Switched network. Please refresh the page."));
@@ -3106,6 +3167,8 @@ async function sendTx(contract, method, args = [], glimit = 2500000, val = "0", 
     const POLYGON_CHAIN_ID = '0x89';
     const ETH_CHAIN_ID = '0x1';
     let switchedNetwork = false;
+    let mmTxHash = null;
+    let txPromise;
     try {
       var gasPrice2 = gasPrice;
       if (switchNetworks) {
@@ -3147,14 +3210,14 @@ async function sendTx(contract, method, args = [], glimit = 2500000, val = "0", 
           value,
           gas: glimit,
           gasPrice: gasPrice2
-        });
+        }).on('transactionHash', function (h) { mmTxHash = validation(DOMPurify.sanitize(h)); });
       } else {
         txPromise = await contract.methods[method](...args).send({
           from: myaccounts,
           gasLimit: glimit,
           gasPrice: gasPrice2,
           value: val
-        });
+        }).on('transactionHash', function (h) { mmTxHash = validation(DOMPurify.sanitize(h)); });
       }
       if (switchedNetwork) {
         await window.ethereum.request({
@@ -3182,6 +3245,39 @@ async function sendTx(contract, method, args = [], glimit = 2500000, val = "0", 
         }
       }
       netSwitch = false;
+      try {
+        if (mmTxHash && isReceiptWatchError(e)) {
+          console.log("MetaMask receipt check failed, falling back to own RPC for", mmTxHash);
+          let receipt = null;
+          try {
+            // Ethereum if we switched networks for this tx, otherwise the Polygon (rotating) web3
+            const checkWeb3 = switchedNetwork ? new Web3(getEthereumRpc()) : new Web3(getPolygonRpc());
+            if (confCheck) {
+              Swal.fire({
+                title: translateThis(`Transaction sent...`),
+                html: translateThis("Waiting for confirmation on chain..."),
+                didOpen: () => Swal.showLoading(),
+                allowOutsideClick: false,
+                showConfirmButton: false
+              });
+            }
+            receipt = await pollForReceipt(checkWeb3, mmTxHash);
+          } catch (pollErr) {
+            console.log(pollErr);
+          }
+          await Swal.close();          
+          if (receipt && receipt.status === false) {
+            throw new Error("Transaction has been reverted by the EVM");
+          }
+          if (!receipt) {
+            await showConfirmationPending(mmTxHash);
+            return showResult(mmTxHash);
+          }
+          return showResult(receipt);
+        }
+      } catch (err) {
+        console.log(err);
+      }
       throw new Error(e.message || e);
     }
     return;
@@ -3347,42 +3443,7 @@ async function sendTx(contract, method, args = [], glimit = 2500000, val = "0", 
         return showResult(receipt);
       }
       if (Date.now() - startTime > 120_000) { // 2 minutes
-        await Swal.fire({
-          icon: "info",
-          title: translateThis("Confirmation pending"),
-          html: `
-            ${translateThis('Transaction may take longer to confirm. Please check that it confirms on a block explorer.')}<br><br>
-            TXID: <code id="txid">${txHash}</code><br>
-            <button id="copyTxBtn" style="
-              margin-top:8px;
-              padding:6px 12px;
-              font-size:14px;
-              cursor:pointer;
-            ">${translateThis('Copy TXID')}</button>
-          `,
-          showConfirmButton: true,
-          didOpen: async () => {
-            const btn = document.getElementById("copyTxBtn");
-            const txidEl = document.getElementById("txid");
-
-            btn.addEventListener("click", async () => {
-              const text = txidEl.textContent || txidEl.innerText;
-              const textarea = document.createElement("textarea");
-              textarea.value = text;
-              textarea.style.position = "fixed"; // avoid scroll jump
-              textarea.style.opacity = "0";
-              document.body.appendChild(textarea);
-              textarea.select();
-              try {
-                document.execCommand("copy");
-                await Swal.fire(translateThis("Copied!"), translateThis("TXID copied to clipboard."), "success");
-              } catch (err) {
-                await Swal.fire(translateThis("Error"), translateThis("Failed to copy TXID"), "error");
-              }
-              document.body.removeChild(textarea);
-            });
-          }
-        });
+        await showConfirmationPending(txHash);
         if ((switchedProvider && originalProvider) ||  netSwitch) {
           web3.setProvider(originalProvider);
           await new Promise(r => setTimeout(r, 1000));
